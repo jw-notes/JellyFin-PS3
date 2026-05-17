@@ -41,6 +41,14 @@ static volatile int  s_vid_disp_idx    = 0;     // index RSX is reading from
 static volatile bool s_vid_frame_ready = false;  // upload → display handoff
 
 // -------------------------------------------------------
+// TS packet ring buffer — network thread fills, decode thread drains
+// -------------------------------------------------------
+#define TSRING_SIZE 512
+static u8           s_ts_ring[TSRING_SIZE][TS_PACKET_SIZE];
+static volatile int s_ts_wr = 0;
+static volatile int s_ts_rd = 0;
+
+// -------------------------------------------------------
 // Async log — ring buffer drained by a dedicated thread
 // -------------------------------------------------------
 
@@ -144,13 +152,54 @@ static void show_error(const char *line1, const char *line2) {
 }
 
 // -------------------------------------------------------
+// Network thread — reads raw TS packets from socket into ring buffer
+// -------------------------------------------------------
+
+struct NetCtx {
+    volatile bool *playing;
+    int            sock;
+};
+
+static void net_thread_fn(void *arg) {
+    NetCtx        *ctx     = (NetCtx*)arg;
+    volatile bool *playing = ctx->playing;
+    int            sock    = ctx->sock;
+
+    while (running && *playing && !s_vdec_error) {
+        // Barrier: read fresh s_ts_rd before checking ring fullness
+        __asm__ volatile("sync" ::: "memory");
+        int next_wr = (s_ts_wr + 1) % TSRING_SIZE;
+        if (next_wr == s_ts_rd) {
+            usleep(1000);
+            continue;
+        }
+
+        int rc = stream_read(sock, s_ts_ring[s_ts_wr], TS_PACKET_SIZE);
+        if (rc < 0) {
+            plog("playing=0 reason=stream_eof");
+            *ctx->playing = false;
+            break;
+        }
+        if (rc == 0) {
+            usleep(1000);
+            continue;
+        }
+
+        // Barrier: ensure packet data is visible before advancing write index
+        __asm__ volatile("sync" ::: "memory");
+        s_ts_wr = next_wr;
+    }
+
+    sysThreadExit(0);
+}
+
+// -------------------------------------------------------
 // Decode thread  (Steps 2, 5c, 8b)
 // -------------------------------------------------------
 
 struct DecodeCtx {
     volatile bool *playing;
     int           *frame_count;  // read-only for heartbeat (benign race)
-    int            sock;
 };
 
 static void decode_thread_fn(void *arg) {
@@ -158,7 +207,6 @@ static void decode_thread_fn(void *arg) {
     volatile bool *playing     = ctx->playing;
     int           *frame_count = ctx->frame_count;
 
-    u8   ts_pkt[TS_PACKET_SIZE];
     bool in_stall              = false;
     u64  stall_ep_start_us     = 0;
     long stall_ep_count        = 0;
@@ -174,14 +222,16 @@ static void decode_thread_fn(void *arg) {
         }
 
         for (int batch = 0; batch < 128 && jbuf_count() < JBUF_SIZE; batch++) {
-            int rd = stream_read(ctx->sock, ts_pkt, TS_PACKET_SIZE);
-            if (rd < 0) {
-                plog("playing=0 reason=stream_eof");
-                *ctx->playing = false;
+            // Barrier: read fresh s_ts_wr before checking ring emptiness
+            __asm__ volatile("sync" ::: "memory");
+            if (s_ts_rd == s_ts_wr) {
+                if (!in_stall) {
+                    in_stall = true;
+                    stall_ep_start_us = timing_get_us();
+                }
+                usleep(1000);
                 break;
             }
-            if (rd == 0) { usleep(1000); continue; }
-
             if (in_stall) {
                 in_stall = false;
                 long dur = (long)(timing_get_us() - stall_ep_start_us);
@@ -189,8 +239,10 @@ static void decode_thread_fn(void *arg) {
                 if (dur > stall_ep_dur_max_us) stall_ep_dur_max_us = dur;
                 stall_ep_count++;
             }
-
-            video_feed_ts(ts_pkt);
+            video_feed_ts(s_ts_ring[s_ts_rd]);
+            // Barrier: pop visible to network thread before it reclaims this slot
+            __asm__ volatile("sync" ::: "memory");
+            s_ts_rd = (s_ts_rd + 1) % TSRING_SIZE;
         }
 
         // Drain all decoded frames from VDEC into the jitter buffer
@@ -221,7 +273,7 @@ static void decode_thread_fn(void *arg) {
                 *frame_count, jbuf_count(), s_au_submitted,
                 (unsigned long long)audio_block_count(),
                 stall_ep_count, stall_ep_dur_max_us / 1000, avg_ms,
-                display_fps, 0);
+                display_fps, (s_ts_wr - s_ts_rd + TSRING_SIZE) % TSRING_SIZE);
             plog(buf);
             stall_ep_count = stall_ep_dur_max_us = stall_ep_dur_total_us = 0;
         }
@@ -458,6 +510,10 @@ void show_player(const JFItem *item) {
     int           frame_count = 0;
     int           rd          = 0;
 
+    // Reset TS ring buffer for this playback session
+    s_ts_wr = 0;
+    s_ts_rd = 0;
+
     // ---- Pre-fill: decode JBUF_PREFILL frames before display starts ----
     plog("jbuf: pre-fill start");
     while (jbuf_count() < JBUF_PREFILL && running && !s_vdec_error) {
@@ -493,8 +549,24 @@ void show_player(const JFItem *item) {
     plog("jbuf: pre-fill done — starting threads");
     timing_register_vblank();
 
+    // ---- Spawn network thread (fills TS ring; lower priority than decode) ----
+    NetCtx           net_ctx = { &playing, sock };
+    sys_ppu_thread_t net_tid = 0;
+    if (playing) {
+        int trc = sysThreadCreate(&net_tid, net_thread_fn,
+                                  (void *)&net_ctx,
+                                  900, 64 * 1024,
+                                  0, "jf_net");
+        if (trc != 0) {
+            char buf[64];
+            snprintf(buf, sizeof(buf), "show_player: net thread_create FAILED rc=%d", trc);
+            plog(buf);
+            playing = false;
+        }
+    }
+
     // ---- Spawn decode thread (Step 2) ----
-    DecodeCtx        dec_ctx = { &playing, &frame_count, sock };
+    DecodeCtx        dec_ctx = { &playing, &frame_count };
     sys_ppu_thread_t dec_tid = 0;
     if (playing) {
         int trc = sysThreadCreate(&dec_tid, decode_thread_fn,
@@ -829,6 +901,11 @@ void show_player(const JFItem *item) {
     playing = false;
     usleep(16000);
 
+    if (net_tid) {
+        u64 tret;
+        sysThreadJoin(net_tid, &tret);
+        plog("show_player: network thread joined");
+    }
     if (dec_tid) {
         u64 tret;
         sysThreadJoin(dec_tid, &tret);
