@@ -17,7 +17,7 @@ feels like the console's own.
 This is my continuation of
 [vortigauntlet's LosslessAudio fork](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio),
 which itself started from [MontyMcK's JellyFin-PS3](https://github.com/MontyMcK/JellyFin-PS3).
-All of their work is still here; I fix and add things on top.
+All of their work is still here, I i just fixed and added things on top.
 
 ## Features
 
@@ -53,9 +53,11 @@ The steps are at the end of [CUSTOM-CHANGES.md](CUSTOM-CHANGES.md#building).
 
 - **vortigauntlet**: lossless audio, the XMB interface, JellyWave and most of the app
 - **MontyMcK**: the original JellyFin-PS3
-- Everyone who contributed to either project; the git history keeps every commit
-- [Movian](https://github.com/andoma/showtime), [PSL1GHT](https://github.com/ps3dev/PSL1GHT),
-  [mohasi's NTFS/exFAT drivers](https://github.com/mohasi/ps3-dev), and the Jellyfin project
+- **Ethan Hammer**, **Lucian** and **orbisai0security** for their contributions
+- [Movian](https://github.com/andoma/showtime), FFmpeg, liba52, libdca, minimp3, stb,
+  [PSL1GHT](https://github.com/ps3dev/PSL1GHT), mohasi's NTFS/exFAT drivers, and Jellyfin
+
+Every library, font and icon set, with its licence, is listed in [CREDITS.md](CREDITS.md).
 
 ## License
 
