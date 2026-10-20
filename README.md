@@ -7,8 +7,7 @@
 </div>
 
 <p align="center">
-  <img src="docs/screenshots/3.3/home.png" width="49%">
-  <img src="docs/screenshots/3.3/movies.png" width="49%">
+
 </p>
 
 Watch your Jellyfin films, shows and music on a PS3, with a menu that looks and
