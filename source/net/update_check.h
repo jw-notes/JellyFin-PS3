@@ -3,7 +3,7 @@
 // Version built into this binary.  Keep in step with the GitHub release tag
 // (leading 'v'/'V' is ignored when comparing, so "2.0-beta" matches
 // "V2.0-beta").  Bump this when cutting a release.
-#define APP_VERSION "3.3.2"
+#define APP_VERSION "3.3.3"
 
 // The GitHub repository releases and updates come from.
 #define UPDATE_REPO "jw-notes/JellyFin-PS3"

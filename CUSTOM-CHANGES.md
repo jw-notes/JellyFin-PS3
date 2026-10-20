@@ -1,4 +1,4 @@
-# JellyFin [PS3] 3.3.2: changes
+# JellyFin [PS3] 3.3.3: changes
 
 By jw-notes, based on [vortigauntlet/JellyFin-PS3-LosslessAudio](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio) `v3.2.3`.
 Tested on a retail PS3 with CFW at 1080p.
