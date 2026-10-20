@@ -12,9 +12,12 @@
 //
 // under a header with Home / Search / Settings.  The rows scroll vertically and
 // each scrolls on its own horizontally, both eased; the focused card has the
-// selection ring.  Libraries, Search and Settings open their usual screens, and
-// backing out of them returns here (ui_xmb.cpp).  No wave: the theme's
-// gradient alone (wave_set_plain).
+// selection ring.  No wave: the theme's gradient alone (wave_set_plain).
+//
+// The header is the Classic layout's top level: L1 / R1 move between its three
+// pages anywhere on them, and Search and Settings keep it (in place of the XMB
+// lockup and category row) with their usual contents below.  A library still
+// opens its own screen; backing out of anything returns here (ui_xmb.cpp).
 
 #define CLASSIC_FILE "jellyfin_layout.txt"
 
@@ -46,6 +49,18 @@ void ui_layout_step(int dir) {
 
 bool xmb_classic_active(int tab) {
     return ui_layout() == UI_LAYOUT_CLASSIC && tab == XMB_TAB_HOME;
+}
+
+// Which header page a tab is: 0 Home, 1 Search, 2 Settings, -1 none.
+static int classic_page(int tab) {
+    if (tab == XMB_TAB_HOME) return 0;
+    if (tab == XMB_TAB_SEARCH) return 1;
+    if (tab == XMB_TAB_SETTINGS) return 2;
+    return -1;
+}
+
+bool xmb_classic_chrome(int tab) {
+    return ui_layout() == UI_LAYOUT_CLASSIC && classic_page(tab) >= 0;
 }
 
 // --- rows -------------------------------------------------------------------------------
@@ -236,21 +251,43 @@ static void chdr_boxes(int x[3], int w[3], int *y, int *h) {
     *h = UIS_H(34);
 }
 
+// The header, on the page `tab` is: the focused tab filled (Home's header
+// focus), the current page underlined.
+void xmb_classic_header_gpu(int tab) {
+    if (!ui_card_gpu_ready()) return;
+    const int page = classic_page(tab);
+    const bool focus = page == 0 && s_cfocus == -1;
+    int x[3], w[3], y, h;
+    chdr_boxes(x, w, &y, &h);
+    for (int i = 0; i < 3; i++) {
+        if (focus && s_chdr == i)
+            ui_rect_gpu_draw(x[i], y, w[i], h, XMB_ACCENT, 255);
+        else if (i == page)
+            ui_rect_gpu_draw(x[i] + UIS_W(14), y + h - UIS_H(3), w[i] - UIS_W(28), UIS_H(3), XMB_ACCENT, 255);
+    }
+    ui_card_gpu_end();
+}
+
+void xmb_classic_header_text(int tab) {
+    xmb_draw_topbar();
+    const int page = classic_page(tab);
+    const bool focus = page == 0 && s_cfocus == -1;
+    int x[3], w[3], y, h;
+    chdr_boxes(x, w, &y, &h);
+    const float px = UIS_TF(17.0f);
+    for (int i = 0; i < 3; i++) {
+        const bool on = focus && s_chdr == i;
+        const char *t = tr(k_hdr[i]);
+        const int tw = ttf_text_width(t, px, true);
+        drawTTF((u32)(x[i] + (w[i] - tw) / 2), (u32)(y + (h - (int)px) / 2 - UIS_H(2)), t, px,
+                on ? XMB_KEY_LABEL_SEL : (i == page ? XMB_TEXT : XMB_TEXT_DIM), true);
+    }
+}
+
 void xmb_classic_gpu(void) {
     classic_tick();
+    xmb_classic_header_gpu(XMB_TAB_HOME);
     if (!ui_card_gpu_ready()) return;
-
-    // Header: the focused tab filled, Home underlined while it is the page.
-    {
-        int x[3], w[3], y, h;
-        chdr_boxes(x, w, &y, &h);
-        for (int i = 0; i < 3; i++) {
-            if (s_cfocus == -1 && s_chdr == i)
-                ui_rect_gpu_draw(x[i], y, w[i], h, XMB_ACCENT, 255);
-            else if (i == 0)
-                ui_rect_gpu_draw(x[i] + UIS_W(14), y + h - UIS_H(3), w[i] - UIS_W(28), UIS_H(3), XMB_ACCENT, 255);
-        }
-    }
 
     ui_card_gpu_clip(C_TOP - UIS_H(8), 0);
     int fx = -1, fy = 0, fw = 0, fh = 0;            // the focused card, for the ring
@@ -316,19 +353,7 @@ static void clabel(const CRow *r, int c, char *a, size_t ac, char *b, size_t bc)
 }
 
 void xmb_classic_text(void) {
-    xmb_draw_topbar();
-    {
-        int x[3], w[3], y, h;
-        chdr_boxes(x, w, &y, &h);
-        const float px = UIS_TF(17.0f);
-        for (int i = 0; i < 3; i++) {
-            const bool on = s_cfocus == -1 && s_chdr == i;
-            const char *t = tr(k_hdr[i]);
-            const int tw = ttf_text_width(t, px, true);
-            drawTTF((u32)(x[i] + (w[i] - tw) / 2), (u32)(y + (h - (int)px) / 2 - UIS_H(2)), t, px,
-                    on ? XMB_KEY_LABEL_SEL : (i == 0 ? XMB_TEXT : XMB_TEXT_DIM), true);
-        }
-    }
+    xmb_classic_header_text(XMB_TAB_HOME);
     const int old_top = g_cpu_clip_top;
     g_cpu_clip_top = C_TOP - UIS_H(8);
     for (int i = 0; i < s_ncr; i++) {
@@ -380,6 +405,25 @@ static void classic_open_tab(int tab) {
     xmb_switch_tab(tab);
     spine_set_level(SPINE_L2);
     init_btns();
+}
+
+// L1 / R1 on any header page: the page to the left / right.  True when it
+// took the press.
+bool xmb_classic_switch_input(int tab) {
+    if (!xmb_classic_chrome(tab)) return false;
+    const bool l = BTN_PRESSED(l1), r = BTN_PRESSED(r1);
+    if (!l && !r) return false;
+    const int page = classic_page(tab);
+    const int to = page + (l ? -1 : 1);
+    if (to < 0 || to > 2) { init_btns(); return true; }
+    ui_sfx_play(SFX_CURSOR);
+    if (to == 0) {
+        xmb_switch_tab(XMB_TAB_HOME);
+        init_btns();
+    } else {
+        classic_open_tab(to == 1 ? XMB_TAB_SEARCH : XMB_TAB_SETTINGS);
+    }
+    return true;
 }
 
 bool xmb_classic_input(void) {

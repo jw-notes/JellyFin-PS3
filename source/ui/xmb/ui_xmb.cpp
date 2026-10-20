@@ -183,7 +183,11 @@ static void xmb_draw_gpu_phase(int tab) {
     // blended quad over the wave, and at 1,351 us of CPU VRAM reads it was the
     // single largest item in the frame.  It has to be issued here, before the
     // frame's rsxSync() -- see wave_draw_divider_gpu().
-    if (wave_gpu_blend_ready()) {
+    if (xmb_classic_chrome(tab)) {
+        // Classic's Search / Settings: its header, no divider, no spine glow.
+        xmb_classic_header_gpu(tab);
+        s_div_on_gpu = true;
+    } else if (wave_gpu_blend_ready()) {
         // The spine's base layer draws no divider; between levels it fades.
         const u8 div_a = (u8)(72.0f * spine_divider_alpha() + 0.5f);
         if (div_a) wave_draw_divider_gpu(XMB_DIVIDER_Y, 0x8A, 0x93, 0xC8, div_a);
@@ -265,7 +269,8 @@ static void xmb_draw_cpu_phase(int tab) {
 // TTF/RSX draw phase — text and icons on top of the CPU-drawn layer.
 static void xmb_draw_text_phase(int tab) {
     if (xmb_classic_active(tab)) { xmb_classic_text(); return; }
-    xmb_draw_topbar();
+    if (xmb_classic_chrome(tab)) xmb_classic_header_text(tab);
+    else                         xmb_draw_topbar();
 
     wd_stage("topbar done");
     if (tab == XMB_TAB_HOME) {
@@ -658,6 +663,8 @@ void ui_run_xmb(void) {
             xmb_update_popup_input();   // modal: the screen below keeps focus state
         else if (peek_active())
             peek_input();               // the quick-peek owns the pad while up
+        else if (xmb_classic_switch_input(tab))
+            ;                           // Classic: L1 / R1 between Home, Search, Settings
         else if (xmb_classic_active(tab))
             should_exit = xmb_classic_input();  // Classic: its own Home
         else if (BTN_PRESSED(square) && tab != XMB_TAB_SEARCH) {
@@ -725,7 +732,7 @@ void ui_run_xmb(void) {
             // The popup and the quick-peek draw their own hints.
             if (!popup && !peek_visible()) xmb_draw_hints(tab);
             wd_stage("13.8d tabs"); if (first_iter) crash_log("13.8d tabs");
-            if (!xmb_classic_active(tab)) spine_draw();
+            if (!xmb_classic_chrome(tab)) spine_draw();
             if (popup) {
                 // The popup GPU-dims the whole screen and then lays an opaque
                 // panel on it, so everything queued so far has to be on the

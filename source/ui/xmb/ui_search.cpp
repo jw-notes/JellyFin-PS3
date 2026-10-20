@@ -449,7 +449,9 @@ bool xmb_handle_input_search(void) {
         return false;
     }
     if (BTN_PRESSED(circle) && !g_search_buf[0]) {
-        xmb_switch_tab(xmb_next_enabled(g_active_tab, +1));
+        // Classic: back to its Home, not on along the XMB's categories.
+        xmb_switch_tab(ui_layout() == UI_LAYOUT_CLASSIC ? XMB_TAB_HOME
+                                                         : xmb_next_enabled(g_active_tab, +1));
         return false;
     }
     if (BTN_PRESSED(circle)) { g_search_buf[0] = '\0'; results_clear(); g_search_focus_results = false; return false; }
