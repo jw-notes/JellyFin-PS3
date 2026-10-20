@@ -1,8 +1,8 @@
 # Download
 
-**[⬇ Download the latest release](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio/releases/latest)** — the recommended link.
+**[⬇ Download the latest release](https://github.com/jw-notes/JellyFin-PS3/releases/latest)** — the recommended link.
 
-Direct file: [`JellyFin-PS3.pkg`](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio/releases/latest/download/JellyFin-PS3.pkg)
+Direct file: [`JellyFin-PS3.pkg`](https://github.com/jw-notes/JellyFin-PS3/releases/latest/download/JellyFin-PS3.pkg)
 — that link always resolves to the current release, so it cannot go stale the
 way a version-pinned one does. This folder mirrors the same build, so the repo
 always carries an installable package alongside the source it was made from.

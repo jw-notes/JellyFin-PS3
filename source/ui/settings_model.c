@@ -32,6 +32,9 @@ static const setting_row k_rows[] = {
     { SET_DIALOGUE,  SEC_AUDIO, TRN("Dialogue Boost"),
       TRN("Raise the centre channel, where the dialogue is. Not available\n"
       "with Dolby Digital passthrough. Helps when voices are quiet.")},
+    { SET_MENU_SOUNDS, SEC_AUDIO, TRN("Menu Sounds"),
+      TRN("The PS3's own cursor and select sounds in the menus.\n"
+      "Films and music are not affected.")},
     // ---- Subtitles
     { SET_SUB_FONT,  SEC_SUBTITLES, TRN("Subtitle Font"),
       TRN("The typeface subtitles are drawn in.\n"
@@ -65,6 +68,12 @@ static const setting_row k_rows[] = {
     { SET_WAVE_INT,  SEC_DISPLAY, TRN("Wave Intensity"),
       TRN("How strongly the wave reacts to music.\n"
       "Off keeps it calm; Max makes every beat hit hard.")},
+    { SET_SCREENSAVER, SEC_DISPLAY, TRN("Screensaver"),
+      TRN("After a few idle minutes: Classic drifts posters over the wave,\n"
+      "Artwork fills the screen with backdrops. Off never starts it.")},
+    { SET_SAVER_DELAY, SEC_DISPLAY, TRN("Screensaver Delay"),
+      TRN("How long the menus wait, untouched, before the screensaver\n"
+      "starts: 30 seconds to 5 minutes.")},
     { SET_PARTICLES, SEC_DISPLAY, TRN("Menu Particles"),
       TRN("Let the floating particles drift behind the menus too,\n"
       "not only while music is playing.")},

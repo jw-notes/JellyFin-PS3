@@ -13,6 +13,7 @@
 #include "circle_blit.h"
 #include "ui_card_gpu.h"
 #include "ui_spine.h"      // spine_focus_ring_gpu, grid scroll motion
+#include "ui_depth.h"      // depth_shimmer_gpu
 
 // -------------------------------------------------------
 // CPU blits: main-memory bitmap -> framebuffer
@@ -329,6 +330,10 @@ void xmb_draw_letter_tile(const char *seed, const char *name,
             letter, px, XMB_TEXT, true);
 }
 
+// Set by xmb_grid_cpu while it draws: the grid's GPU pass has already drawn
+// the loading placeholders, so xmb_draw_card_src must not cover them.
+static bool s_grid_gpu_placeholders = false;
+
 // Draw one card at (cx,cy): cached image (or a dim placeholder while it
 // loads), the watched-progress strip, and — when selected — a thin white
 // frame with a soft 1px halo.  Shared by the grid and the Home shelf.
@@ -384,8 +389,10 @@ void xmb_draw_card_src(const char *item_id, int src_w, int src_h,
         xmb_draw_letter_tile(item_id, tile_name, cx, cy,
                              card_w < card_h ? card_w : card_h);
     } else {
-        // Loading placeholder: dark panel with a faint image glyph.
-        drawRect((u32)cx, (u32)cy, (u32)card_w, (u32)card_h, XMB_THUMB_DIM);
+        // Loading placeholder: dark panel with a faint image glyph.  In the
+        // grid the GPU pass has drawn the panel, with its shimmer.
+        if (!s_grid_gpu_placeholders)
+            drawRect((u32)cx, (u32)cy, (u32)card_w, (u32)card_h, XMB_THUMB_DIM);
         const float ph_px = UIS_TF(32.0f);
         drawIcon((u32)(cx + (card_w - (int)ph_px) / 2),
                  (u32)(cy + (card_h - (int)ph_px) / 2),
@@ -466,18 +473,38 @@ void xmb_grid_gpu(const GridGeom *gg, const XMBItem *items, int count,
                      strcmp(ty, "Playlist")    == 0;
         ThumbImg img = (!gg->portrait && !music && items[idx].has_thumb)
                      ? THUMB_IMG_THUMB : THUMB_IMG_PRIMARY;
-        xmb_card_gpu_one(items[idx].id, cx, cy, gg->card_w, gg->card_h, img);
+        const int cw = gg->card_w, ch = gg->card_h;
+        u32 off = 0, pitch = 0;
+        if (thumb_gpu_texture(items[idx].id, cw, ch, &off, &pitch, img)) {
+            // A poster that has just arrived fades in over its placeholder.
+            const float fade = thumb_fade_in(items[idx].id, cw, ch, img);
+            if (fade < 1.0f) {
+                ui_rect_gpu_draw(cx, cy, cw, ch, XMB_THUMB_DIM, 255);
+                ui_card_gpu_draw_ex(off, (u32)cw, (u32)ch, pitch, cx, cy, cw, ch,
+                                    0.0f, 1.0f, (u8)(fade * 255.0f + 0.5f));
+            } else {
+                ui_card_gpu_draw(off, (u32)cw, (u32)ch, pitch, cx, cy, cw, ch);
+            }
+        } else if (!music) {
+            // Still loading: the placeholder, and the shimmer unless the fetch
+            // failed.  xmb_grid_cpu then draws only its glyph.
+            ui_rect_gpu_draw(cx, cy, cw, ch, XMB_THUMB_DIM, 255);
+            if (!thumb_failed(items[idx].id, img))
+                depth_shimmer_gpu(cx, cy, cw, ch, 1.0f);
+        }
         if (idx == sel)   // glides between cards (inert with the gate off)
             spine_focus_poster_gpu(cx, cy, gg->card_w, gg->card_h);
     }
 }
 
 // CPU phase (after rsxSync): card images, placeholders, selection border,
-// progress strips.
+// progress strips.  With the GPU path up, xmb_grid_gpu has already drawn the
+// loading placeholders (and their shimmer), so the CPU keeps off them.
 void xmb_grid_cpu(const GridGeom *gg, const XMBItem *items, int count,
                   int sel, int scroll, int y0) {
     int i0, i1;
     gm_range(gg, &i0, &i1);
+    s_grid_gpu_placeholders = ui_card_gpu_ready();
     for (int i = i0; i < i1; i++) {
         int idx = scroll + i;
         if (idx < 0) continue;
@@ -494,6 +521,7 @@ void xmb_grid_cpu(const GridGeom *gg, const XMBItem *items, int count,
                       items[idx].progress_pct, idx == sel,
                       music ? items[idx].name : NULL);
     }
+    s_grid_gpu_placeholders = false;
 
     // Prefetch the next page of thumbs past the visible window so paging
     // down shows images instead of placeholders.  Queued after the visible

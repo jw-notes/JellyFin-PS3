@@ -503,6 +503,7 @@ void xmb_home_stage_text(void) {
 int xmb_home_ambient_art(AmbientArt *out, int max) {
     home_init_once();
     static char meta[16][16];
+    static char epi[16][160];
     static const int order[4] = { HR_CONTINUE, HR_NEXTUP, HR_MOVIES, HR_SHOWS };
     int n = 0;
     for (int oi = 0; oi < 4 && n < max; oi++) {
@@ -528,6 +529,16 @@ int xmb_home_ambient_art(AmbientArt *out, int max) {
             else
                 snprintf(m, 16, "%s", row->items[c].year_str);
             a->meta = m;
+            a->item_id = row->items[c].id;
+            a->year    = row->items[c].year_str;
+            a->rating  = x->rating;
+            char *e = epi[n < 16 ? n : 15];
+            if (strcmp(row->items[c].type, "Episode") == 0 && x->episode)
+                snprintf(e, 160, "S%u E%u  \xC2\xB7  %s", (unsigned)x->season,
+                         (unsigned)x->episode, row->items[c].name);
+            else
+                e[0] = '\0';
+            a->episode = e;
             n++;
         }
     }

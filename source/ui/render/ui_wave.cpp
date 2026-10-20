@@ -499,6 +499,14 @@ static float s_bg_dim = 0.0f;
 void wave_set_bg_dim(float d) { s_bg_dim = d < 0.0f ? 0.0f : (d > 1.0f ? 1.0f : d); }
 
 static inline void wave_bg_refresh(void) {
+    // The ribbons' colours follow the theme's lockup pair (wave_palette.h).
+    // Re-derived only when it changes: a frame compares two words.
+    static u32 s_pal_a = 0xFFFFFFFFu, s_pal_b = 0xFFFFFFFFu;
+    if (XMB_LK_MARK_A != s_pal_a || XMB_LK_MARK_B != s_pal_b) {
+        s_pal_a = XMB_LK_MARK_A;
+        s_pal_b = XMB_LK_MARK_B;
+        g_jw_pal = jw_palette_for(s_pal_a, s_pal_b);
+    }
     // Without jellyfin_months.ini this is exactly bg_from_two(top, bot).
     s_bg = month_bg_current(XMB_BG_TOP, XMB_BG_BOT, XMB_ACCENT);
 }

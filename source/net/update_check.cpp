@@ -25,6 +25,8 @@
 #include <ssl/ssl.h>
 
 #include "update_check.h"
+#include "release_version.h"
+#include "jf_paths.h"
 #include "https_client.h"
 #include "http.h"    // HTTP_USER_AGENT (GitHub rejects requests without one)
 #include "timing.h"
@@ -33,7 +35,7 @@
 // This fork's own releases.  Use the repo's exact current name: a renamed repo
 // answers with a 301 redirect, which the console's firmware HTTP client does
 // not reliably follow, and the update popup would silently never appear.
-#define UPDATE_URL "https://api.github.com/repos/vortigauntlet/JellyFin-PS3-LosslessAudio/releases/latest"
+#define UPDATE_URL "https://api.github.com/repos/jw-notes/JellyFin-PS3/releases/latest"
 #define UPDATE_TIMEOUT_US (2 * 1000 * 1000)
 
 #define UPDATE_LOG_PATH "/dev_hdd0/tmp/update_detection.txt"
@@ -45,6 +47,7 @@ static bool             s_started = false;
 // so readers polling update_check_result() only ever see a complete result.
 static volatile bool s_done  = false;
 static bool          s_newer = false;
+static bool          s_disabled = false;
 static bool          s_ok    = false;   // a release tag was read, newer or not
 static char          s_latest[64];
 
@@ -91,35 +94,6 @@ static void ulog_raw(const char *buf, u32 len) {
 
 // Split "v2.0-beta" into up to three numeric fields (missing = 0) and the
 // trailing suffix ("-beta", or "" for a plain release).
-static void ver_split(const char *s, int num[3], const char **suffix) {
-    if (*s == 'v' || *s == 'V') s++;
-    num[0] = num[1] = num[2] = 0;
-    int i = 0;
-    while (i < 3 && *s >= '0' && *s <= '9') {
-        int v = 0;
-        while (*s >= '0' && *s <= '9') v = v * 10 + (*s++ - '0');
-        num[i++] = v;
-        if (*s != '.') break;
-        s++;
-    }
-    *suffix = s;
-}
-
-// > 0 when a is newer than b.  Numeric fields decide first; on a tie a plain
-// release outranks a pre-release ("1.0" > "1.0-beta"), and two pre-release
-// suffixes fall back to name order ("-beta" > "-alpha").  A tag with no
-// number at all ("Testing") parses as 0.0.0, i.e. never newer.
-static int ver_cmp(const char *a, const char *b) {
-    int na[3], nb[3];
-    const char *sa, *sb;
-    ver_split(a, na, &sa);
-    ver_split(b, nb, &sb);
-    for (int i = 0; i < 3; i++)
-        if (na[i] != nb[i]) return na[i] - nb[i];
-    if ((*sa == '\0') != (*sb == '\0')) return (*sa == '\0') ? 1 : -1;
-    return strcasecmp(sa, sb);
-}
-
 // -------------------------------------------------------
 // Fetch
 // -------------------------------------------------------
@@ -249,7 +223,7 @@ static void do_check(void) {
             goto cleanup;
         }
         s_ok = true;
-        int cmp = ver_cmp(tag, APP_VERSION);
+        int cmp = release_version_cmp(tag, APP_VERSION);
         ulog("tag=%s app=%s cmp=%d -> %s", tag, APP_VERSION, cmp,
              cmp > 0 ? "UPDATE AVAILABLE" : "up to date");
         if (cmp > 0) {
@@ -280,14 +254,33 @@ static void check_thread_fn(void *arg) {
 
 void update_check_start(void) {
     if (s_started) return;
+    s_done = false;
+    s_newer = false;
+    s_ok = false;
     s_latest[0] = '\0';
     s_log_t0 = timing_get_us();
+    s_disabled = false;
+    FILE *gate = fopen(jf_data_path("jellyfin_updatecheck.txt"), "r");
+    if (gate) {
+        int enabled = 1;
+        if (fscanf(gate, "%d", &enabled) == 1) s_disabled = enabled == 0;
+        fclose(gate);
+    }
+    if (s_disabled) {
+        ulog("update check disabled by diagnostic setting");
+        __sync_synchronize();
+        s_done = true;
+        return;
+    }
     s32 rc = sysThreadCreate(&s_thread, check_thread_fn, NULL,
-                             1500, 65536, 0, "upd_check");
+                             1500, 65536, THREAD_JOINABLE, "upd_check");
     if (rc == 0)
         s_started = true;
-    else
+    else {
         ulog("FAIL sysThreadCreate: 0x%08x", (u32)rc);
+        __sync_synchronize();
+        s_done = true;
+    }
 }
 
 void update_check_shutdown(void) {
@@ -309,6 +302,7 @@ bool update_check_done(void) {
 }
 
 int update_check_state(void) {
+    if (s_disabled) return UPD_IDLE;
     if (!s_started && !s_done) return UPD_IDLE;
     if (!s_done)  return UPD_CHECKING;
     if (s_newer)  return UPD_AVAILABLE;

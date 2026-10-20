@@ -53,6 +53,7 @@
 
 #include "wave_cam.h"
 #include "wave_kernel.h"     /* wk_sinf, for the drifting key */
+#include "wave_palette.h"    /* the light colours below, themed at run time */
 
 // --- the rig --------------------------------------------------------------
 //
@@ -84,18 +85,15 @@
 
 // Light colours, 0..1 linear, straight from the design.
 //   key  #dcefff   fill #8a4fb0   rim #00a4dc   ambient #2a2140
-#define JW_KEY_R       0.862745f
-#define JW_KEY_G       0.937255f
-#define JW_KEY_B       1.000000f
-
-#define JW_FILL_R      0.541176f
-#define JW_FILL_G      0.309804f
-#define JW_FILL_B      0.690196f
-
-#define JW_RIM_R       0.000000f
-#define JW_RIM_G       0.643137f
-#define JW_RIM_B       0.862745f
-
+#define JW_KEY_R       (g_jw_pal.key[0])
+#define JW_KEY_G       (g_jw_pal.key[1])
+#define JW_KEY_B       (g_jw_pal.key[2])
+#define JW_FILL_R      (g_jw_pal.fill[0])
+#define JW_FILL_G      (g_jw_pal.fill[1])
+#define JW_FILL_B      (g_jw_pal.fill[2])
+#define JW_RIM_R       (g_jw_pal.rim[0])
+#define JW_RIM_G       (g_jw_pal.rim[1])
+#define JW_RIM_B       (g_jw_pal.rim[2])
 // Intensities.  The design's ratios (3.4 : 0.75 : 0.9) are preserved; the
 // common scale lives in JW_EXPOSURE.
 #define JW_KEY_I       1.000000f
@@ -114,12 +112,12 @@
 // and the object sits below the first and beside the second.  Setting them
 // equal flattened the body into one ambient colour and cost the depth cue the
 // hemispheric split exists for.
-#define JW_AMB_SKY_R   0.170196f
-#define JW_AMB_SKY_G   0.236471f
-#define JW_AMB_SKY_B   0.369020f
-#define JW_AMB_GND_R   0.202353f
-#define JW_AMB_GND_G   0.137647f
-#define JW_AMB_GND_B   0.292157f
+#define JW_AMB_SKY_R   (g_jw_pal.sky[0])
+#define JW_AMB_SKY_G   (g_jw_pal.sky[1])
+#define JW_AMB_SKY_B   (g_jw_pal.sky[2])
+#define JW_AMB_GND_R   (g_jw_pal.gnd[0])
+#define JW_AMB_GND_G   (g_jw_pal.gnd[1])
+#define JW_AMB_GND_B   (g_jw_pal.gnd[2])
 #define JW_AMB_I       0.550000f
 
 // Specular tint and strength.  Wet gel's highlight takes the light's colour,
@@ -130,10 +128,9 @@
 // The highlight's colour.  It used to be the key light's own (DCEFFF, near
 // white), which on hardware read as a white shine across the body.  It is now
 // a neon Jellyfin cyan, so the sheen reads as glow rather than gloss.
-#define JW_GLOW_R      0.220000f
-#define JW_GLOW_G      0.780000f
-#define JW_GLOW_B      1.000000f
-
+#define JW_GLOW_R      (g_jw_pal.glow[0])
+#define JW_GLOW_G      (g_jw_pal.glow[1])
+#define JW_GLOW_B      (g_jw_pal.glow[2])
 // --- Fresnel, and the mistake that is easy to make here -------------------
 //
 // The first build of this rig added the Fresnel LUT straight into the result

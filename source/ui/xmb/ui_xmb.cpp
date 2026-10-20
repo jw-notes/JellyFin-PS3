@@ -1,6 +1,7 @@
 // XMB main screen — per-frame loop: input dispatch, CPU draw phase,
 // RSX/TTF draw phase, contextual hints.
 
+#include "watchdog.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -48,6 +49,7 @@ static void xmb_reset_state(void) {
     g_music_depth  = 0;
     g_music_sub_count = 0; g_music_sub_sel = 0;
     g_music_sub_scroll = 0; g_music_sub_total = 0;
+    g_osk_row = 0; g_osk_col = 0; g_osk_sym = false;
 }
 
 // Resolve the card-grid view for the current tab: grid geometry, which item
@@ -196,6 +198,7 @@ static void xmb_draw_gpu_phase(int tab) {
     // queue at every depth, a library's into its grid until the grid takes
     // the screen back (render/depth.h, ui_depth.cpp).
     if (tab == XMB_TAB_HOME) {
+        wd_stage("home gpu");
         xmb_home_stage_gpu();
     } else if (depth_lib_owns(tab)) {
         depth_lib_gpu(tab);          // the L1 column, or its swing into the grid
@@ -224,8 +227,11 @@ static void xmb_draw_cpu_phase(int tab) {
         xmb_draw_divider();
 
     if (tab == XMB_TAB_HOME) {
+        wd_stage("home cpu");
         xmb_home_stage_cpu();
+        wd_stage("home prefetch next");
         depth_lib_prefetch(xmb_next_enabled(tab, +1), 6);   // the libraries either side
+        wd_stage("home prefetch prev");
         depth_lib_prefetch(xmb_next_enabled(tab, -1), 6);
     } else if (depth_lib_owns(tab)) {
         depth_lib_cpu(tab);
@@ -233,7 +239,7 @@ static void xmb_draw_cpu_phase(int tab) {
         depth_lib_prefetch(xmb_next_enabled(tab, +1), 6);
         depth_lib_prefetch(xmb_next_enabled(tab, -1), 6);
     } else if (tab == XMB_TAB_SEARCH) {
-        xmb_cpu_draw_search();
+        xmb_cpu_draw_osk();
         xmb_cpu_draw_search_results();
     } else if (tab == XMB_TAB_SETTINGS) {
         xmb_cpu_draw_settings();
@@ -258,12 +264,14 @@ static void xmb_draw_cpu_phase(int tab) {
 static void xmb_draw_text_phase(int tab) {
     xmb_draw_topbar();
 
+    wd_stage("topbar done");
     if (tab == XMB_TAB_HOME) {
+        wd_stage("home text");
         xmb_home_stage_text();
     } else if (depth_lib_owns(tab)) {
         depth_lib_text(tab);
     } else if (tab == XMB_TAB_SEARCH) {
-        xmb_rsx_draw_search();
+        xmb_rsx_draw_osk();
     } else if (tab == XMB_TAB_SETTINGS) {
         xmb_draw_settings();
     } else if (xmb_kind(tab) == TABKIND_LIVETV) {
@@ -451,12 +459,22 @@ static void xmb_draw_hints(int tab) {
             }
         }
     } else if (tab == XMB_TAB_SEARCH) {
-        if (g_search_focus_results) {
-            static const Hint h[] = {{'X',TRN("Open")},{'T',TRN("Details")},{'C',TRN("Clear")}};
+        // L2 and R2 pair into one "Filter" hint while there are results.
+        if (g_search_focus_results && xmb_search_showing_recent()) {
+            static const Hint h[] = {{'X',TRN("Search")},{'S',TRN("Remove")},{'C',TRN("Back")}};
             draw_hints_bar(h, 3);
+        } else if (g_search_focus_results && xmb_search_has_filters()) {
+            static const Hint h[] = {{'X',TRN("Open")},{'T',TRN("Details")},{'L',""},{'R',TRN("Filter")},{'C',TRN("Back")}};
+            draw_hints_bar(h, 5);
+        } else if (g_search_focus_results) {
+            static const Hint h[] = {{'X',TRN("Open")},{'T',TRN("Details")},{'C',TRN("Back")}};
+            draw_hints_bar(h, 3);
+        } else if (xmb_search_has_filters()) {
+            static const Hint h[] = {{'X',TRN("Type")},{'S',TRN("Delete")},{'L',""},{'R',TRN("Filter")},{'C',TRN("Clear")}};
+            draw_hints_bar(h, 5);
         } else {
-            static const Hint h[] = {{'X',TRN("Type")},{'C',TRN("Clear")}};
-            draw_hints_bar(h, 2);
+            static const Hint h[] = {{'X',TRN("Type")},{'S',TRN("Delete")},{'C',TRN("Clear")}};
+            draw_hints_bar(h, 3);
         }
     } else if (xmb_kind(tab) == TABKIND_MUSIC && g_music_header) {
         static const Hint h[] = {{'D',TRN("Switch")},{'X',TRN("Select")}};
@@ -511,9 +529,12 @@ void ui_run_xmb(void) {
         }
     }
 
+    OSK_Y0 = XMB_CONTENT_Y + UIS_H(80);
+
     crash_log("13.4 init_btns");
     init_btns();
     crash_log("13.5 loop enter");
+    wd_start();
 
     // Breadcrumbs inside the loop fire only on the first pass so the log
     // doesn't grow unbounded once the UI is actually running.
@@ -530,11 +551,11 @@ void ui_run_xmb(void) {
             return;
         }
         u64 t_f0 = timing_get_us();
-        if (first_iter) crash_log("13.5a waitflip");
+        wd_stage("13.5a waitflip"); if (first_iter) crash_log("13.5a waitflip");
         waitflip();
         u64 t_vsync = timing_get_us();
         s_fc.vsync += t_vsync - t_f0;
-        if (first_iter) crash_log("13.5b syscb");
+        wd_stage("13.5b syscb"); if (first_iter) crash_log("13.5b syscb");
         sysUtilCheckCallback();
 
         // Self-heal an empty library bar.
@@ -561,6 +582,7 @@ void ui_run_xmb(void) {
                     s_lib_next_us = 1;
                 }
             }
+            wd_stage("13.5f tabs_poll");
             const int got = xmb_detect_tabs_poll();
             if (got >= 0) {
                 if (got == 1 && xmb_have_server_tabs()) {
@@ -591,47 +613,49 @@ void ui_run_xmb(void) {
                 }
             }
         }
+        wd_stage("13.5e thumb_tick");
         thumb_cache_tick();   // age out thumbs nothing on screen still wants
         u64 t_gpu0 = timing_get_us();
-        if (first_iter) crash_log("13.5c clearScreen");
+        wd_stage("13.5c clearScreen"); if (first_iter) crash_log("13.5c clearScreen");
         clearScreen(XMB_BG);
-        if (first_iter) crash_log("13.5d wave_draw");
+        wd_stage("13.5d wave_draw"); if (first_iter) crash_log("13.5d wave_draw");
         wave_snow_ambient();   // a menu: Menu Particles may show here
+        wd_stage("13.5d2 wave_draw");
         wave_draw();
         s_fc.gpu += timing_get_us() - t_gpu0;
-        if (first_iter) crash_log("13.6 wave_draw done");
+        wd_stage("13.6 wave_draw done"); if (first_iter) crash_log("13.6 wave_draw done");
 
         int tab = g_active_tab;
         if (tab != XMB_TAB_SEARCH && tab != XMB_TAB_SETTINGS
             && tab != XMB_TAB_HOME && xmb_kind(tab) != TABKIND_LIVETV
             && xmb_kind(tab) != TABKIND_LOCAL)
             if (!g_items_loaded[tab]) {
-                if (first_iter) crash_log("13.7 fetch_tab_items");
+                wd_stage("13.7 fetch_tab_items"); if (first_iter) crash_log("13.7 fetch_tab_items");
                 xmb_fetch_tab_items(tab);
-                if (first_iter) crash_log("13.7b fetch done");
+                wd_stage("13.7b fetch done"); if (first_iter) crash_log("13.7b fetch done");
             }
 
+        wd_stage("13.7c input");
         poll_buttons();
         input_media_keys_as_shoulders();   // a remote with no L1 / R1
         spine_frame_begin();   // one depth sample for the whole frame
         // The ambient screensaver: a press that wakes it does nothing else.
         const bool amb_swallow =
-            ambient_update(!xmb_update_popup_active() && !g_overscan_calib &&
-                           !xmb_search_osk_active());
+            ambient_update(!xmb_update_popup_active() && !g_overscan_calib);
         const bool draw_ui = ambient_draw_ui();
         bool should_exit = false;
+        wd_stage("13.7c2 boot_anim frame");
         if (boot_anim_xmb_frame())
             ;   // cold boot still assembling: a press skips it, nothing else
-        else if (xmb_search_osk_active())
-            should_exit = xmb_handle_input_search();   // the system keyboard has the pad
         else if (amb_swallow)
             ;                           // it only brought the UI back
         else if (xmb_update_popup_active())
             xmb_update_popup_input();   // modal: the screen below keeps focus state
         else if (peek_active())
             peek_input();               // the quick-peek owns the pad while up
-        else if (BTN_PRESSED(square)) {
+        else if (BTN_PRESSED(square) && tab != XMB_TAB_SEARCH) {
             // Square: the visualiser, JellyWave -> JellyDrop -> Off (ui_wave.h).
+            // Not on Search, where Square deletes a character.
             wave_vis_cycle();
             ui_sfx_play(SFX_OPTION);
         }
@@ -650,11 +674,13 @@ void ui_run_xmb(void) {
         slog_menu_tick();   // STATE: MENU ... (emulator-only, emits on change)
 
         // Card images go into the FIFO with the wave, ahead of the fence.
+        wd_stage("13.7d gpu_phase");
         if (!g_overscan_calib) {
             if (draw_ui) xmb_draw_gpu_phase(tab);
             else         ambient_gpu();
         }
 
+        wd_stage("13.7e rsxSync");
         u64 t_sync0 = timing_get_us();
         rsxSync();
         u64 t_sync1 = timing_get_us();
@@ -674,19 +700,19 @@ void ui_run_xmb(void) {
         } else if (!draw_ui) {
             ambient_text();
         } else {
-            if (first_iter) crash_log("13.8 cpu_phase");
+            wd_stage("13.8 cpu_phase"); if (first_iter) crash_log("13.8 cpu_phase");
             xmb_draw_cpu_phase(tab);
             u64 t_cards = timing_get_us();
             s_fc.cards += t_cards - t_sync1;
-            if (first_iter) crash_log("13.8b text_phase");
+            wd_stage("13.8b text_phase"); if (first_iter) crash_log("13.8b text_phase");
             xmb_draw_text_phase(tab);
             u64 t_text = timing_get_us();
             s_fc.text += t_text - t_cards;
-            if (first_iter) crash_log("13.8c hints");
+            wd_stage("13.8c hints"); if (first_iter) crash_log("13.8c hints");
             bool popup = xmb_update_popup_active();
             // The popup and the quick-peek draw their own hints.
             if (!popup && !peek_visible()) xmb_draw_hints(tab);
-            if (first_iter) crash_log("13.8d tabs");
+            wd_stage("13.8d tabs"); if (first_iter) crash_log("13.8d tabs");
             spine_draw();
             if (popup) {
                 // The popup GPU-dims the whole screen and then lays an opaque
@@ -705,19 +731,24 @@ void ui_run_xmb(void) {
         // Submit the frame's text runs.  No fence: flip() queues the flip
         // behind these quads and waitflip() at the top of the next iteration
         // is the wait, so the RSX gets the rest of the vblank to draw them.
+        wd_stage("13.8e text_flush");
         u64 t_tg0 = timing_get_us();
         ui_text_gpu_flush();
+        wd_stage("13.8e2 peek");
         peek_draw_over();              // the quick-peek, over the grid's text
+        wd_stage("13.8e3 ambient");
         ambient_cover_over_ui();       // the dissolve, over everything
         s_fc.textgpu += timing_get_us() - t_tg0;
 
         // Cold boot: the veil and the travelling mark, over everything above.
+        wd_stage("13.8f boot_anim overlay");
         boot_anim_xmb_overlay();
 
         u64 t_flip0 = timing_get_us();
-        if (first_iter) crash_log("13.9 first flip");
+        wd_stage("13.9 first flip"); if (first_iter) crash_log("13.9 first flip");
         flip();
         s_fc.flip += timing_get_us() - t_flip0;
+        wd_beat(); wd_stage("13.10 frame done");
         if (first_iter) { crash_log("13.10 first frame done"); first_iter = false; }
         sysUtilCheckCallback();
         xmb_cost_tick(timing_get_us() - t_f0);

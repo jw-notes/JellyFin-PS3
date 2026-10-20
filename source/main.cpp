@@ -93,12 +93,13 @@ static void sysutil_exit_callback(u64 status, u64 param, void *usrdata) {
 // FILE* + fflush can lose its tail on a hard GPU hang (the kind that needs a
 // power-cycle); closing every line forces it through the lv2 FS so the last
 // breadcrumb is on disk no matter how the next step dies. First call
-// truncates the file; every call after that appends.
+// truncates the file; every call after that appends.  Each line carries the
+// free main memory, so a hang shows how much headroom it happened with.
 void crash_log(const char *msg) {
     static bool started = false;
     FILE *f = fopen("/dev_hdd0/tmp/crash_log.txt", started ? "a" : "w");
     if (f) {
-        fprintf(f, "%s\n", msg);
+        fprintf(f, "%s [free=%uKB]\n", msg, meminfo_avail_kb());
         fclose(f);
         started = true;
     }

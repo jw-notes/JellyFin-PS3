@@ -76,6 +76,17 @@ bool thumb_gpu_texture(const char *item_id, int w, int h,
                        u32 *out_offset, u32 *out_pitch,
                        ThumbImg img = THUMB_IMG_PRIMARY);
 
+// 0..1 over the first THUMB_FADE_US after a fetch put this image in its
+// slot, so a card can fade it in rather than pop; 1 when it has been there
+// longer, came back with a refill, or is not cached at all.
+#define THUMB_FADE_US 260000ULL
+float thumb_fade_in(const char *item_id, int w, int h,
+                    ThumbImg img = THUMB_IMG_PRIMARY);
+
+// True while a fetch of this image has just failed (it is backing off), so a
+// loading indicator can stop instead of promising art that is not coming.
+bool thumb_failed(const char *item_id, ThumbImg img = THUMB_IMG_PRIMARY);
+
 // Largest square edge a slot can hold (slots are sized for grid cards at
 // init).  thumb_request silently drops anything bigger, so callers wanting
 // larger on-screen art must request at this cap and upscale when blitting.

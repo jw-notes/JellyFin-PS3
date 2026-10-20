@@ -82,6 +82,11 @@ void ui_card_gpu_end(void);
 // ui_card_gpu_end(), i.e. still inside the frame's GPU phase.
 void ui_rect_gpu_draw(int x, int y, int w, int h, u32 colour, u8 alpha);
 
+// The same with an opacity per corner (top-left, top-right, bottom-left,
+// bottom-right), blended smoothly between them: scrims and the loading shimmer.
+void ui_rect_gpu_gradient(int x, int y, int w, int h, u32 colour,
+                          u8 a_tl, u8 a_tr, u8 a_bl, u8 a_br);
+
 // The full selection treatment for a card at (cx,cy,w,h): the same geometry
 // xmb_draw_card draws on the CPU, so the two are interchangeable.
 void ui_card_gpu_selection(int cx, int cy, int w, int h);
@@ -93,6 +98,10 @@ void ui_card_gpu_selection(int cx, int cy, int w, int h);
 #include "bitmap.h"
 #define GPU_TEX_BACKDROP 0
 #define GPU_TEX_POSTER   1
+// The artwork screensaver's two backdrops (this one and the next), so it never
+// touches the detail page's.
+#define GPU_TEX_AMB0     2
+#define GPU_TEX_AMB1     3
 bool ui_gpu_tex_upload(int slot, const Bitmap *bm);
 void ui_gpu_tex_clear(int slot);
 bool ui_gpu_tex_draw(int slot, int x, int y, int w, int h);

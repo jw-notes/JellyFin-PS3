@@ -65,6 +65,8 @@ static bool d_fetch_gated = false;   // fetch thread's last-known gate state
 // one: 32 working slots (~15MB) beat 46 that can never be filled.  Two full
 // screens of cards still fit, and eviction is ~3s anyway.
 #define THUMB_CACHE_SIZE  32
+// Main memory (KB) the slots must leave free; see thumb_cache_init.
+#define THUMB_HEADROOM_KB 8192
 #define FETCH_BUF_SIZE    (256*1024)
 
 typedef enum { SLOT_EMPTY = 0, SLOT_QUEUED, SLOT_READY } SlotState;
@@ -94,6 +96,10 @@ typedef struct {
     // when each was written.
     u32       px_sum;
     u32       vram_sum;
+
+    // When a fetch last published new pixels here (0 = before this session's
+    // init), for the cards' fade-in.  A refill keeps it: same image.
+    u64       ready_us;
 
     // bmp.pixels holds THIS slot's image.  False for a slot that came through
     // a playback on its VRAM mirror alone (thumb_cache_shutdown frees the
@@ -511,6 +517,7 @@ static void fetch_thread_fn(void *arg) {
             s_slots[si].state    = SLOT_READY;
             s_slots[si].px_sum   = px_sum;
             s_slots[si].px_valid = true;
+            if (!refill) s_slots[si].ready_us = timing_get_us();
             // The decode just rewrote bmp; the mirror is stale until
             // thumb_gpu_texture() copies it on the render thread.  Uploading
             // here would be a main->VRAM write from the FETCH thread while
@@ -621,7 +628,13 @@ void thumb_cache_init(void) {
             b->width  = 0;
             b->height = 0;
         }
-        if (!b->pixels) b->pixels = (u32*)memalign(16, s_max_px * 4);
+        // Leave headroom for HTTP response buffers, glyph rasterising and
+        // firmware dialogs: a cache that takes the last of the heap froze
+        // the menu.  Fewer slots only means fewer posters held at once.
+        // Free space already inside the heap counts too (lv2 never sees it).
+        if (!b->pixels &&
+            meminfo_avail_kb() + mallinfo().fordblks / 1024 >= THUMB_HEADROOM_KB + s_max_px * 4 / 1024)
+            b->pixels = (u32*)memalign(16, s_max_px * 4);
         if (!b->pixels) failed++;
         b->offset = 0;
         // VRAM mirror.  32 slots x ~455 KB is ~14.6 MB of the 256 MB of RSX
@@ -833,6 +846,27 @@ void thumb_cache_retarget(void) {
     s_fetch_hold = s_frame + THUMB_SWITCH_COOLDOWN;
     lock_release();
     glogf("RETARGET frame=%u -> hold=%u", s_frame, s_fetch_hold);
+}
+
+float thumb_fade_in(const char *item_id, int w, int h, ThumbImg img)
+{
+    if (!item_id || w <= 0 || h <= 0) return 1.0f;
+    lock_acquire();
+    const int si = find_slot(item_id, (u32)w, (u32)h, (u8)img);
+    const u64 at = si >= 0 && s_slots[si].state == SLOT_READY ? s_slots[si].ready_us : 0;
+    lock_release();
+    if (!at) return 1.0f;
+    const u64 age = timing_get_us() - at;
+    return age >= THUMB_FADE_US ? 1.0f : (float)age / (float)THUMB_FADE_US;
+}
+
+bool thumb_failed(const char *item_id, ThumbImg img)
+{
+    if (!item_id) return false;
+    lock_acquire();
+    const bool f = fail_listed(item_id, (u8)img);
+    lock_release();
+    return f;
 }
 
 bool thumb_gpu_texture(const char *item_id, int w, int h,

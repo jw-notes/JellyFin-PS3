@@ -39,13 +39,15 @@ typedef struct {
 } HomeRow;
 
 // Favourites and Downloaded appear only when they have something to show.
-enum { HR_CONTINUE, HR_NEXTUP, HR_FAVOURITES, HR_DOWNLOADED, HR_MOVIES, HR_SHOWS,
+// "Because you watched ..." (HR_BECAUSE) appears only when the server knows
+// something like the last thing finished.
+enum { HR_CONTINUE, HR_NEXTUP, HR_FAVOURITES, HR_DOWNLOADED, HR_BECAUSE, HR_MOVIES, HR_SHOWS,
        HR_MUSIC, HOME_ROWS_N };
 
 // Rows that go stale when something is played or starred: refetched.
-static bool row_dynamic(int r)  { return r == HR_CONTINUE || r == HR_NEXTUP || r == HR_FAVOURITES; }
+static bool row_dynamic(int r)  { return r == HR_CONTINUE || r == HR_NEXTUP || r == HR_FAVOURITES || r == HR_BECAUSE; }
 // Rows that are not shown while empty.
-static bool row_optional(int r) { return r == HR_FAVOURITES || r == HR_DOWNLOADED; }
+static bool row_optional(int r) { return r == HR_FAVOURITES || r == HR_DOWNLOADED || r == HR_BECAUSE; }
 // Rows read from the offline library on this console, not asked of the server.
 static bool row_local(int r)    { return r == HR_DOWNLOADED; }
 
@@ -68,6 +70,9 @@ static unsigned s_seen_gen = 0;
 static int     s_focus_row = 0;
 static bool    s_inited    = false;
 
+// HR_BECAUSE's heading names the title it is based on.
+static char    s_because_title[160];
+
 static void home_init_once(void) {
     if (s_inited) return;
     s_inited = true;
@@ -76,6 +81,7 @@ static void home_init_once(void) {
     s_rows[HR_NEXTUP].title   = TRN("Next Up");                  s_rows[HR_NEXTUP].kind   = HROW_LANDSCAPE;
     s_rows[HR_FAVOURITES].title = TRN("Favourites");             s_rows[HR_FAVOURITES].kind = HROW_PORTRAIT;
     s_rows[HR_DOWNLOADED].title = TRN("Downloaded");             s_rows[HR_DOWNLOADED].kind = HROW_PORTRAIT;
+    s_rows[HR_BECAUSE].title  = s_because_title;                 s_rows[HR_BECAUSE].kind  = HROW_PORTRAIT;
     s_rows[HR_MOVIES].title   = TRN("Recently Added in Movies"); s_rows[HR_MOVIES].kind   = HROW_PORTRAIT;
     s_rows[HR_SHOWS].title    = TRN("Recently Added in Shows");  s_rows[HR_SHOWS].kind    = HROW_PORTRAIT;
     s_rows[HR_MUSIC].title    = TRN("Recently Added in Music"); s_rows[HR_MUSIC].kind    = HROW_SQUARE;
@@ -100,6 +106,7 @@ static void home_mark_dynamic_stale(void) {
     s_rows[HR_CONTINUE].loaded = false;
     s_rows[HR_NEXTUP].loaded   = false;
     s_rows[HR_FAVOURITES].loaded = false;     // keeps its place: a star toggled
+    s_rows[HR_BECAUSE].loaded  = false;       // what was just finished may change it
     s_seen_gen = g_play_gen;
     home_stage_dynamic_reset();
 }
@@ -126,6 +133,14 @@ static bool home_row_url(int r, char *url, size_t cap) {
             g_server, g_userid, HOME_ROW_MAX, fields);
     } else if (r == HR_DOWNLOADED) {
         return false;        // read from the offline library (home_step_local)
+    } else if (r == HR_BECAUSE) {
+        // Step one: the film or episode finished most recently.  Step two,
+        // what is like it, is home_because_fetch().
+        snprintf(url, cap,
+            "%s/Users/%s/Items?SortBy=DatePlayed&SortOrder=Descending"
+            "&IncludeItemTypes=Movie,Episode&Recursive=true&Filters=IsPlayed"
+            "&Limit=1&Fields=SeriesId",
+            g_server, g_userid);
     } else if (r == HR_MUSIC) {
         // Home samples the FIRST music library; the others are still reachable
         // as their own tabs.
@@ -155,6 +170,42 @@ static bool home_row_url(int r, char *url, size_t cap) {
     return true;
 }
 
+// "Because you watched": `buf` holds the answer to HR_BECAUSE's request (the
+// last film or episode finished).  Ask the server for what is similar to it --
+// to its series, for an episode -- into the same buffer, and leave out the
+// title itself.  Runs wherever the row's fetch runs (the row worker, or the
+// boot prefetch), so it blocks only that.  Returns the item count, or -1 when
+// either request failed; `title` gets the row's heading.
+static int home_because_fetch(char *buf, int cap, int status, XMBItem *items,
+                              HomeExtra *extra, char *title, int title_cap) {
+    if (status != 200) return -1;
+    char type[32] = "", id[64] = "", name[128] = "";
+    json_get_string(buf, "Type", type, sizeof type);
+    const bool episode = strcmp(type, "Episode") == 0;
+    json_get_string(buf, episode ? "SeriesId" : "Id", id, sizeof id);
+    json_get_string(buf, episode ? "SeriesName" : "Name", name, sizeof name);
+    if (!id[0] || !name[0]) return 0;          // nothing finished yet: no row
+    decode_unicode_escapes(name);
+
+    char url[512];
+    snprintf(url, sizeof url,
+        "%s/Items/%s/Similar?userId=%s&Limit=%d"
+        "&Fields=Genres,RunTimeTicks,ProductionYear,Container,Tags",
+        g_server, id, g_userid, HOME_ROW_MAX);
+    if (http_request(0, url, NULL, g_token, buf, cap) != 200) return -1;
+    memset(extra, 0, sizeof(HomeExtra) * HOME_ROW_MAX);
+    int n = parse_xmb_items_each(buf, items, HOME_ROW_MAX, home_each_extra, extra);
+    if (n < 0) n = 0;
+    int k = 0;
+    for (int i = 0; i < n; i++) {
+        if (strcmp(items[i].id, id) == 0) continue;
+        if (k != i) { items[k] = items[i]; extra[k] = extra[i]; }
+        k++;
+    }
+    snprintf(title, (size_t)title_cap, TR("Because you watched %s"), name);
+    return k;
+}
+
 // Synchronous: the boot worker's prefetch (nothing else is drawing then).
 static void home_fetch_row(int r) {
     HomeRow *row = &s_rows[r];
@@ -165,6 +216,11 @@ static void home_fetch_row(int r) {
     row->count = (status == 200)
                ? parse_xmb_items_each(responseBuffer, row->items, HOME_ROW_MAX,
                                       home_each_extra, s_extra[r]) : 0;
+    if (r == HR_BECAUSE) {
+        const int n = home_because_fetch(responseBuffer, RESPONSE_SIZE, status, row->items,
+                                         s_extra[r], s_because_title, sizeof s_because_title);
+        row->count = n < 0 ? 0 : n;
+    }
     row->loaded = true;
 }
 
@@ -189,6 +245,7 @@ static HomeExtra        s_hw_extra[HOME_ROW_MAX];
 static char             s_hw_url[512];
 static int              s_hw_count = 0;
 static int              s_hw_status = 0;
+static char             s_hw_title[160];        // HR_BECAUSE's heading, from the worker
 static int              s_hw_row = -1;          // the row in flight
 static unsigned         s_hw_gen = 0;           // g_play_gen when it was asked for
 static volatile int     s_hw_state = 0;         // 0 idle, 1 queued, 2 done
@@ -207,6 +264,12 @@ static void home_worker_fn(void *arg) {
         s_hw_count  = (status == 200)
                     ? parse_xmb_items_each(s_hw_buf, s_hw_items, HOME_ROW_MAX,
                                            home_each_extra, s_hw_extra) : 0;
+        if (s_hw_row == HR_BECAUSE) {
+            const int n = home_because_fetch(s_hw_buf, HOME_WORK_BUF, status, s_hw_items,
+                                             s_hw_extra, s_hw_title, sizeof s_hw_title);
+            s_hw_status = n < 0 ? 0 : 200;        // a failure keeps the row it had
+            s_hw_count  = n < 0 ? 0 : n;
+        }
         __sync_synchronize();
         s_hw_state = 2;
     }
@@ -245,6 +308,8 @@ static void home_worker_collect(void) {
             memcpy(row->items, s_hw_items, (size_t)n * sizeof(XMBItem));
             memcpy(s_extra[r], s_hw_extra, sizeof s_extra[r]);
             row->count = n;
+            if (r == HR_BECAUSE && s_hw_status == 200)
+                snprintf(s_because_title, sizeof s_because_title, "%s", s_hw_title);
         }
         row->loaded = true;
     }

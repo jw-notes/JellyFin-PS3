@@ -118,13 +118,13 @@ static void test_builtin_golden_age(void) {
     ck_u32("accent",        g_theme.accent,        0xE0A13C);
     ck_u32("accent_alt",    g_theme.accent_alt,    0xC8332E);
     ck_u32("accent_deep",   g_theme.accent_deep,   0x8A5F1E);
-    // The lockup keeps Jellyfin's own colours in every theme (decided on
-    // hardware 2026-09-24, overriding README 2.1's gold wordmark E8B45C and
-    // the gold mark): the same values as built-in 0.
-    ck_u32("wordmark",      g_theme.wordmark,      0x00A4DC);
-    ck_u32("lk_mark_a",     g_theme.lk_mark_a,     0xAA5CC3);
-    ck_u32("lk_word_a",     g_theme.lk_word_a,     0x00A4DC);
-    ck_u32("lk_word_d",     g_theme.lk_word_d,     0xAA5CC3);
+    // The lockup follows the theme again (2026-10-20): the gold mark, a gold
+    // to copper wordmark, and the same pair for the wave (wave_palette.h).
+    ck_u32("wordmark",      g_theme.wordmark,      0xE8B45C);
+    ck_u32("lk_mark_a",     g_theme.lk_mark_a,     0xE8B45C);
+    ck_u32("lk_mark_b",     g_theme.lk_mark_b,     0xB5651D);
+    ck_u32("lk_word_a",     g_theme.lk_word_a,     0xF0C878);
+    ck_u32("lk_word_d",     g_theme.lk_word_d,     0xB5651D);
     ck_u32("text",          g_theme.text,          0xF4EDE1);
     ck_u32("text_dim",      g_theme.text_dim,      0xB3A695);
     ck_u32("text_faint",    g_theme.text_faint,    0x6D6353);
@@ -194,6 +194,28 @@ static void test_ini_matches_builtin(const char *path, int builtin, bool has_loc
         ck_u32("lk_word_c", g_theme.lk_word_c, want.lk_word_c);
         ck_u32("lk_word_d", g_theme.lk_word_d, want.lk_word_d);
     }
+}
+
+// Every theme in themes/jw-notes (shipped in the package) must load, carry a
+// name, and give the lockup -- and so the wave -- its own pair rather than
+// inheriting XMB wave's.
+static void test_jw_notes_themes(void) {
+    static const char *files[] = { "deep-ocean", "emerald", "crimson-night", "aurora",
+                                   "arctic", "midnight-rose", "synthwave" };
+    printf("themes/jw-notes load and colour the lockup\n");
+    for (unsigned i = 0; i < sizeof files / sizeof files[0]; i++) {
+        char path[96];
+        snprintf(path, sizeof path, "../themes/jw-notes/%s.ini", files[i]);
+        theme_apply_builtin(0);
+        const bool ok = theme_load(path);
+        ck_true(path, ok);
+        if (!ok) continue;
+        ck_true("  named", g_theme.name[0] != '\0');
+        ck_true("  own lockup pair", g_theme.lk_mark_a != 0xAA5CC3 || g_theme.lk_mark_b != 0x00A4DC);
+        ck_true("  readable text", ((g_theme.text >> 8) & 0xFF) > 0xC0);
+        ck_true("  dark background", ((g_theme.bg_bot >> 8) & 0xFF) < 0x20);
+    }
+    theme_apply_builtin(0);
 }
 
 // golden-age.ini carries none of bg / key_* , so they must be derived from
@@ -412,7 +434,8 @@ int main(void) {
     test_builtin_xmb_wave();
     test_builtin_golden_age();
     test_ini_matches_builtin("../themes/xmb-wave.ini",   0, true);
-    test_ini_matches_builtin("../themes/golden-age.ini", 1, false);
+    test_ini_matches_builtin("../themes/golden-age.ini", 1, true);
+    test_jw_notes_themes();
     test_optional_token_derivation();
     test_malformed_refused();
     test_tolerances();

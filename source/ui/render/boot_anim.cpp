@@ -198,13 +198,15 @@ static void resample(const u32 *src, int sp, u32 *dst, int dp, u32 dst_pitch_px)
 static bool load_mark(void)
 {
     const int v = xmb_mark_variant();
+    const bool gold = v == 1;
     int w, h, comp;
     unsigned char *img = stbi_load_from_memory(
-        v ? jfmark_hd_gold_png : jfmark_hd_cool_png,
-        (int)(v ? jfmark_hd_gold_png_len : jfmark_hd_cool_png_len),
+        gold ? jfmark_hd_gold_png : jfmark_hd_cool_png,
+        (int)(gold ? jfmark_hd_gold_png_len : jfmark_hd_cool_png_len),
         &w, &h, &comp, 4);
     if (!img) return false;
     if (w != JFMARK_HD_MASTER || h != JFMARK_HD_MASTER) { stbi_image_free(img); return false; }
+    if (v == 2) xmb_mark_tint(img, w * h, XMB_LK_MARK_A, XMB_LK_MARK_B);
     u32 *m = (u32 *)malloc((size_t)w * h * 4);
     if (!m) { stbi_image_free(img); return false; }
     for (int i = 0; i < w * h; i++) {
@@ -784,7 +786,7 @@ bool boot_anim_begin(void)
 
     char b[128];
     snprintf(b, sizeof b, "boot: animation ON, %s mark (%s), %ux%u, tv wake %d ms",
-             s_gpu ? "RSX" : "CPU", xmb_mark_variant() ? "gold" : "cool",
+             s_gpu ? "RSX" : "CPU", xmb_mark_variant() == 1 ? "gold" : xmb_mark_variant() == 2 ? "theme" : "cool",
              display_width, display_height, (int)s_tv_wait_ms);
     plog(b);
     crash_log(s_gpu ? "boot: ON (RSX mark)" : "boot: ON (CPU mark)");

@@ -1,0 +1,19 @@
+FROM ubuntu:24.04
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential ca-certificates python3 libgmp10 libmpfr6 libmpc3 libisl23 \
+    zlib1g libelf1t64 libssl3t64 libstdc++6 libxml2 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Official ps3dev/ps3dev nightly-2026-07-26 Linux X64 archive: the last one with
+# PPU GCC 7.2.0, which the upstream release is built with.  Later nightlies use
+# GCC 13.2, and binaries built with them hang the RSX on the Home screen on
+# real hardware.  Put the archive next to this file and build from here.
+COPY ps3dev-linux-X64.tar.gz /tmp/ps3dev.tar.gz
+RUN echo "dcbed747e094c6a382dae5b0aacc322a1d4390d9f2849a7d750a96ea398ee8ab  /tmp/ps3dev.tar.gz" | sha256sum -c - \
+    && tar -xzf /tmp/ps3dev.tar.gz -C /usr/local && rm /tmp/ps3dev.tar.gz
+
+ENV PS3DEV=/usr/local/ps3dev
+ENV PSL1GHT=/usr/local/ps3dev
+ENV PATH="/usr/local/ps3dev/bin:/usr/local/ps3dev/ppu/bin:/usr/local/ps3dev/spu/bin:${PATH}"
+WORKDIR /build

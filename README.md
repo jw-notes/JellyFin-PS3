@@ -1,7 +1,7 @@
 <div align="center">
   <img src="docs/brand/jellyfin-ps3-lockup.png" alt="Jellyfin PS3" width="560">
 
-  # JellyFin PS3
+  # JellyFin [PS3]
 
   **A native Jellyfin client for the PlayStation 3.**
 
@@ -9,7 +9,7 @@
   It's built to feel like it belongs on the console instead of a web page squeezed
   onto a TV.
 
-  [![Latest release](https://img.shields.io/github/v/release/vortigauntlet/JellyFin-PS3-LosslessAudio?label=release&color=8b5cf6)](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio/releases/latest)
+  [![Latest release](https://img.shields.io/github/v/release/jw-notes/JellyFin-PS3?label=release&color=8b5cf6)](https://github.com/jw-notes/JellyFin-PS3/releases/latest)
   [![License: GPLv3](https://img.shields.io/badge/license-GPLv3-8b5cf6)](LICENSE)
 
   C/C++ · PSL1GHT · Evilnat CFW / HEN
@@ -18,14 +18,28 @@
 
 ---
 
-> ### This is the Lossless Audio fork
+> ### JellyFin [PS3], by jw-notes
 >
-> A fork of [MontyMcK/JellyFin-PS3](https://github.com/MontyMcK/JellyFin-PS3)
-> that adds **lossless HD audio**, fixes 1080p playback, and (since 3.0) a whole
-> new **XMB-style interface**: depth navigation, full details pages, the
-> audio-reactive **JellyWave**, and **true 24 Hz output** for films.
+> A continuation of [vortigauntlet/JellyFin-PS3-LosslessAudio](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio)
+> (itself a fork of [MontyMcK/JellyFin-PS3](https://github.com/MontyMcK/JellyFin-PS3)),
+> maintained here. Everything the LosslessAudio fork does is kept; on top of its
+> 3.2.3 release this adds:
 >
-> | | upstream | this fork |
+> - **Stability on real hardware**: the freeze on the Home screen is gone (a build
+>   toolchain issue), and ~30 MB more free memory at 1080p, so posters load and
+>   large libraries browse smoothly.
+> - **Search** with live results, recent searches and Movies / Shows / Episodes filters.
+> - **Screensaver choice**: full-screen *Artwork* with title, synopsis and file details,
+>   or the classic one, with an adjustable delay.
+> - **Themes that colour everything**, including JellyWave, JellyDrop and the logo,
+>   plus seven new themes. **Deep Ocean** is the default.
+> - A clearer, centred **sign-in** with Quick Connect from a phone, tablet or PC,
+>   a "Because you watched…" row on Home, loading shimmer on posters, and more.
+>
+> The full list, and why each change was made, is in **[CUSTOM-CHANGES.md](CUSTOM-CHANGES.md)**.
+> What the LosslessAudio fork adds over the original:
+>
+> | | original | LosslessAudio and this |
 > |---|---|---|
 > | **TrueHD / Atmos** | not decoded | **lossless** 5.1 / 7.1 |
 > | **DTS-HD MA** | not decoded | **lossless** (bit-exact vs ffmpeg) |
@@ -33,7 +47,7 @@
 > | **AC-3 5.1** | — | yes, server-transcoded |
 > | **1080p** | stalls on big files | stable to **25 Mbps** |
 >
-> ### [⬇ Download the latest release](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio/releases/latest)
+> ### [⬇ Download the latest release](https://github.com/jw-notes/JellyFin-PS3/releases/latest)
 >
 > One click, straight to the file. Copy it to a USB stick and install it from
 > the XMB, or drop it in `/dev_hdd0/packages/` over FTP and use webMAN's
@@ -287,7 +301,7 @@ Notes and limitations:
 
 ## Install
 
-**[⬇ JellyFin-PS3.pkg — latest release](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio/releases/latest)**
+**[⬇ JellyFin-PS3.pkg — latest release](https://github.com/jw-notes/JellyFin-PS3/releases/latest)**
 
 Direct link to the current build: [`JellyFin-PS3.pkg`](release/JellyFin-PS3.pkg?raw=1), the same file as the release, kept in [`release/`](release/).
 
@@ -614,6 +628,14 @@ its own trace in `/dev_hdd0/tmp/update_detection.txt`.
 
 ## Acknowledgments
 
+- **[vortigauntlet](https://github.com/vortigauntlet)**, whose
+  [JellyFin-PS3-LosslessAudio](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio)
+  this is built on: lossless TrueHD and DTS-HD, the XMB interface, JellyWave and
+  JellyDrop, 24 Hz output, offline downloads and most of what this app is.
+- **[MontyMcK](https://github.com/MontyMcK)**, who wrote the original
+  [JellyFin-PS3](https://github.com/MontyMcK/JellyFin-PS3) client, and everyone who
+  contributed to either project (Ethan Hammer, Tuggs-Bunny and others; the git history
+  keeps every commit and its author).
 - **[Movian](https://github.com/andoma/showtime)** (formerly Showtime). The whole
   app was built using Movian's media player as a reference. The video display loop,
   the temporal frame blending, and the flush-and-reopen seek path all follow how
@@ -639,6 +661,8 @@ JellyFin PS3 is free software licensed under the **GNU General Public License v3
 [LICENSE](LICENSE) file.
 
 Copyright (C) 2026 vortigauntlet
+Copyright (C) 2026 MontyMcK (the original JellyFin-PS3)
+Modifications copyright (C) 2026 jw-notes (see [CUSTOM-CHANGES.md](CUSTOM-CHANGES.md))
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY
 WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A

@@ -93,7 +93,7 @@ static const Theme THEME_BUILTIN[THEME_BUILTIN_COUNT] = {
         0x00E0A13CUL,   // accent
         0x00C8332EUL,   // accent_alt
         0x008A5F1EUL,   // accent_deep
-        0x0000A4DCUL,   // wordmark      = Jellyfin's, as in XMB wave (the brand does not re-theme)
+        0x00E8B45CUL,   // wordmark      flat lockup fallback, gold
         0x00F4EDE1UL,   // text
         0x00B3A695UL,   // text_dim
         0x006D6353UL,   // text_faint
@@ -108,15 +108,15 @@ static const Theme THEME_BUILTIN[THEME_BUILTIN_COUNT] = {
         0x001A1410UL,   // key_normal    = panel
         0x00FFFAF2UL,   // key_sel       = white
         0x00221A13UL,   // key_label_sel = track
-        // The lockup keeps Jellyfin's own colours in every theme: the same
-        // mark (the cool raster -- mark_variant() reads lk_mark_a) and the
-        // same wordmark ramp as XMB wave.  The gold mark is retired.
-        0x00AA5CC3UL,   // lk_mark_a
-        0x0000A4DCUL,   // lk_mark_b
-        0x0000A4DCUL,   // lk_word_a
-        0x004189D3UL,   // lk_word_b
-        0x007A70CAUL,   // lk_word_c
-        0x00AA5CC3UL,   // lk_word_d
+        // The lockup, the wave and JellyDrop follow the theme: the gold mark
+        // (mark_variant() reads this pair), a gold-to-copper wordmark, and
+        // the same pair for the ribbons (wave_palette.h).
+        0x00E8B45CUL,   // lk_mark_a     light gold
+        0x00B5651DUL,   // lk_mark_b     copper
+        0x00F0C878UL,   // lk_word_a
+        0x00E8B45CUL,   // lk_word_b
+        0x00D3913CUL,   // lk_word_c
+        0x00B5651DUL,   // lk_word_d
         0x00FFFAF2UL,   // focus_ring    = white; golden-age.ini sets no ring
         0x005A3A16UL,   // detail_band   deep brass, sits in the gold ramp
         0x00040303UL,   // scrim         = bg_bot
@@ -250,6 +250,16 @@ void theme_apply_builtin(int index) {
 // Seeded from built-in 0 so a missing key keeps the built-in value, per the
 // handoff.  Nothing touches g_theme until the whole file has parsed clean, so
 // a malformed theme leaves the previous one standing.
+// a -> b by t/255, per channel.
+static u32 rgb_mix(u32 a, u32 b, u32 t) {
+    u32 o = 0;
+    for (int sh = 0; sh <= 16; sh += 8) {
+        const u32 ca = (a >> sh) & 0xFF, cb = (b >> sh) & 0xFF;
+        o |= ((ca * (255 - t) + cb * t + 127) / 255) << sh;
+    }
+    return o;
+}
+
 bool theme_load(const char *ini_path) {
     FILE *f = fopen(ini_path, "r");
     if (!f) {
@@ -265,6 +275,7 @@ bool theme_load(const char *ini_path) {
     // them tracks its own colours instead of inheriting XMB wave's.
     bool set_bg = false, set_kn = false, set_ks = false, set_kl = false;
     bool set_fr = false;
+    bool set_mark = false, set_word = false;
 
     char line[512];
     int lineno = 0;
@@ -315,12 +326,12 @@ bool theme_load(const char *ini_path) {
         else if (!strcmp(k, "key_normal"))    { ok = parse_rgb(v, &t.key_normal); set_kn = true; }
         else if (!strcmp(k, "key_sel"))       { ok = parse_rgb(v, &t.key_sel); set_ks = true; }
         else if (!strcmp(k, "key_label_sel")) { ok = parse_rgb(v, &t.key_label_sel); set_kl = true; }
-        else if (!strcmp(k, "lk_mark_a"))     { ok = parse_rgb(v, &t.lk_mark_a); }
-        else if (!strcmp(k, "lk_mark_b"))     { ok = parse_rgb(v, &t.lk_mark_b); }
-        else if (!strcmp(k, "lk_word_a"))     { ok = parse_rgb(v, &t.lk_word_a); }
-        else if (!strcmp(k, "lk_word_b"))     { ok = parse_rgb(v, &t.lk_word_b); }
-        else if (!strcmp(k, "lk_word_c"))     { ok = parse_rgb(v, &t.lk_word_c); }
-        else if (!strcmp(k, "lk_word_d"))     { ok = parse_rgb(v, &t.lk_word_d); }
+        else if (!strcmp(k, "lk_mark_a"))     { ok = parse_rgb(v, &t.lk_mark_a); set_mark = true; }
+        else if (!strcmp(k, "lk_mark_b"))     { ok = parse_rgb(v, &t.lk_mark_b); set_mark = true; }
+        else if (!strcmp(k, "lk_word_a"))     { ok = parse_rgb(v, &t.lk_word_a); set_word = true; }
+        else if (!strcmp(k, "lk_word_b"))     { ok = parse_rgb(v, &t.lk_word_b); set_word = true; }
+        else if (!strcmp(k, "lk_word_c"))     { ok = parse_rgb(v, &t.lk_word_c); set_word = true; }
+        else if (!strcmp(k, "lk_word_d"))     { ok = parse_rgb(v, &t.lk_word_d); set_word = true; }
         else if (!strcmp(k, "focus_ring"))    { ok = parse_rgb(v, &t.focus_ring); set_fr = true; }
         else if (!strcmp(k, "detail_band"))   { ok = parse_rgb(v, &t.detail_band); }
         else if (!strcmp(k, "scrim"))         { ok = parse_rgba(v, &t.scrim,   &t.scrim_a); }
@@ -357,6 +368,15 @@ bool theme_load(const char *ini_path) {
     // A theme written before the 2026-09-20 revision has no focus_ring; pure
     // white is what the ring was then, so that stays the fallback.
     if (!set_fr) t.focus_ring    = t.white;
+    // The lockup pair (also the wave's colours) is the theme's own accents
+    // unless the file names it, and the wordmark ramp runs between the two.
+    if (!set_mark) { t.lk_mark_a = t.accent; t.lk_mark_b = t.accent_alt; }
+    if (!set_word) {
+        t.lk_word_a = t.lk_mark_b;
+        t.lk_word_b = rgb_mix(t.lk_mark_b, t.lk_mark_a, 85);
+        t.lk_word_c = rgb_mix(t.lk_mark_b, t.lk_mark_a, 170);
+        t.lk_word_d = t.lk_mark_a;
+    }
 
     g_theme = t;
     return true;
@@ -475,11 +495,12 @@ void theme_load_setting(void) {
         fclose(f);
     }
 
-    // No saved choice: the static initialiser already has built-in 0 live.
+    // No saved choice: Deep Ocean (themes/jw-notes, shipped in USRDIR/themes).
+    // Not saved, so a theme the user picks always wins; if the file is not
+    // there, the static initialiser's built-in 0 (XMB wave) stands.
     if (!s_wanted[0]) {
-        crash_log("theme: default (XMB wave)");
-        plog("theme: no saved choice, using built-in 0 (XMB wave)");
-        return;
+        snprintf(s_wanted, sizeof s_wanted, "%s", THEME_DEFAULT_NAME);
+        crash_log("theme: no saved choice, default Deep Ocean");
     }
 
     ThemeEntry entries[THEME_MAX_ENTRIES];

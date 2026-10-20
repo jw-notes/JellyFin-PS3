@@ -133,30 +133,29 @@
 
 // --- palette --------------------------------------------------------------
 // Straight from the design, which took the first two from the Jellyfin brand
-// SVG.  These are also g_theme's accent / accent_alt, so a theme that repaints
-// the UI repaints the wave with it -- see jw_palette_from_theme().
+// SVG.  They live in g_jw_pal (wave_palette.h), which ui_wave.cpp re-derives
+// from the theme's lockup pair, so a theme repaints the wave and JellyDrop.
 //   PURPLE #AA5CC3   BLUE #00A4DC   RIM #d8f4ff   DEEP #150a22   FRINGE #7fd0ff
-#define JW_PURPLE_R    0.666667f
-#define JW_PURPLE_G    0.360784f
-#define JW_PURPLE_B    0.764706f
-#define JW_BLUE_R      0.000000f
-#define JW_BLUE_G      0.643137f
-#define JW_BLUE_B      0.862745f
+#define JW_PURPLE_R    (g_jw_pal.purple[0])
+#define JW_PURPLE_G    (g_jw_pal.purple[1])
+#define JW_PURPLE_B    (g_jw_pal.purple[2])
+#define JW_BLUE_R      (g_jw_pal.blue[0])
+#define JW_BLUE_G      (g_jw_pal.blue[1])
+#define JW_BLUE_B      (g_jw_pal.blue[2])
 // 2026-09-24, on hardware: "too much of a white shine; it needs a more neon,
 // translucent glow".  The rim was near-white (D8F4FF).  It is now a saturated
 // Jellyfin cyan, and the outer fringe runs to violet rather than to pale blue,
 // so the edge glows in the brand's two colours instead of reading as a
 // specular white line.
-#define JW_RIMC_R      0.180000f
-#define JW_RIMC_G      0.840000f
-#define JW_RIMC_B      1.000000f
-#define JW_DEEP_R      0.082353f
-#define JW_DEEP_G      0.039216f
-#define JW_DEEP_B      0.133333f
-#define JW_FRINGE_R    0.760000f
-#define JW_FRINGE_G    0.360000f
-#define JW_FRINGE_B    1.000000f
-
+#define JW_RIMC_R      (g_jw_pal.rimc[0])
+#define JW_RIMC_G      (g_jw_pal.rimc[1])
+#define JW_RIMC_B      (g_jw_pal.rimc[2])
+#define JW_DEEP_R      (g_jw_pal.deep[0])
+#define JW_DEEP_G      (g_jw_pal.deep[1])
+#define JW_DEEP_B      (g_jw_pal.deep[2])
+#define JW_FRINGE_R    (g_jw_pal.fringe[0])
+#define JW_FRINGE_G    (g_jw_pal.fringe[1])
+#define JW_FRINGE_B    (g_jw_pal.fringe[2])
 // The brand gradient axis: 30 degrees below horizontal, purple upper-left to
 // blue lower-right.  Verified from jellyfin-ux's icon-transparent.svg, whose
 // linearGradient runs (110.25,213.3) -> (496.14,436.09) -- exactly -30 degrees.

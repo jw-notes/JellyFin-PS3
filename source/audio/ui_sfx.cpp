@@ -259,7 +259,7 @@ void ui_sfx_init(void) {
 }
 
 void ui_sfx_play(int sfx) {
-    if (!s_open || sfx < 0 || sfx >= SFX_COUNT) return;
+    if (!s_open || !s_enabled || sfx < 0 || sfx >= SFX_COUNT) return;
     s_req[sfx]++;
 }
 
@@ -272,4 +272,16 @@ void ui_sfx_suspend(void) {
 void ui_sfx_resume(void) {
     if (s_open || !s_loaded || !s_enabled) return;
     s_open = port_open();
+}
+
+bool ui_sfx_enabled(void) { return s_enabled; }
+
+void ui_sfx_set_enabled(bool on) {
+    s_enabled = on;
+    FILE *f = fopen(jf_data_path(SFX_FILE), "w");
+    if (f) { fprintf(f, "%d\n", on ? 1 : 0); fclose(f); }
+    // Off leaves the port open: ui_sfx_play is a no-op from here on.
+    if (!on) return;
+    if (!s_loaded) s_loaded = load_sounds();
+    if (s_loaded && !s_open) s_open = port_open();
 }

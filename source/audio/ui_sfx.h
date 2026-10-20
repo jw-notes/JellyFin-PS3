@@ -13,6 +13,7 @@
 // second port mixed into it.
 //
 // jellyfin_uisfx.txt containing "0" turns the effects off; missing = on.
+// Settings > Audio > Menu Sounds writes it (ui_sfx_set_enabled).
 
 enum UiSfx {
     SFX_CURSOR,   // d-pad / left stick step, L1 / R1
@@ -32,3 +33,9 @@ void ui_sfx_play(int sfx);
 // Close / reopen the port around video playback.  Both are idempotent.
 void ui_sfx_suspend(void);
 void ui_sfx_resume(void);
+
+// The Menu Sounds setting.  Off silences the effects at once; on loads them
+// and opens the port if that never happened (they were off at launch).
+// Saved, so it holds across launches.
+bool ui_sfx_enabled(void);
+void ui_sfx_set_enabled(bool on);

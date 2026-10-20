@@ -20,6 +20,8 @@
 #include "centermix.h"
 #include "statsovl.h"
 #include "menusnow.h"
+#include "ui_sfx.h"          // Menu Sounds
+#include "ui_internal.h"     // Screensaver (xmb/ui_ambient.cpp)
 #include "autoskip.h"
 #include "directstream.h"
 #include "display_24p.h"    // 24Hz Output
@@ -65,6 +67,7 @@ static void val_onoff(char *buf, int cap, bool *lit, bool on) {
 static void v_debug(char *b, int c, bool *l)    { val_onoff(b, c, l, plog_enabled()); }
 static void v_hd1080(char *b, int c, bool *l)   { val_onoff(b, c, l, hd1080_enabled()); }
 static void v_particles(char *b, int c, bool *l){ val_onoff(b, c, l, menusnow_enabled()); }
+static void v_sounds(char *b, int c, bool *l)   { val_onoff(b, c, l, ui_sfx_enabled()); }
 static void v_daynight(char *b, int c, bool *l) { val_onoff(b, c, l, daynight_enabled()); }
 static void v_autoskip(char *b, int c, bool *l) { val_onoff(b, c, l, autoskip_enabled()); }
 #if ENABLE_PLAYER_STATS
@@ -94,6 +97,8 @@ static void v_subcolor(char *b, int c, bool *l) { val_text(b, c, l, tr(subcolor_
 static void v_theme(char *b, int c, bool *l)    { val_text(b, c, l, theme_current_name(), true); }
 static void v_wave(char *b, int c, bool *l)     { val_text(b, c, l, tr(wave_audio_level_label()), wave_audio_level() != 0); }
 static void v_language(char *b, int c, bool *l) { val_text(b, c, l, i18n_pref_label(i18n_pref()), true); }
+static void v_saver(char *b, int c, bool *l)    { val_text(b, c, l, ambient_mode_label(), ambient_mode() != AMB_MODE_OFF); }
+static void v_saverdelay(char *b, int c, bool *l) { val_text(b, c, l, ambient_delay_label(), ambient_mode() != AMB_MODE_OFF); }
 static void v_screen(char *b, int c, bool *l) {
     const int pm = (int)(overscan_frac() * 1000.0f + 0.5f);   // permille
     if (pm == 0) val_text(b, c, l, TR("Off"), false);
@@ -207,6 +212,7 @@ static void a_offline(void)    { xmb_show_offline(); }
 static void t_debug(int)       { plog_set_enabled(!plog_enabled()); }
 static void t_hd1080(int)      { hd1080_set_enabled(!hd1080_enabled()); }
 static void t_particles(int)   { menusnow_set_enabled(!menusnow_enabled()); }
+static void t_sounds(int)      { ui_sfx_set_enabled(!ui_sfx_enabled()); }
 static void t_daynight(int)    { daynight_set_enabled(!daynight_enabled()); }
 static void t_autoskip(int)    { autoskip_set_enabled(!autoskip_enabled()); }
 #if ENABLE_PLAYER_STATS
@@ -222,6 +228,8 @@ static void s_subcolor(int d)  { subcolor_step(d); }
 static void s_theme(int d)     { theme_step(d); }
 static void s_wave(int d)      { wave_audio_step(d); }
 static void s_language(int d)  { i18n_step_pref(d); }
+static void s_saver(int d)     { ambient_mode_step(d); }
+static void s_saverdelay(int d) { ambient_delay_step(d); }
 
 // A toggle takes X and either direction as the same flip; a value row takes X
 // as a step forward.  Neither names an activate function: X falls through to
@@ -239,10 +247,13 @@ static const UiRow k_ui[] = {
     TOGGLE(SET_HD1080,      ICON_MOVIE,       v_hd1080,    t_hd1080),
     VALUE (SET_AUDIO_OUT,   ICON_MUSIC,       v_audio,     s_audio),
     VALUE (SET_DIALOGUE,    ICON_MUSIC,       v_dialogue,  s_dialogue),
+    TOGGLE(SET_MENU_SOUNDS, ICON_VOLUME,      v_sounds,    t_sounds),
     VALUE (SET_SUB_FONT,    ICON_TV,          v_subfont,   s_subfont),
     VALUE (SET_SUB_COLOUR,  ICON_TV,          v_subcolor,  s_subcolor),
     VALUE (SET_LANGUAGE,    ICON_TV,          v_language,  s_language),
     VALUE (SET_THEME,       ICON_PHOTO,       v_theme,     s_theme),
+    VALUE (SET_SCREENSAVER, ICON_PHOTO,       v_saver,     s_saver),
+    VALUE (SET_SAVER_DELAY, ICON_PHOTO,       v_saverdelay, s_saverdelay),
     TOGGLE(SET_PARTICLES,   ICON_PHOTO,       v_particles, t_particles),
     TOGGLE(SET_DAYNIGHT,    ICON_PHOTO,       v_daynight,  t_daynight),
     VALUE (SET_WAVE_INT,    ICON_MUSIC,       v_wave,      s_wave),

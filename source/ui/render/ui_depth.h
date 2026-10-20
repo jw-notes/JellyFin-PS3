@@ -40,6 +40,10 @@ typedef struct {
     const char *tile_name;   // CPU fallback's letter tile (music), or NULL
 } DepthCard;
 
+// The loading shimmer over a placeholder card at (x, y, w, h), opacity op:
+// a soft light band sweeping across it.  GPU phase.
+void depth_shimmer_gpu(int x, int y, int w, int h, float op);
+
 typedef bool (*DepthCardFn)(const void *ctx, int i, DepthCard *out);
 
 typedef struct {

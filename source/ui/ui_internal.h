@@ -83,10 +83,6 @@ bool xmb_handle_input_search(void);
 // (xmb_search_in_flight() lives in ui_visuals.h, beside the search state, so
 // the results-list drawing can see it too.)
 void xmb_search_shutdown(void);
-// The system keyboard for the search term (ui_search.cpp).  While it is up it
-// owns the pad: the XMB loop hands no input to the menu.
-void xmb_search_open_keyboard(void);
-bool xmb_search_osk_active(void);
 bool xmb_handle_input_home(void);
 
 // Launch the player for one list item (xmb/ui_nav.cpp).  resume_secs > 0
@@ -152,6 +148,10 @@ typedef struct {
     const char *eyebrow;     // the row's title
     const char *title;       // an episode goes by its series
     const char *meta;        // "2014" / "S1 E4" (may be "")
+    const char *item_id;     // the item itself (an episode, not its series)
+    const char *episode;     // "S1 E4 · Name" for an episode, else ""
+    const char *year;        // "2014" (may be "")
+    const char *rating;      // "PG-13" (may be "")
 } AmbientArt;
 int  xmb_home_ambient_art(AmbientArt *out, int max);
 
@@ -168,6 +168,16 @@ bool ambient_draw_ui(void);
 void ambient_gpu(void);
 void ambient_text(void);
 void ambient_cover_over_ui(void);
+// Settings > Display > Screensaver: Classic (posters over the wave), Artwork
+// (full-screen backdrops), or Off.  Saved in jellyfin_screensaver.txt.
+enum { AMB_MODE_CLASSIC = 0, AMB_MODE_ARTWORK, AMB_MODE_OFF, AMB_MODE__COUNT };
+int         ambient_mode(void);
+void        ambient_mode_step(int dir);
+const char *ambient_mode_label(void);
+// Settings > Display > Screensaver Delay: idle time before it starts, 30 s to
+// 5 min.  Saved in jellyfin_screensaver_delay.txt (seconds).
+void        ambient_delay_step(int dir);
+const char *ambient_delay_label(void);
 
 // The Triangle quick-peek (xmb/ui_peek.cpp): on any focused poster under the
 // spine -- Home, the base column, the library grids and sub-grids, Search --

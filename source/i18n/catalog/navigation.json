@@ -130,5 +130,10 @@
   "Customise": {"ja": "カスタマイズ", "pt-BR": "Personalizar", "de": "Anpassen", "fr": "Personnaliser", "es": "Personalizar"},
   "Customise Live TV": {"ja": "ライブTVをカスタマイズ", "pt-BR": "Personalizar TV ao vivo", "de": "Live-TV anpassen", "fr": "Personnaliser la TV en direct", "es": "Personalizar TV en vivo"},
   "Ticked pages are shown. L2 / R2 skip the others.": {"ja": "チェックしたページを表示します。L2 / R2 で他は飛ばします。", "pt-BR": "As páginas marcadas aparecem. L2 / R2 pulam as outras.", "de": "Markierte Seiten werden angezeigt. L2 / R2 überspringen die anderen.", "fr": "Les pages cochées sont affichées. L2 / R2 sautent les autres.", "es": "Se muestran las páginas marcadas. L2 / R2 saltan las demás."},
-  "Show / hide": {"ja": "表示 / 非表示", "pt-BR": "Mostrar / ocultar", "de": "Anzeigen / ausblenden", "fr": "Afficher / masquer", "es": "Mostrar / ocultar"}
+  "Show / hide": {"ja": "表示 / 非表示", "pt-BR": "Mostrar / ocultar", "de": "Anzeigen / ausblenden", "fr": "Afficher / masquer", "es": "Mostrar / ocultar"},
+  "Filter": {"ja": "絞り込み", "pt-BR": "Filtrar", "de": "Filtern", "fr": "Filtrer", "es": "Filtrar"},
+  "Remove": {"ja": "消去", "pt-BR": "Remover", "de": "Entfernen", "fr": "Retirer", "es": "Quitar"},
+  "All": {"ja": "すべて", "pt-BR": "Tudo", "de": "Alle", "fr": "Tout", "es": "Todo"},
+  "Recent searches": {"ja": "最近の検索", "pt-BR": "Pesquisas recentes", "de": "Letzte Suchen", "fr": "Recherches récentes", "es": "Búsquedas recientes"},
+  "Because you watched %s": {"ja": "%sを見た方へ", "pt-BR": "Porque você assistiu %s", "de": "Weil du %s gesehen hast", "fr": "Parce que vous avez regardé %s", "es": "Porque viste %s"}
 }

@@ -606,11 +606,50 @@ void draw_ps_button_vcentered(u32 x, int cy, char glyph, int h, u32 bright) {
 
 #define JFMARK_COOL 0
 #define JFMARK_GOLD 1
+#define JFMARK_TINT 2                 // the cool raster recoloured to the theme
 
-static u32 *s_mark_px[2];
-static int  s_mark_state[2];          // 0 = untried, 1 = ok, -1 = failed
+static u32 *s_mark_px[3];
+static int  s_mark_state[3];          // 0 = untried, 1 = ok, -1 = failed
+static u32  s_tint_a, s_tint_b;       // the pair the TINT raster was made for
+
+// Recolour the cool raster's RGBA in place to the pair (a, b).  Each coloured
+// pixel is placed along the raster's own purple -> blue gradient and moved to
+// the same place along a -> b at the same brightness; the PlayStation symbol,
+// the white edge and the shadow (no colour of their own) are left as they are.
+void xmb_mark_tint(unsigned char *rgba, int n, u32 a, u32 b) {
+    const float P[3] = { 170, 92, 195 }, B[3] = { 0, 164, 220 };
+    const float A2[3] = { (float)((a >> 16) & 0xFF), (float)((a >> 8) & 0xFF), (float)(a & 0xFF) };
+    const float B2[3] = { (float)((b >> 16) & 0xFF), (float)((b >> 8) & 0xFF), (float)(b & 0xFF) };
+    const float d[3] = { B[0] - P[0], B[1] - P[1], B[2] - P[2] };
+    const float dd = d[0] * d[0] + d[1] * d[1] + d[2] * d[2];
+    for (int i = 0; i < n; i++) {
+        unsigned char *px = rgba + (size_t)i * 4;
+        const int mx = px[0] > px[1] ? (px[0] > px[2] ? px[0] : px[2]) : (px[1] > px[2] ? px[1] : px[2]);
+        const int mn = px[0] < px[1] ? (px[0] < px[2] ? px[0] : px[2]) : (px[1] < px[2] ? px[1] : px[2]);
+        if (mx - mn < 36) continue;                       // grey, white, black: not the gradient
+        float t = ((px[0] - P[0]) * d[0] + (px[1] - P[1]) * d[1] + (px[2] - P[2]) * d[2]) / dd;
+        t = t < 0.0f ? 0.0f : (t > 1.0f ? 1.0f : t);
+        const float lum_src = 0.299f * px[0] + 0.587f * px[1] + 0.114f * px[2];
+        const float base[3] = { P[0] + d[0] * t, P[1] + d[1] * t, P[2] + d[2] * t };
+        const float lum_base = 0.299f * base[0] + 0.587f * base[1] + 0.114f * base[2];
+        float c[3], lum_c;
+        for (int k = 0; k < 3; k++) c[k] = A2[k] + (B2[k] - A2[k]) * t;
+        lum_c = 0.299f * c[0] + 0.587f * c[1] + 0.114f * c[2];
+        // Keep the source's shading relative to its gradient colour.
+        const float k = lum_base > 1.0f ? lum_src / lum_base : 1.0f;
+        const float scale = lum_c > 1.0f ? k : 1.0f;
+        for (int j = 0; j < 3; j++) {
+            float v = c[j] * scale;
+            px[j] = (unsigned char)(v < 0.0f ? 0 : (v > 255.0f ? 255 : (int)(v + 0.5f)));
+        }
+    }
+}
 
 static void mark_load(int v) {
+    if (v == JFMARK_TINT && s_mark_state[v] &&
+        (s_tint_a != XMB_LK_MARK_A || s_tint_b != XMB_LK_MARK_B)) {
+        free(s_mark_px[v]); s_mark_px[v] = NULL; s_mark_state[v] = 0;   // the theme changed
+    }
     if (s_mark_state[v]) return;
     s_mark_state[v] = -1;
     int w, h, comp;
@@ -620,6 +659,11 @@ static void mark_load(int v) {
         &w, &h, &comp, 4);
     if (!img) return;
     if (w != JFMARK_MASTER || h != JFMARK_MASTER) { stbi_image_free(img); return; }
+    if (v == JFMARK_TINT) {
+        s_tint_a = XMB_LK_MARK_A;
+        s_tint_b = XMB_LK_MARK_B;
+        xmb_mark_tint(img, w * h, s_tint_a, s_tint_b);
+    }
     u32 *m = (u32 *)malloc((size_t)w * h * 4);
     if (!m) { stbi_image_free(img); return; }
     for (int i = 0; i < w * h; i++)
@@ -630,14 +674,13 @@ static void mark_load(int v) {
     s_mark_state[v] = 1;
 }
 
-// Which raster this theme gets.  The ramp is baked in, so the only question a
-// theme can answer is which of the two it is NEARER: a warm mark colour (Golden
-// Age's E8B45C) takes the gold PS logo, a cool one (XMB wave's AA5CC3) takes
-// the soft one.  Red against blue is the whole test -- a hue angle would be
-// more words for the same two answers.
+// Which raster this theme gets: the two drawn ones for the pairs they were
+// drawn in (XMB wave, Golden Age), the cool one recoloured for any other.
 static int mark_variant(void) {
-    u32 c = XMB_LK_MARK_A;
-    return (((c >> 16) & 0xFF) > (c & 0xFF)) ? JFMARK_GOLD : JFMARK_COOL;
+    const u32 a = XMB_LK_MARK_A & 0xFFFFFF, b = XMB_LK_MARK_B & 0xFFFFFF;
+    if (a == 0xAA5CC3 && b == 0x00A4DC) return JFMARK_COOL;
+    if (a == 0xE8B45C) return JFMARK_GOLD;
+    return JFMARK_TINT;
 }
 
 int xmb_mark_variant(void) { return mark_variant(); }

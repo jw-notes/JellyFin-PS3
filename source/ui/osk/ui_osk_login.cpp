@@ -15,8 +15,31 @@
 #include "ui_visuals.h"
 #include "ui_wave.h"
 #include "timing.h"
+#include "jf_paths.h"
+
+extern void crash_log(const char *msg);
+int get_input_system(char *out, int max_len, const char *prompt, bool is_password, bool keep_text);
 
 namespace {
+
+// "1" in jellyfin_sysosk.txt swaps this keyboard for the firmware one
+// (ui_osk_login_system.cpp), a fallback that needs no rebuild.
+bool use_system_keyboard(void) {
+    FILE *f = fopen(jf_data_path("jellyfin_sysosk.txt"), "r");
+    if (!f) return false;
+    int v = 0;
+    const bool on = fscanf(f, "%d", &v) == 1 && v == 1;
+    fclose(f);
+    return on;
+}
+
+// Breadcrumbs carry counts only, never the text: this also takes passwords.
+int osk_finish(int result, int presses) {
+    char b[64];
+    snprintf(b, sizeof b, "osk: %s after %d presses", result == 1 ? "done" : "cancel", presses);
+    crash_log(b);
+    return result;
+}
 
 enum OKind { OK_CHAR, OK_SHIFT, OK_SYM, OK_BACK, OK_SPACE, OK_ENTER };
 
@@ -197,13 +220,18 @@ void osk_draw(const char *prompt, const char *input, bool is_password,
 } // namespace
 
 int get_input(char *out, int max_len, const char *prompt, bool is_password, bool keep_text) {
+    if (use_system_keyboard())
+        return get_input_system(out, max_len, prompt, is_password, keep_text);
+    if (max_len <= 0) return -1;
     if (!keep_text) out[0] = '\0';
-    else if ((int)strlen(out) >= max_len) out[max_len - 1] = '\0';
+    else if ((int)strnlen(out, (size_t)max_len) >= max_len) out[max_len - 1] = '\0';
 
     int  sr = 1, sc = 0;            // start on the top letter row
     bool caps = false, sym = false;
+    int  presses = 0;
 
     init_btns();
+    crash_log("osk: open");
 
     while (running) {
         sysUtilCheckCallback();
@@ -230,12 +258,13 @@ int get_input(char *out, int max_len, const char *prompt, bool is_password, bool
         // also cancelling on Select made the app quit the moment the user hit
         // space while typing a URL (which needs the symbols page for : and /).
         if (BTN_PRESSED(square)) { int l = strlen(out); if (l > 0) out[l-1] = '\0'; }
-        if (BTN_PRESSED(start))  return 1;
-        if (BTN_PRESSED(circle)) return -1;
+        if (BTN_PRESSED(start))  return osk_finish(1, presses);
+        if (BTN_PRESSED(circle)) return osk_finish(-1, presses);
 
         // Activate the highlighted key.
         if (BTN_PRESSED(cross)) {
             const OKey *k = &rows[sr].keys[sc];
+            presses++;
             switch (k->kind) {
             case OK_CHAR: {
                 int l = strlen(out);
@@ -251,10 +280,11 @@ int get_input(char *out, int max_len, const char *prompt, bool is_password, bool
                 sym = !sym;
                 sr  = osk_build(rows, sym, caps) - 1;
                 sc  = 0;
+                crash_log(sym ? "osk: symbols" : "osk: letters");
                 break;
             case OK_BACK:  { int l = strlen(out); if (l > 0) out[l-1] = '\0'; break; }
             case OK_SPACE: { int l = strlen(out); if (l < max_len - 1) { out[l] = ' '; out[l+1] = '\0'; } break; }
-            case OK_ENTER: return 1;
+            case OK_ENTER: return osk_finish(1, presses);
             }
             // The layout (and row count) may have changed; re-clamp selection.
             nrows = osk_build(rows, sym, caps);
@@ -266,5 +296,5 @@ int get_input(char *out, int max_len, const char *prompt, bool is_password, bool
         nrows = osk_build(rows, sym, caps);
         osk_draw(prompt, out, is_password, rows, nrows, sr, sc, caps);
     }
-    return -1;
+    return osk_finish(-1, presses);
 }

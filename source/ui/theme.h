@@ -31,6 +31,7 @@
 
 #define THEME_BUILTIN_COUNT 2    /* 0 = XMB wave, 1 = Golden Age */
 #define THEME_MAX_ENTRIES   16   /* built-ins + files, the theme picker's cap */
+#define THEME_DEFAULT_NAME  "Deep Ocean"   /* used until a theme is chosen */
 
 typedef struct {
     /* colours — 0xRRGGBB, the renderer owns alpha */
@@ -164,11 +165,11 @@ void quality_frame_tick(float frame_ms);     /* auto-downgrade watchdog       */
 #define XMB_FOCUS_RING    (g_theme.focus_ring)
 #define XMB_DETAIL_BAND   (g_theme.detail_band)
 
-/* The lockup ramp (README section 2.1).  The MARK's pair is baked into the
- * rasters in gfx/jfmark_png.h -- an SVG with a bevel, an edge stroke and a
- * clipped image is not something this renderer can tint -- so XMB_LK_MARK_A is
- * read for one purpose here: its warmth picks which of the two rasters a theme
- * gets.  The WORDMARK ramp is live, sampled per glyph across the word. */
+/* The lockup ramp (README section 2.1).  The MARK's pair picks its raster:
+ * XMB wave's pair takes the cool one and Golden Age's the gold one exactly as
+ * drawn; any other pair takes the cool raster recoloured to it at load
+ * (xmb_mark_tint).  The same pair colours the wave and JellyDrop
+ * (render/wave_palette.h).  The WORDMARK ramp is live, sampled per glyph. */
 #define XMB_LK_MARK_A     (g_theme.lk_mark_a)
 #define XMB_LK_MARK_B     (g_theme.lk_mark_b)
 #define XMB_LK_WORD_A     (g_theme.lk_word_a)

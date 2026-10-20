@@ -4,17 +4,16 @@ ifeq ($(strip $(PSL1GHT)),)
 $(error "Please set PSL1GHT in your environment. export PSL1GHT=<path>")
 endif
 
-ICON0       := $(CURDIR)/ICON0.PNG
-# sfo.xml: the stock template plus ITEM_PRIORITY (pins the app to the top of
-# the Game column, as ManaGunZ does) and the APP_VER the XMB shows.
-SFOXML      := $(CURDIR)/sfo.xml
+ICON0       ?= $(CURDIR)/ICON0.PNG
+# Custom metadata installs the native client under TV / Video Services.
+SFOXML      ?= $(CURDIR)/sfo.xml
 
 include $(PSL1GHT)/ppu_rules
 
 #---------------------------------------------------------------------------
 # Project identity
 #---------------------------------------------------------------------------
-TARGET      := $(notdir $(CURDIR))
+TARGET      := JellyFin-PS3
 BUILD       := obj
 SOURCES     := source source/audio source/audio/a52 source/audio/dca \
                source/gfx source/net source/api \
@@ -32,7 +31,7 @@ INCLUDES    := source/audio source/audio/dcahd \
                source/util source/cache source/video source/music source/spu \
                source/offline source/local third_party/mohasi_fs source/i18n
 
-TITLE       := Jellyfin PS3
+TITLE       := JellyFin [PS3]
 APPID       := JFPS30000
 CONTENTID   := UP0001-$(APPID)_00-0000000000000000
 
@@ -106,6 +105,7 @@ LIBDIRS     :=
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 
 export OUTPUT   := $(CURDIR)/$(TARGET)
+export ICON0 SFOXML
 export VPATH    := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
                    $(foreach dir,$(DATA),$(CURDIR)/$(dir))
 export DEPSDIR  := $(CURDIR)/$(BUILD)
@@ -178,7 +178,14 @@ run:
 	make
 	ps3load $(OUTPUT).self
 
-pkg: $(BUILD) $(OUTPUT).pkg
+# Compile first, then package inside obj so parallel builds cannot link early.
+# The extra themes (themes/jw-notes) ship in USRDIR/themes, where the Theme
+# setting lists them; ppu_rules copies PKGFILES into the package.
+pkg: $(BUILD)
+	@rm -rf $(CURDIR)/$(BUILD)/pkgfiles
+	@mkdir -p $(CURDIR)/$(BUILD)/pkgfiles/USRDIR/themes
+	@cp $(CURDIR)/themes/jw-notes/*.ini $(CURDIR)/$(BUILD)/pkgfiles/USRDIR/themes/
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile $(OUTPUT).pkg 		PKGFILES=$(CURDIR)/$(BUILD)/pkgfiles
 
 else
 
@@ -186,6 +193,7 @@ DEPENDS := $(OFILES:.o=.d)
 
 $(OUTPUT).self: $(OUTPUT).elf
 $(OUTPUT).elf:  $(OFILES)
+$(OUTPUT).pkg:  $(SFOXML) $(ICON0) $(wildcard $(CURDIR)/../themes/jw-notes/*.ini)
 
 %.bin.o : %.bin
 	@echo $(notdir $<)

@@ -95,3 +95,11 @@ tests/em_be.txt
 tests/em_le.bin
 tests/em_be.bin
 tests/text_shadow_*.ppm
+
+# Custom build: host test binaries and the SDK archive for tools/Dockerfile.ps3
+tests/test_auth_data
+tests/test_login_osk
+tests/test_login_drawn
+tests/test_release_version
+tools/*.tar.gz
+tests/test_search_model

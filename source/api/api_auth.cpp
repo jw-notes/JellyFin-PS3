@@ -8,6 +8,7 @@
 #include <sysutil/sysutil.h>
 
 #include "jellyfin_api.h"
+#include "auth_data.h"
 #include "ui.h"
 #include "ui_visuals.h"
 #include "timing.h"
@@ -51,11 +52,18 @@ void save_config(void) {
 int load_config(void) {
     FILE *f = fopen(jf_data_path("jellyfin_config.txt"), "r");
     if (!f) return 0;
-    fscanf(f, "%255s\n%63s\n%255s\n%63s\n", g_server, g_username, g_token, g_userid);
+    JFSavedSession session;
+    bool valid = jf_read_session(f, &session);
     fclose(f);
-    int sl = strlen(g_server);
-    if (sl > 0 && g_server[sl-1] == '/') g_server[sl-1] = '\0';
-    return (g_server[0] && g_token[0]);
+    if (!valid) {
+        g_token[0] = g_userid[0] = '\0';
+        return 0;
+    }
+    strcpy(g_server, session.server);
+    strcpy(g_username, session.username);
+    strcpy(g_token, session.token);
+    strcpy(g_userid, session.userid);
+    return 1;
 }
 
 void jellyfin_logout(void) {
@@ -131,6 +139,52 @@ static void trim(char *s) {
     if (p != s) memmove(s, p, strlen(p)+1);
 }
 
+// --- the sign-in screens ---------------------------------------------------
+//
+// Centred and scaled with the screen (authored at 1280x720, like the XMB), in
+// the style of a TV app's sign-in: a heading, a line or two of instructions,
+// and the code large in the middle.
+
+// One line of text centred on the screen at y (720p units).
+static void ctext(int y720, const char *s, float px720, u32 col, bool bold = false) {
+    const float px = UIS_TF(px720);
+    const int w = ttf_text_width(s, px, bold);
+    drawTTF((u32)(((int)display_width - w) / 2), (u32)(XMB_OY + UIS_H(y720)), s, px, col, bold);
+}
+
+// The Quick Connect code, one character to a box, with an accent underline.
+static void draw_code_boxes(const char *code, int y720) {
+    int n = (int)strlen(code);
+    if (n > 10) n = 10;
+    const int bw = UIS_W(66), bh = UIS_H(86), gap = UIS_W(12);
+    const int total = n * bw + (n - 1) * gap;
+    int x = ((int)display_width - total) / 2;
+    const int y = XMB_OY + UIS_H(y720);
+    const float px = UIS_TF(54.0f);
+    for (int i = 0; i < n; i++, x += bw + gap) {
+        drawRect((u32)x, (u32)y, (u32)bw, (u32)bh, XMB_PANEL);
+        drawRect((u32)x, (u32)(y + bh - UIS_H(4)), (u32)bw, (u32)UIS_H(4), XMB_ACCENT);
+        const char ch[2] = { code[i], '\0' };
+        const int cw = ttf_text_width(ch, px, true);
+        drawTTF((u32)(x + (bw - cw) / 2), (u32)(y + (bh - (int)px) / 2 - UIS_H(4)), ch, px,
+                XMB_TEXT, true);
+    }
+}
+
+// A choice card: a button glyph and a title, with one line under it.
+static void draw_choice(int x, int y, int w, int h, char glyph, const char *title,
+                        const char *line) {
+    drawRect((u32)x, (u32)y, (u32)w, (u32)h, XMB_PANEL);
+    drawRect((u32)x, (u32)y, (u32)w, 1, XMB_HAIRLINE);
+    drawRect((u32)x, (u32)(y + h - 1), (u32)w, 1, XMB_HAIRLINE);
+    const int gh = UIS_H(30);
+    const int gx = x + UIS_W(24);
+    draw_ps_button_vcentered((u32)gx, y + UIS_H(40), glyph, gh, 255);
+    const int tx = gx + ps_btn_width(glyph, gh) + UIS_W(14);
+    drawTTF((u32)tx, (u32)(y + UIS_H(26)), title, UIS_TF(21.0f), XMB_TEXT, true);
+    drawTTF((u32)(x + UIS_W(24)), (u32)(y + UIS_H(72)), line, UIS_TF(14.0f), XMB_TEXT_DIM);
+}
+
 // Quick Connect: the console shows a six-digit code, the user approves it from
 // a signed-in Jellyfin app (Settings > Quick Connect), and the server hands
 // back a token — no password typed with a gamepad.  Returns 1 signed in,
@@ -158,12 +212,33 @@ static int quick_connect_login(void) {
         poll_buttons();
         if (BTN_PRESSED(circle)) return 0;
 
+        waitflip();
         drawHeader();
-        drawTTF(40, 96, TR("Sign in with Quick Connect"), 22, XMB_TEXT, true);
-        drawTTF(40, 136, TR("On your phone, open the Jellyfin app, then:"), 15, XMB_TEXT_DIM);
-        drawTTF(40, 160, TR("Settings > Quick Connect, and enter this code."), 15, XMB_TEXT_DIM);
-        drawTTF(40, 212, code, 64, XMB_ACCENT, true);
-        drawTTF(40, 280, g_server, 13, XMB_TEXT_FAINT);
+        ctext(150, TR("Sign in with Quick Connect"), 34.0f, XMB_TEXT, true);
+        ctext(206, TR("On your phone, tablet or computer, open Jellyfin and sign in."),
+              17.0f, XMB_TEXT_DIM);
+        ctext(234, TR("Go to Settings > Quick Connect and enter this code:"),
+              17.0f, XMB_TEXT_DIM);
+        draw_code_boxes(code, 284);
+        {
+            // On a computer the web client is the server's own address.
+            char web[300];
+            snprintf(web, sizeof web, TR("On a computer, open %s in a web browser."), g_server);
+            ctext(408, web, 15.0f, XMB_TEXT_FAINT);
+        }
+        {
+            static const char *dots[4] = { "", ".", "..", "..." };
+            char wait[64];
+            snprintf(wait, sizeof wait, "%s%s", TR("Waiting for approval"),
+                     dots[(timing_get_us() / 450000ull) % 4]);
+            const float px = UIS_TF(16.0f);
+            // Centred on the whole phrase with all three dots, so it holds still.
+            char full[64];
+            snprintf(full, sizeof full, "%s...", TR("Waiting for approval"));
+            const int w = ttf_text_width(full, px);
+            drawTTF((u32)(((int)display_width - w) / 2), (u32)(XMB_OY + UIS_H(460)), wait, px,
+                    XMB_ACCENT_ALT);
+        }
         static const Hint h[] = {{'C', TRN("Cancel")}};
         draw_hints_bar(h, 1);
         flip();
@@ -198,9 +273,20 @@ int do_login(void) {
         snprintf(url, sizeof url, "%s/QuickConnect/Enabled", g_server);
         int st = http_probe_get(url, NULL, responseBuffer, RESPONSE_SIZE);
         if (st == 200 && strstr(responseBuffer, "true")) {
+            waitflip();
             drawHeader();
-            drawTTF(40, 96,  TR("Sign in"), 22, XMB_TEXT, true);
-            drawTTF(40, 136, TR("Quick Connect lets you approve this console from your phone."), 15, XMB_TEXT_DIM);
+            ctext(170, TR("Sign in to Jellyfin"), 34.0f, XMB_TEXT, true);
+            ctext(226, TR("Approve this PS3 from your phone, tablet or computer, or type your login."),
+                  17.0f, XMB_TEXT_DIM);
+            {
+                const int cw = UIS_W(380), ch = UIS_H(108), gap = UIS_W(28);
+                const int x0 = ((int)display_width - (2 * cw + gap)) / 2;
+                const int y0 = XMB_OY + UIS_H(290);
+                draw_choice(x0, y0, cw, ch, 'X', TR("Quick Connect"),
+                            TR("Enter a code on another device"));
+                draw_choice(x0 + cw + gap, y0, cw, ch, 'S', TR("Username & password"),
+                            TR("Type them on the keyboard"));
+            }
             static const Hint h[] = {{'X', TRN("Quick Connect")}, {'S', TRN("Username & password")}};
             draw_hints_bar(h, 2);
             flip();
@@ -225,7 +311,6 @@ int do_login(void) {
     if (get_input(g_username, sizeof(g_username), TR("Username"), false) != 1) return 0;
     if (get_input(password,   sizeof(password),   TR("Password"), true)  != 1) return 0;
     trim(g_username);
-    trim(password);
 
     drawHeader();
     drawTTF(40, 96, TR("Signing in..."), 18, XMB_TEXT);
@@ -236,15 +321,15 @@ int do_login(void) {
     }
     flip();
 
-    char url[512], body[256];
+    char url[512], body[6 * (sizeof(g_username) + sizeof(password)) + 32];
     snprintf(url,  sizeof(url),  "%s/Users/AuthenticateByName", g_server);
-    snprintf(body, sizeof(body), "{\"Username\":\"%s\",\"Pw\":\"%s\"}",
-             g_username, password);
+    if (!jf_build_login_body(g_username, password, body, sizeof(body))) return 0;
 
     {
         FILE *dbg = fopen("/dev_hdd0/tmp/jf_debug.txt", "w");
         if (dbg) {
-            fprintf(dbg, "URL: %s\nBody(%d): %s\n", url, (int)strlen(body), body);
+            fprintf(dbg, "URL: %s\nBody(%d): <credentials redacted>\n",
+                    url, (int)strlen(body));
             fclose(dbg);
         }
     }

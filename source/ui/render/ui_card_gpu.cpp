@@ -272,9 +272,11 @@ static void rect_fp_init(void)
     rsxAddressToOffset(s_rect_fp_buf, &s_rect_fp_off);
 }
 
-void ui_rect_gpu_draw(int x, int y, int w, int h, u32 colour, u8 alpha)
+// One colour, an opacity per corner; the passthrough programs interpolate it.
+static void rect_quad(int x, int y, int w, int h, u32 colour,
+                      u8 a_tl, u8 a_tr, u8 a_bl, u8 a_br)
 {
-    if (!s_ready || w <= 0 || h <= 0 || alpha == 0) return;
+    const bool solid = a_tl == 255 && a_tr == 255 && a_bl == 255 && a_br == 255;
     rect_fp_init();
     if (!s_rect_fp_buf) return;
 
@@ -292,7 +294,7 @@ void ui_rect_gpu_draw(int x, int y, int w, int h, u32 colour, u8 alpha)
         GCM_SRC_ALPHA, GCM_ONE_MINUS_SRC_ALPHA,
         GCM_SRC_ALPHA, GCM_ONE_MINUS_SRC_ALPHA);
     rsxSetBlendEquation(context, GCM_FUNC_ADD, GCM_FUNC_ADD);
-    rsxSetBlendEnable(context, alpha == 255 ? GCM_FALSE : GCM_TRUE);
+    rsxSetBlendEnable(context, solid ? GCM_FALSE : GCM_TRUE);
 
     const float W = (float)display_width, H = (float)display_height;
     const float x0 = (2.0f * (float)x / W) - 1.0f;
@@ -300,10 +302,10 @@ void ui_rect_gpu_draw(int x, int y, int w, int h, u32 colour, u8 alpha)
     const float y0 = 1.0f - (2.0f * (float)y / H);
     const float y1 = 1.0f - (2.0f * (float)(y + h) / H);
 
-    const u8 col[4] = { (u8)((colour >> 16) & 0xFF),
-                        (u8)((colour >>  8) & 0xFF),
-                        (u8)( colour        & 0xFF),
-                        alpha };
+    const u8 r = (u8)((colour >> 16) & 0xFF), g = (u8)((colour >> 8) & 0xFF),
+             b = (u8)(colour & 0xFF);
+    const u8 c_tl[4] = { r, g, b, a_tl }, c_tr[4] = { r, g, b, a_tr };
+    const u8 c_bl[4] = { r, g, b, a_bl }, c_br[4] = { r, g, b, a_br };
     const float p_tl[4] = { x0, y0, 0.f, 1.f };
     const float p_tr[4] = { x1, y0, 0.f, 1.f };
     const float p_bl[4] = { x0, y1, 0.f, 1.f };
@@ -311,15 +313,29 @@ void ui_rect_gpu_draw(int x, int y, int w, int h, u32 colour, u8 alpha)
 
     // Colour first, position last -- the position write latches the vertex.
     rsxDrawVertexBegin(context, GCM_TYPE_TRIANGLE_STRIP);
-    rsxDrawVertex4ub(context, GCM_VERTEX_ATTRIB_COLOR0, col);
+    rsxDrawVertex4ub(context, GCM_VERTEX_ATTRIB_COLOR0, c_tl);
     rsxDrawVertex4f (context, GCM_VERTEX_ATTRIB_POS,    p_tl);
-    rsxDrawVertex4ub(context, GCM_VERTEX_ATTRIB_COLOR0, col);
+    rsxDrawVertex4ub(context, GCM_VERTEX_ATTRIB_COLOR0, c_tr);
     rsxDrawVertex4f (context, GCM_VERTEX_ATTRIB_POS,    p_tr);
-    rsxDrawVertex4ub(context, GCM_VERTEX_ATTRIB_COLOR0, col);
+    rsxDrawVertex4ub(context, GCM_VERTEX_ATTRIB_COLOR0, c_bl);
     rsxDrawVertex4f (context, GCM_VERTEX_ATTRIB_POS,    p_bl);
-    rsxDrawVertex4ub(context, GCM_VERTEX_ATTRIB_COLOR0, col);
+    rsxDrawVertex4ub(context, GCM_VERTEX_ATTRIB_COLOR0, c_br);
     rsxDrawVertex4f (context, GCM_VERTEX_ATTRIB_POS,    p_br);
     rsxDrawVertexEnd(context);
+}
+
+void ui_rect_gpu_draw(int x, int y, int w, int h, u32 colour, u8 alpha)
+{
+    if (!s_ready || w <= 0 || h <= 0 || alpha == 0) return;
+    rect_quad(x, y, w, h, colour, alpha, alpha, alpha, alpha);
+}
+
+void ui_rect_gpu_gradient(int x, int y, int w, int h, u32 colour,
+                          u8 a_tl, u8 a_tr, u8 a_bl, u8 a_br)
+{
+    if (!s_ready || w <= 0 || h <= 0) return;
+    if (!a_tl && !a_tr && !a_bl && !a_br) return;
+    rect_quad(x, y, w, h, colour, a_tl, a_tr, a_bl, a_br);
 }
 
 void ui_card_gpu_selection(int cx, int cy, int w, int h)
@@ -352,7 +368,7 @@ void ui_card_gpu_selection(int cx, int cy, int w, int h)
 // row by row into a 64-byte-aligned pitch (the RSX requires it of a linear
 // texture) and ends with a sync, the same write-gather rule the vertex
 // uploads follow.
-#define GPU_TEX_SLOTS 2
+#define GPU_TEX_SLOTS 4
 
 typedef struct {
     u32 *mem;

@@ -133,8 +133,10 @@ bool vdec_open(void) {
     // alloc FAILED -> error screen -> RSX dead-FIFO).  1080p therefore sizes the
     // arena at exactly the queryAttr requirement; num_spus stays 3 for decode
     // throughput (SPU count and work-area size are independent cellVdec params).
-    // Gated: the 720p ship path keeps the proven 3× arena unchanged.
-    const u32 arena_mult = vdec_wants_hd() ? 1u : NUM_SPUS;
+    // 720p keeps 2× (64MB, the same reservation as 1080p): 3× left a 1080p
+    // console with ~3.8MB of main RAM once the UI was up, so posters, HTTP
+    // and glyph rasterising starved and the app froze at the menu.
+    const u32 arena_mult = vdec_wants_hd() ? 1u : 2u;
     u32 mem_size_aligned = ((attr.mem_size * arena_mult) + (1024*1024-1))
                            & ~(u32)(1024*1024-1);
     // The arena is CACHED across vdec_close/vdec_open (seek reopens the
@@ -254,13 +256,12 @@ void vdec_release_mem(void) {
 // (H.264 queryAttr mem_size 33368829 x 3 SPUs, 1MB-aligned); if a firmware
 // ever reports a bigger attr, vdec_open frees this and re-allocates.
 void vdec_reserve_mem(void) {
-    // 720p reserves the 3×-SPU arena it always used (~96MB).  1080p (Alpha)
-    // sizes the arena at the queryAttr requirement instead (L4.2 = ~55MB, 1×;
-    // see vdec_open), so 64MB is enough and leaves the heap for the bigger
-    // jitter-buffer slots.  Reserving up front keeps it off the UI-fragmented
-    // heap; vdec_open re-allocates if the real queryAttr comes back larger.
-    const u32 RESERVE = vdec_wants_hd() ? 64u * 1024 * 1024
-                                         : 96u * 1024 * 1024;
+    // 720p reserves 2× its queryAttr requirement (L3.1 = ~32MB, so 64MB).
+    // 1080p (Alpha) sizes the arena at the requirement itself (L4.2 = ~55MB,
+    // 1×; see vdec_open), so 64MB covers both.  Reserving up front keeps it
+    // off the UI-fragmented heap; vdec_open re-allocates if the real
+    // queryAttr comes back larger.
+    const u32 RESERVE = 64u * 1024 * 1024;
     if (!s_vdec_mem) {
         s_vdec_mem = (u8*)memalign(1024*1024, RESERVE);
         if (s_vdec_mem) s_vdec_mem_size = RESERVE;

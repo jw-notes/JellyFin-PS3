@@ -24,6 +24,8 @@
 #include "ui_wave.h"
 #include "ui_spine.h"
 #include "ui_depth.h"
+#include "thumbnail_cache.h"
+#include "timing.h"
 
 // A stage never has more than the queue's seven slots plus a screen of grid;
 // the library swing draws the column and a 5x2 page at once.
@@ -179,9 +181,40 @@ void depth_focus_bands_gpu(int x, int y, int w, int h)
     halo_bands(x, y, w, h, 1.0f);
 }
 
+// The loading shimmer: a soft light band sweeping across a placeholder every
+// 1.4 s, a little later for cards further right so a row reads as one wave.
+// Two gradient quads (up to the peak, then down), clipped to the card.
+#define SHIMMER_US   1400000ull
+#define SHIMMER_PEAK 0.09f
+
+void depth_shimmer_gpu(int x, int y, int w, int h, float op)
+{
+    if (w <= 0 || h <= 0 || op <= 0.01f) return;
+    const u64 t = timing_get_us() + (u64)((x > 0 ? x : 0) * 400000ull / (display_width ? display_width : 1));
+    const float u = (float)(t % SHIMMER_US) / (float)SHIMMER_US;   // 0..1
+    const float hb = (float)w * 0.45f;
+    const float c = (float)x - hb + u * ((float)w + 2.0f * hb);
+    const float peak = SHIMMER_PEAK * op;
+    // Opacity of the band at screen column px: a triangle, 0 at c +- hb.
+    #define SH_A(px) (peak * (1.0f - fabsf(((float)(px) - c) / hb)))
+    const float seg[2][2] = { { c - hb, c }, { c, c + hb } };
+    for (int k = 0; k < 2; k++) {
+        float a = seg[k][0], b = seg[k][1];
+        if (a < (float)x) a = (float)x;
+        if (b > (float)(x + w)) b = (float)(x + w);
+        if (b - a < 1.0f) continue;
+        const u8 al = depth_a8(SH_A(a)), ar = depth_a8(SH_A(b));
+        ui_rect_gpu_gradient((int)a, y, (int)(b - a + 0.5f), h, 0x00FFFFFF, al, ar, al, ar);
+    }
+    #undef SH_A
+}
+
 // One card: the image at its opacity (or the dim placeholder while it loads),
 // the veil, and the reflection -- the image's bottom rows mirrored, fading out
 // in six strips from 0.34 x the card's opacity (the canvas's 46 px gradient).
+// A freshly fetched image fades in over the placeholder (thumb_fade_in); one
+// still on its way has the shimmer over the placeholder, and one that failed
+// does not.
 static void card_gpu(const DepthCard *c, float alpha)
 {
     int x, y, w, h;
@@ -192,11 +225,17 @@ static void card_gpu(const DepthCard *c, float alpha)
     const bool have = c->img_id && c->src_w > 0 && c->src_h > 0 &&
                       thumb_gpu_texture(c->img_id, c->src_w, c->src_h,
                                         &off, &pitch, c->img);
-    if (have)
+    if (have) {
+        const float fade = thumb_fade_in(c->img_id, c->src_w, c->src_h, c->img);
+        if (fade < 1.0f)
+            ui_rect_gpu_draw(x, y, w, h, XMB_THUMB_DIM, depth_a8(op));
         ui_card_gpu_draw_ex(off, (u32)c->src_w, (u32)c->src_h, pitch,
-                            x, y, w, h, 0.0f, 1.0f, depth_a8(op));
-    else
+                            x, y, w, h, 0.0f, 1.0f, depth_a8(op * fade));
+    } else {
         ui_rect_gpu_draw(x, y, w, h, XMB_THUMB_DIM, depth_a8(op));
+        if (c->img_id && !thumb_failed(c->img_id, c->img))
+            depth_shimmer_gpu(x, y, w, h, op);
+    }
     if (c->box.veil > 0.01f)
         ui_rect_gpu_draw(x, y, w, h, DEPTH_VEIL_RGB, depth_a8(c->box.veil * alpha));
 
