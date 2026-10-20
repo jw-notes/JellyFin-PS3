@@ -1,4 +1,4 @@
-# JellyFin [PS3] 3.3.1: changes
+# JellyFin [PS3] 3.3.2: changes
 
 By jw-notes, based on [vortigauntlet/JellyFin-PS3-LosslessAudio](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio) `v3.2.3`.
 Tested on a retail PS3 with CFW at 1080p.
@@ -106,3 +106,16 @@ docker run --rm --mount "type=bind,source=$PWD,target=/build,readonly" jellyfin-
 ```
 
 Install `JellyFin-PS3.gnpdrm.pkg` with Package Manager.
+
+## Releasing
+
+1. Bump `APP_VERSION` in `source/net/update_check.h` and `APP_VER` in `sfo.xml`.
+2. Build, then copy `JellyFin-PS3.gnpdrm.pkg` to `release/JellyFin-PS3.pkg` and commit it with
+   the source.
+3. Tag that commit (`v3.3.3`, ...) and publish a GitHub release with the same file attached as
+   `JellyFin-PS3.pkg`.
+
+The app downloads updates from `release/JellyFin-PS3.pkg` at the release's tag, through
+api.github.com: GitHub's normal download server only accepts ciphers the PS3's firmware does
+not have. The file is checked against the release asset's SHA-256, so the two must match.
+

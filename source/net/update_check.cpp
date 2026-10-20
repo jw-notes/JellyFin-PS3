@@ -36,7 +36,7 @@
 // This fork's own releases.  Use the repo's exact current name: a renamed repo
 // answers with a 301 redirect, which the console's firmware HTTP client does
 // not reliably follow, and the update popup would silently never appear.
-#define UPDATE_URL "https://api.github.com/repos/jw-notes/JellyFin-PS3/releases/latest"
+#define UPDATE_URL "https://api.github.com/repos/" UPDATE_REPO "/releases/latest"
 #define UPDATE_TIMEOUT_US (2 * 1000 * 1000)
 
 #define UPDATE_LOG_PATH "/dev_hdd0/tmp/update_detection.txt"
