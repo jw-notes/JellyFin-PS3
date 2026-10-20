@@ -52,7 +52,7 @@ DCAHD_SRCS = ../source/audio/dcahd_api.c ../source/audio/dcahd_xll.c \
 DTS_HD_DEPS = $(DTS_STREAM_SRC) $(DTS_MAP_SRC) $(DTS_EXSS_SRC) $(DCA_SRCS) \
               ../source/audio/truehd_map.c $(DCAHD_SRCS)
 
-all: test_release_version test_login_osk test_login_drawn test_search_model test_sha256 test_release_asset test_auth_data test_wave_scope test_ac3_map test_ac3_decode test_iec61937 test_media_sources test_subtitles \
+all: test_classic_library test_release_version test_login_osk test_login_drawn test_search_model test_sha256 test_release_asset test_auth_data test_wave_scope test_ac3_map test_ac3_decode test_iec61937 test_media_sources test_subtitles \
      test_subtitles_pgs test_trickplay_info test_media_segments \
      test_dts_map test_dts_decode test_dts_stream test_dts_exss test_track_codec \
      test_truehd_map test_truehd_decode \
@@ -560,6 +560,7 @@ check: all tones51.ac3 tones51.spdif tones51.dts tones51.thd tones51.thd.ref
 	./test_utf8
 	./test_circle_blit
 	./test_theme
+	./test_classic_library
 	./test_layout
 	./test_wave_kernel
 	./test_wave_spline
@@ -627,6 +628,7 @@ check: all tones51.ac3 tones51.spdif tones51.dts tones51.thd tones51.thd.ref
 	$(MAKE) -f Makefile.host endian_music
 
 clean:
+	rm -f test_classic_library
 	rm -f test_release_version
 	rm -f test_login_osk
 	rm -f test_login_drawn
@@ -686,6 +688,10 @@ test_theme: test_theme.cpp ../source/ui/theme.cpp ../themes/xmb-wave.ini
 # invisible in source and obvious on a TV: a chrome band that grows into the
 # content, a negative card height, a hints bar overlapping the grid.
 LAYOUT_INC = -Ihoststub -I../source/ui -I../source/ui/render -I../source/ui/fonts -I../source/gfx -I../source/util -I../source
+# Classic library pages: real geometry/input, with platform and browse I/O stubbed.
+test_classic_library: test_classic_library.cpp ../source/ui/xmb/ui_library_classic.cpp ../source/ui/render/classic_grid.h
+	$(CXX) $(CXXFLAGS) $(LAYOUT_INC) -I../source/audio -ffunction-sections -fdata-sections -Wl,--gc-sections -o $@ test_classic_library.cpp ../source/ui/xmb/ui_library_classic.cpp
+
 test_layout: test_layout.cpp ../source/ui/ui_visuals.h ../source/ui/theme.h \
              ../source/ui/render/spine.h ../source/ui/render/depth.h
 	$(CXX) $(CXXFLAGS) $(LAYOUT_INC) -o $@ test_layout.cpp

@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "ui_render_internal.h"
+#include "ui_internal.h"
 #include "bitmap.h"
 #include "thumbnail_cache.h"
 #include "circle_blit.h"
@@ -252,6 +253,7 @@ static void grid_geom_core(XMBTabKind kind, bool portrait, GridGeom *gg) {
 }
 
 void xmb_grid_geom(int tab, GridGeom *gg) {
+    if (xmb_classic_grid_geom(tab, gg)) return;
     grid_geom_core(xmb_kind(tab), xmb_tab_uses_portrait(tab), gg);
 }
 
@@ -492,8 +494,10 @@ void xmb_grid_gpu(const GridGeom *gg, const XMBItem *items, int count,
             if (!thumb_failed(items[idx].id, img))
                 depth_shimmer_gpu(cx, cy, cw, ch, 1.0f);
         }
-        if (idx == sel)   // glides between cards (inert with the gate off)
-            spine_focus_poster_gpu(cx, cy, gg->card_w, gg->card_h);
+        if (idx == sel) { // Classic keeps Home's simple ring; XMB keeps its depth bands.
+            if (xmb_classic_library(g_active_tab)) spine_focus_ring_gpu(cx, cy, gg->card_w, gg->card_h);
+            else spine_focus_poster_gpu(cx, cy, gg->card_w, gg->card_h);
+        }
     }
 }
 
@@ -618,7 +622,7 @@ void xmb_grid_text(const GridGeom *gg, const XMBItem *items, int count,
         if (total > vis) {
             int first = abs_start + scroll;
             int bar_x = gg->x0 + gg->grid_w + UIS_W(14);
-            int bar_h = gg->stride + gg->card_h;   // row 1 top -> row 2 card bottom
+            int bar_h = (gg->vis / gg->cols - 1) * gg->stride + gg->card_h;   // row 1 top -> row 2 card bottom
             drawRect((u32)bar_x, (u32)y0, UIS_W(3), (u32)bar_h, XMB_TRACK);
             int th = bar_h * vis / total;
             if (th < 24)    th = 24;

@@ -33,7 +33,28 @@ own version (3.3.x) and checks this repo's releases for updates.
 **Startup hang if the update check couldn't start.** It now finishes instead of leaving
 the boot animation running forever.
 
+**Music visualizers hidden in Classic mode.**
+Classic's plain browsing background carried into Now Playing and hid JellyWave
+and JellyDrop. Music playback now enables the selected visualizer and restores
+Classic's plain background when you leave. The saved choice and Off option are kept.
+
 ## Changes
+
+- **Classic layout** (Settings > Display > Layout): a web-style Home with My Media,
+  Continue Watching, Next Up, Downloaded and latest-library rows. Home, Search and
+  Settings share a header; L1/R1 move between its pages.
+- **Classic library pages.** Movies, Shows, Collections and generic libraries open
+  a full-width poster grid under the same header. Seasons and episodes keep their
+  breadcrumbs, with wide stills for episodes. Existing fetching, paging, A-Z,
+  details and playback actions are reused. Up from the first row focuses the
+  header; Circle at a library root returns Home, while drill-down keeps Back.
+- **Classic Music and Playlists.** Square artwork with room for artist credits;
+  Music retains Albums, Artists, Playlists, Genres and Songs, plus artist/genre
+  and playlist drill-down. Up from the grid focuses the Music sub-tabs, then the
+  shared header. Small displays with large UI text use one row when needed.
+- **Media in Classic My Media.** A local tile opens Downloads, internal storage
+  and USB drives under the Classic header. Its icon needs no server artwork;
+  opening a place uses the existing folder browser and playback screens.
 
 - **TV / Video column.** The app installs under TV / Video Services instead of Game, as
   "JellyFin [PS3]". Same title ID, so it installs over the original and keeps
@@ -95,6 +116,18 @@ the boot animation running forever.
 New host tests: version comparison, sign-in escaping and saved sessions, and both
 keyboards (typing a server address, passwords, limits and random input; also checked
 under AddressSanitizer). Run with `make -f Makefile.host check` in `tests/`.
+
+Classic checks: `test_classic_library` exercises the production geometry and input
+adapter across 480p, 576p, 720p and 1080p, UI scales and overscan. It covers poster,
+wide and square art, header and Music sub-tab navigation, Media entry actions,
+Back/Cancel routing and selection alignment when changing layouts. It passed
+normally and with AddressSanitizer/UndefinedBehaviorSanitizer; `test_layout` also
+passed. See [Classic library notes](docs/classic-libraries.md).
+
+The updated PS3 package builds with the verified GCC 7.2 image and passes
+`tools/verify_pkg.py` (payloads, TV category, version, executable and themes).
+The new Classic pages and music visualizer visibility fix still need console
+verification; the retail-PS3 testing noted above covers the earlier changes.
 
 ## Building
 

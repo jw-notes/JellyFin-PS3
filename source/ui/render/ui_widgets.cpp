@@ -8,6 +8,7 @@
 
 #include "ui.h"
 #include "ui_visuals.h"
+#include "ui_internal.h"
 #include "ui_wave.h"
 #include "ui_spine.h"    // frame clock for the A-Z rail's glide
 #include "boot_anim.h"
@@ -402,7 +403,7 @@ static void xmb_draw_jumpbar_window(int tab, int jbar_x, int bar_top, int avail,
 void xmb_draw_jumpbar(int tab) {
     GridGeom gg;
     xmb_grid_geom(tab, &gg);
-    const int bar_top = XMB_GRID_Y0
+    const int bar_top = xmb_classic_library(tab) ? xmb_classic_library_y0(tab) : XMB_GRID_Y0
                       + (xmb_kind(tab) == TABKIND_MUSIC ? XMB_MUSIC_SUBTAB_H : 0);
     int jbar_x = gg.x0 - JBAR_GAP * 3 - JBAR_W;
     if (jbar_x < 0) jbar_x = 0;

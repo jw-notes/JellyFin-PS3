@@ -72,6 +72,7 @@ void xmb_switch_tab(int new_tab) {
     if (xmb_kind(new_tab) == TABKIND_LIVETV) xmb_livetv_on_enter();
     if (xmb_kind(new_tab) == TABKIND_LOCAL) xmb_media_on_enter();
     spine_focus_enter(new_tab);     // no-op with the gate off, or first visit
+    xmb_classic_library_enter(new_tab);
     // Home: reset focus and refetch the dynamic rows (Continue Watching /
     // Next Up change after every playback).
     if (new_tab == XMB_TAB_HOME)

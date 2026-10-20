@@ -56,7 +56,7 @@ static void xmb_reset_state(void) {
 // array, count, selection, scroll, grid origin, and whether more rows exist
 // below.  Returns false for tabs that don't use the grid
 // (search/settings).
-bool xmb_grid_view(int tab, GridGeom *gg, const XMBItem **items,
+static bool xmb_grid_view_data(int tab, GridGeom *gg, const XMBItem **items,
                    int *count, int *sel, int *scroll, int *y0,
                    bool *more_below, int *abs_start, int *abs_total) {
     if (tab == XMB_TAB_SEARCH || tab == XMB_TAB_SETTINGS)
@@ -95,6 +95,19 @@ bool xmb_grid_view(int tab, GridGeom *gg, const XMBItem **items,
     *more_below = g_scroll_top + gg->vis < g_item_count[tab] ||
                   g_tab_start[tab] + g_item_count[tab] < g_tab_total[tab];
     *abs_start = g_tab_start[tab]; *abs_total = g_tab_total[tab];
+    return true;
+}
+
+bool xmb_grid_view(int tab, GridGeom *gg, const XMBItem **items,
+                   int *count, int *sel, int *scroll, int *y0,
+                   bool *more_below, int *abs_start, int *abs_total) {
+    if (!xmb_grid_view_data(tab, gg, items, count, sel, scroll, y0,
+                            more_below, abs_start, abs_total)) return false;
+    if (xmb_classic_library(tab)) {
+        *y0 = xmb_classic_library_y0(tab);
+        if (xmb_classic_library_header_focus(tab) >= 0 ||
+            (xmb_kind(tab) == TABKIND_MUSIC && g_music_depth == 0 && g_music_header)) *sel = -1;
+    }
     return true;
 }
 
@@ -161,6 +174,13 @@ static bool s_div_on_gpu = false;   // set per frame by the GPU phase
 // easing out past the top never draws over the breadcrumb or the spine.  At
 // rest -- and always with the spine gate off -- this does nothing at all.
 static bool grid_motion_begin(const GridGeom *gg, int scroll, int y0, bool gpu) {
+    if (xmb_classic_library(g_active_tab)) {
+        const int rows = gg->vis / gg->cols;
+        xmb_grid_motion(0, rows, 0);
+        if (gpu) ui_card_gpu_clip(y0, y0 + rows * gg->stride);
+        else { g_cpu_clip_top = y0; g_cpu_clip_bot = y0 + rows * gg->stride; }
+        return true;
+    }
     int r0, rn, dy;
     spine_grid_motion(gg, scroll, &r0, &rn, &dy);
     if (r0 == 0 && rn == XMB_GRID_ROWS && dy == 0) return false;
@@ -227,6 +247,7 @@ static void xmb_draw_gpu_phase(int tab) {
 
 // CPU draw phase — direct framebuffer writes, runs after rsxSync().
 static void xmb_draw_cpu_phase(int tab) {
+    if (xmb_classic_chrome(tab)) xmb_classic_header_cpu(tab);
     if (xmb_classic_active(tab)) { xmb_classic_cpu(); return; }
     // Only when the GPU phase did not already lay it down as a blended quad.
     if (!s_div_on_gpu && spine_divider_alpha() >= 0.5f)
@@ -287,35 +308,39 @@ static void xmb_draw_text_phase(int tab) {
     } else if (xmb_kind(tab) == TABKIND_LOCAL) {
         xmb_draw_media();
     } else {
-        // Card-grid tabs: breadcrumb (sub-screens), empty text, grid labels.
-        if (xmb_kind(tab) == TABKIND_MUSIC && g_music_depth == 0) {
-            GridGeom mg;
-            xmb_grid_geom(tab, &mg);
-            xmb_draw_music_subtabs(mg.x0, XMB_CONTENT_Y + UIS_H(2),
-                                   g_music_subtab, g_music_header);
-        } else if (g_music_depth > 0) {
-            // Reached from a music library OR a standalone Playlists one, so
-            // name what is actually listed: a playlist drills into its tracks,
-            // an artist/genre into its albums.
-            bool tracks = (g_music_sub_count > 0 &&
-                           strcmp(g_music_sub_items[0].type, "Audio") == 0);
-            xmb_draw_breadcrumb(XMB_ITEM_PAD, XMB_CONTENT_Y + UIS_H(2),
-                                g_music_parent_name,
-                                tracks ? TR("Tracks") : TR("Albums"), NULL);
-        }
-        if (g_tv_depth > 0) {
-            if (g_tv_depth == 1)
+        if (xmb_classic_library(tab)) xmb_classic_library_heading(tab);
+        else {
+            // Card-grid tabs: breadcrumb (sub-screens), empty text, grid labels.
+            if (xmb_kind(tab) == TABKIND_MUSIC && g_music_depth == 0) {
+                GridGeom mg;
+                xmb_grid_geom(tab, &mg);
+                xmb_draw_music_subtabs(mg.x0, XMB_CONTENT_Y + UIS_H(2),
+                                       g_music_subtab, g_music_header);
+            } else if (g_music_depth > 0) {
+                // Reached from a music library OR a standalone Playlists one, so
+                // name what is actually listed: a playlist drills into its tracks,
+                // an artist/genre into its albums.
+                bool tracks = (g_music_sub_count > 0 &&
+                               strcmp(g_music_sub_items[0].type, "Audio") == 0);
                 xmb_draw_breadcrumb(XMB_ITEM_PAD, XMB_CONTENT_Y + UIS_H(2),
-                                    g_tv_series_name, TR("Seasons"), NULL);
-            else
+                                    g_music_parent_name,
+                                    tracks ? TR("Tracks") : TR("Albums"), NULL);
+            }
+            if (g_tv_depth > 0) {
+                if (g_tv_depth == 1)
+                    xmb_draw_breadcrumb(XMB_ITEM_PAD, XMB_CONTENT_Y + UIS_H(2),
+                                        g_tv_series_name, TR("Seasons"), NULL);
+                else
+                    xmb_draw_breadcrumb(XMB_ITEM_PAD, XMB_CONTENT_Y + UIS_H(2),
+                                        g_tv_series_name, g_tv_season_name,
+                                        TR("Episodes"));
+                xmb_season_toast_draw();
+            } else if (g_col_depth > 0) {
                 xmb_draw_breadcrumb(XMB_ITEM_PAD, XMB_CONTENT_Y + UIS_H(2),
-                                    g_tv_series_name, g_tv_season_name,
-                                    TR("Episodes"));
-            xmb_season_toast_draw();
-        } else if (g_col_depth > 0) {
-            xmb_draw_breadcrumb(XMB_ITEM_PAD, XMB_CONTENT_Y + UIS_H(2),
-                                g_col_name, TR("Movies"), NULL);
-        }
+                                    g_col_name, TR("Movies"), NULL);
+            }
+
+        } // XMB breadcrumbs; Classic draws them under its library heading.
 
         GridGeom gg; const XMBItem *items;
         int count, sel, scroll, y0, a_start, a_total; bool more;
@@ -326,7 +351,11 @@ static void xmb_draw_text_phase(int tab) {
                        (g_music_depth > 0);
             if (count == 0) {
                 bool loaded = sub || g_items_loaded[tab];
-                if (loaded)
+                if (xmb_classic_library(tab)) {
+                    drawTTF((u32)gg.x0, (u32)(y0 + UIS_H(36)),
+                        loaded ? TR("No items in this library") : TR("Loading..."),
+                        UIS_TF(18), XMB_TEXT_DIM);
+                } else if (loaded)
                     xmb_draw_empty_state(tab,
                             tab == XMB_TAB_RESUME ? TR("Nothing in progress")
                                                   : TR("No items in this library"));
@@ -437,6 +466,7 @@ static void draw_hints_vis(const Hint *h, int n) {
 // Contextual hints bar for the current tab / mode.
 static void xmb_draw_hints(int tab) {
     if (xmb_classic_active(tab)) { xmb_classic_hints(); return; }
+    if ((xmb_classic_library(tab) || xmb_classic_media(tab)) && !g_jumpbar_active) { xmb_classic_library_hints(); return; }
     bool in_tv_sub  = (g_tv_depth > 0);
     bool in_col_sub = (g_col_depth > 0);
 
@@ -667,6 +697,8 @@ void ui_run_xmb(void) {
             ;                           // Classic: L1 / R1 between Home, Search, Settings
         else if (xmb_classic_active(tab))
             should_exit = xmb_classic_input();  // Classic: its own Home
+        else if (xmb_classic_library(tab) || xmb_classic_media(tab))
+            should_exit = xmb_classic_library_input(tab);
         else if (BTN_PRESSED(square) && tab != XMB_TAB_SEARCH) {
             // Square: the visualiser, JellyWave -> JellyDrop -> Off (ui_wave.h).
             // Not on Search, where Square deletes a character.
@@ -690,6 +722,7 @@ void ui_run_xmb(void) {
             spine_at_base() && g_tabs[XMB_TAB_HOME].enabled)
             xmb_switch_tab(XMB_TAB_HOME);
 
+        tab = g_active_tab; // navigation may have opened a different Classic page
         slog_menu_tick();   // STATE: MENU ... (emulator-only, emits on change)
 
         // Card images go into the FIFO with the wave, ahead of the fence.

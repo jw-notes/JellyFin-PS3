@@ -63,7 +63,7 @@ int row_h(void)       { return UIS_H(62); }
 int row_pitch(void)   { return row_h() + UIS_H(8); }
 
 // The tab's own list sits in the XMB's content band; the standalone screens have a title above theirs.
-int tab_top(void)     { return XMB_CONTENT_Y + UIS_H(10); }
+int tab_top(void)     { return xmb_classic_media(g_active_tab) ? xmb_classic_library_y0(g_active_tab) : XMB_CONTENT_Y + UIS_H(10); }
 int screen_top(void)  { return XMB_OY + UIS_H(112); }
 int bottom(void)      { return (int)display_height - XMB_BOTTOM_PAD; }
 int rows_in(int top)  {
@@ -821,14 +821,14 @@ void open_root_row(int row) {
 void draw_root_panels(int top, int x, int w) {
     const int vis = rows_in(top);
     for (int r = 0; r < vis && r < root_rows(); r++)
-        draw_row_frame(x, top + r * row_pitch(), w, row_h(), r == s_sel);
+        draw_row_frame(x, top + r * row_pitch(), w, row_h(), r == s_sel && xmb_classic_library_header_focus(g_active_tab) < 0);
 }
 
 void draw_root_text(int top, int x, int w) {
     const int vis = rows_in(top);
     for (int r = 0; r < vis && r < root_rows(); r++) {
         const int y = top + r * row_pitch();
-        const bool s = (r == s_sel);
+        const bool s = (r == s_sel && xmb_classic_library_header_focus(g_active_tab) < 0);
         char title[64], sub[120];
         int icon = ICON_COLLECTIONS;
         if (r == 0) {
@@ -896,6 +896,8 @@ void xmb_cpu_draw_media(void) {
 }
 
 void xmb_draw_media(void) {
+    if (xmb_classic_media(g_active_tab))
+        drawTTF((u32)XMB_ITEM_PAD, (u32)(XMB_OY + UIS_H(86)), TR("Media"), UIS_TF(24), XMB_TEXT, true);
     draw_root_text(tab_top(), (int)(((int)display_width - XMB_LIST_W) / 2), XMB_LIST_W);
 }
 

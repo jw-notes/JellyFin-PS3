@@ -1263,6 +1263,9 @@ static void music_screen_run(const MusicCtx *ctx, int count, int start_idx) {
     if (count <= 0) return;
     if (!music_start(s_tracks, count, start_idx)) return;
 
+    // Classic keeps browsing plain; Now Playing owns its visualizer choice.
+    wave_set_plain(false);
+
     // Entered mid-frame from the XMB input handler: that frame has RSX work
     // queued (clear + wave) but its flip hasn't been issued yet.  Finish it
     // first or the loop's waitflip() below spins forever on a flip that
@@ -1430,6 +1433,7 @@ static void music_screen_run(const MusicCtx *ctx, int count, int start_idx) {
     }
 
     music_stop();
+    wave_set_plain(ui_layout() == UI_LAYOUT_CLASSIC);
     wave_set_album_tint(0u, 0.0f);            // back to the plain palette
     wave_set_bg_dim(0.0f);                    // the menus get their gradient back
     // Home's posters went blank after an album was played (they stayed fine

@@ -53,6 +53,7 @@ bool depth_stage_tab(int tab) {
 }
 
 bool depth_lib_owns(int tab) {
+    if (xmb_classic_library(tab) || xmb_classic_media(tab)) return false;
     if (tab == XMB_TAB_HOME) return false;
     // Search and Settings have no column: their label block shows at base
     // and their own screen takes over at the halfway point, as before.

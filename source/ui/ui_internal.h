@@ -191,10 +191,20 @@ void        xmb_classic_cpu(void);
 void        xmb_classic_text(void);
 void        xmb_classic_hints(void);
 bool        xmb_classic_input(void);
-bool        xmb_classic_chrome(int tab);     // Classic, and Home / Search / Settings
+bool        xmb_classic_chrome(int tab);     // Classic Home, library, Search or Settings
 void        xmb_classic_header_gpu(int tab);
+void        xmb_classic_header_cpu(int tab);
 void        xmb_classic_header_text(int tab);
-bool        xmb_classic_switch_input(int tab);   // L1 / R1 between those three
+bool        xmb_classic_switch_input(int tab);   // L1 / R1 between header pages
+bool        xmb_classic_library(int tab);
+void        xmb_classic_library_enter(int tab);
+int         xmb_classic_library_header_focus(int tab);
+int         xmb_classic_library_y0(int tab);
+bool        xmb_classic_media(int tab);
+bool        xmb_classic_grid_geom(int tab, GridGeom *gg);
+void        xmb_classic_library_heading(int tab);
+void        xmb_classic_library_hints(void);
+bool        xmb_classic_library_input(int tab);
 // Settings > System > About (render/ui_about.cpp): version, credits, licences.
 void        xmb_show_about(void);
 const char *ambient_delay_label(void);

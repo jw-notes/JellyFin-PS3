@@ -56,6 +56,7 @@ static int classic_page(int tab) {
     if (tab == XMB_TAB_HOME) return 0;
     if (tab == XMB_TAB_SEARCH) return 1;
     if (tab == XMB_TAB_SETTINGS) return 2;
+    if (xmb_classic_library(tab) || xmb_classic_media(tab)) return 0;
     return -1;
 }
 
@@ -114,7 +115,7 @@ static void cadd(int src, int shape, const char *title) {
 static void crows_build(void) {
     s_nlib = 0;
     for (int t = 0; t < XMB_TAB_COUNT; t++)
-        if (g_tabs[t].enabled && g_tabs[t].library_id[0] && lib_kind(g_tabs[t].kind))
+        if (g_tabs[t].enabled && ((g_tabs[t].library_id[0] && lib_kind(g_tabs[t].kind)) || g_tabs[t].kind == TABKIND_LOCAL))
             s_lib_tab[s_nlib++] = t;
     s_ncr = 0;
     if (s_nlib) cadd(CR_LIB, CS_LIB, TR("My Media"));
@@ -178,7 +179,7 @@ static bool ccard(const CRow *r, int c, const char **id, ThumbImg *img, int *sw,
     if (r->src == CR_LIB) {
         if (c >= s_nlib) return false;
         *id = g_tabs[s_lib_tab[c]].library_id;
-        return true;
+        return (*id)[0] != 0;
     }
     if (c >= s_rows[r->src].count) return false;
     const XMBItem *it = &s_rows[r->src].items[c];
@@ -228,7 +229,7 @@ static void classic_tick(void) {
         for (int c = 0; c < r->n; c++) {
             const int x = C_X0 + c * step - (int)s_ch[cslot(r->src)].value;
             if (x > (int)display_width + step || x < -2 * step) continue;
-            const char *id; ThumbImg img; int sw, sh;
+            const char *id = ""; ThumbImg img; int sw, sh;
             if (ccard(r, c, &id, &img, &sw, &sh)) thumb_request(id, sw, sh, img);
         }
     }
@@ -256,11 +257,13 @@ static void chdr_boxes(int x[3], int w[3], int *y, int *h) {
 void xmb_classic_header_gpu(int tab) {
     if (!ui_card_gpu_ready()) return;
     const int page = classic_page(tab);
-    const bool focus = page == 0 && s_cfocus == -1;
+    const int lib_focus = xmb_classic_library_header_focus(tab);
+    const bool focus = (tab == XMB_TAB_HOME && s_cfocus == -1) || lib_focus >= 0;
+    const int focused = lib_focus >= 0 ? lib_focus : s_chdr;
     int x[3], w[3], y, h;
     chdr_boxes(x, w, &y, &h);
     for (int i = 0; i < 3; i++) {
-        if (focus && s_chdr == i)
+        if (focus && focused == i)
             ui_rect_gpu_draw(x[i], y, w[i], h, XMB_ACCENT, 255);
         else if (i == page)
             ui_rect_gpu_draw(x[i] + UIS_W(14), y + h - UIS_H(3), w[i] - UIS_W(28), UIS_H(3), XMB_ACCENT, 255);
@@ -271,16 +274,35 @@ void xmb_classic_header_gpu(int tab) {
 void xmb_classic_header_text(int tab) {
     xmb_draw_topbar();
     const int page = classic_page(tab);
-    const bool focus = page == 0 && s_cfocus == -1;
+    const int lib_focus = xmb_classic_library_header_focus(tab);
+    const bool focus = (tab == XMB_TAB_HOME && s_cfocus == -1) || lib_focus >= 0;
+    const int focused = lib_focus >= 0 ? lib_focus : s_chdr;
     int x[3], w[3], y, h;
     chdr_boxes(x, w, &y, &h);
     const float px = UIS_TF(17.0f);
     for (int i = 0; i < 3; i++) {
-        const bool on = focus && s_chdr == i;
+        const bool on = focus && focused == i;
         const char *t = tr(k_hdr[i]);
         const int tw = ttf_text_width(t, px, true);
         drawTTF((u32)(x[i] + (w[i] - tw) / 2), (u32)(y + (h - (int)px) / 2 - UIS_H(2)), t, px,
                 on ? XMB_KEY_LABEL_SEL : (i == page ? XMB_TEXT : XMB_TEXT_DIM), true);
+    }
+}
+
+void xmb_classic_header_cpu(int tab) {
+    if (ui_card_gpu_ready()) return;
+    const int page = classic_page(tab);
+    const int lib_focus = xmb_classic_library_header_focus(tab);
+    const bool focus = (tab == XMB_TAB_HOME && s_cfocus == -1) || lib_focus >= 0;
+    const int focused = lib_focus >= 0 ? lib_focus : s_chdr;
+    int x[3], w[3], y, h;
+    chdr_boxes(x, w, &y, &h);
+    for (int i = 0; i < 3; ++i) {
+        if (focus && focused == i)
+            drawRect((u32)x[i], (u32)y, (u32)w[i], (u32)h, XMB_ACCENT);
+        else if (i == page)
+            drawRect((u32)(x[i] + UIS_W(14)), (u32)(y + h - UIS_H(3)),
+                     (u32)(w[i] - UIS_W(28)), (u32)UIS_H(3), XMB_ACCENT);
     }
 }
 
@@ -304,7 +326,7 @@ void xmb_classic_gpu(void) {
         for (int c = 0; c < cshown(r); c++) {
             const int cx = C_X0 + c * step - (int)(off + 0.5f);
             if (cx > (int)display_width || cx + cw < 0) continue;
-            const char *id; ThumbImg img; int sw, sh;
+            const char *id = ""; ThumbImg img; int sw, sh;
             u32 toff = 0, pitch = 0;
             const bool have = ccard(r, c, &id, &img, &sw, &sh) &&
                               thumb_gpu_texture(id, sw, sh, &toff, &pitch, img);
@@ -315,7 +337,7 @@ void xmb_classic_gpu(void) {
                                     0.0f, 1.0f, (u8)(fade * 255.0f + 0.5f));
             } else {
                 ui_rect_gpu_draw(cx, cy, cw, ch, XMB_THUMB_DIM, 255);
-                if (r->loading || (c < r->n && !thumb_failed(id, img)))
+                if (r->loading || (c < r->n && id[0] && !thumb_failed(id, img)))
                     depth_shimmer_gpu(cx, cy, cw, ch, 1.0f);
             }
             // Watched progress along the bottom (Continue Watching).
@@ -370,6 +392,9 @@ void xmb_classic_text(void) {
         for (int c = 0; c < r->n; c++) {
             const int cx = C_X0 + c * step - (int)(off + 0.5f);
             if (cx > (int)display_width || cx + cw < 0) continue;
+            if (r->src == CR_LIB && g_tabs[s_lib_tab[c]].kind == TABKIND_LOCAL)
+                drawIcon((u32)(cx + (cw - UIS_W(40)) / 2), (u32)(y0 + C_TITLE_H + (ch - UIS_H(40)) / 2),
+                         ICON_COLLECTIONS, UIS_TF(40), XMB_TEXT_DIM);
             char a[160], b[160], fit[160];
             clabel(r, c, a, sizeof a, b, sizeof b);
             const bool on = i == s_cfocus && c == col;
@@ -413,6 +438,11 @@ bool xmb_classic_switch_input(int tab) {
     if (!xmb_classic_chrome(tab)) return false;
     const bool l = BTN_PRESSED(l1), r = BTN_PRESSED(r1);
     if (!l && !r) return false;
+    if ((xmb_classic_library(tab) || xmb_classic_media(tab)) && l) {
+        xmb_switch_tab(XMB_TAB_HOME);
+        init_btns();
+        return true;
+    }
     const int page = classic_page(tab);
     const int to = page + (l ? -1 : 1);
     if (to < 0 || to > 2) { init_btns(); return true; }
