@@ -279,7 +279,7 @@ def main():
         name, path = spec.split("=", 1)
         data[name] = json.loads(pathlib.Path(path).read_text())
     mark = header_bytes("source/gfx/jfmark_hd_png.h", "jfmark_hd_%s_png" % a.variant)
-    font = header_bytes("source/gfx/mata_bold.h", "Mata_Bold_otf")
+    font = header_bytes("source/gfx/archivo_expanded_xbold.h", "Archivo_ExpXBold_ttf")
     back = "null"
     if a.backdrop:
         back = json.dumps("data:image/png;base64," +

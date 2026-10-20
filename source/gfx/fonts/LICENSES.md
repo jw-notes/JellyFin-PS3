@@ -1,62 +1,43 @@
-# Bundled fonts
+# Fonts
 
-Every font compiled into this app, why it is here, and under what licence.
+Every font the app draws with, where it comes from, and under what licence.
+Every font compiled into the app is free to redistribute.
 
 | Font | Used for | Licence | Licence text |
 |---|---|---|---|
-| Open Sans (Regular, Bold) | fallback only, and the default subtitle face | Apache 2.0 | upstream |
+| **SCE-PS3 Rodin LATIN** | all interface text, and the fallback for every other role | Sony; **not shipped** | read from the console's own firmware at runtime |
+| Archivo Expanded Bold | media titles (`--font-display`) | SIL OFL 1.1 | [OFL-Archivo.txt](OFL-Archivo.txt) |
+| Archivo Expanded ExtraBold | the "JELLYFIN" wordmark in the lockup | SIL OFL 1.1 | [OFL-Archivo.txt](OFL-Archivo.txt) |
+| Michroma | codec / quality values, eyebrows and section labels | SIL OFL 1.1 | upstream (Vernon Adams, Google Fonts) |
+| Satoshi (Regular, Bold) | tab labels, clock, cast | ITF Free Font License | upstream (Fontshare) |
+| Open Sans (Regular, Bold) | fallback when Rodin is unavailable, and the default subtitle face | Apache 2.0 | upstream |
 | Noto Sans Bold | optional subtitle face | SIL OFL 1.1 | [OFL-NotoSans.txt](OFL-NotoSans.txt) |
-| Noto Sans JP Regular | kana and kanji: the last link of every face chain (Japanese interface, Japanese titles and subtitles) | SIL OFL 1.1 | [OFL-NotoSansJP.txt](OFL-NotoSansJP.txt) |
+| Noto Sans JP Regular | kana and kanji: the last link of every face chain | SIL OFL 1.1 | [OFL-NotoSansJP.txt](OFL-NotoSansJP.txt) |
 | Roboto Condensed Bold | optional subtitle face | Apache 2.0 | [Apache-2.0-RobotoCondensed.txt](Apache-2.0-RobotoCondensed.txt) |
 | Tabler Icons | UI glyphs | MIT | upstream |
 | Material Icons | UI glyphs | Apache 2.0 | upstream |
-| Michroma | `--font-spec`: codec / quality values | SIL OFL 1.1 | upstream (Vernon Adams, Google Fonts) |
-| Satoshi (Regular, Bold) | `--font-tab`: tab labels, clock, cast | ITF Free Font License | upstream (Fontshare) |
-| **SCE-PS3 Rodin LATIN** | `--font-system` / `--font-tech`: every string, and the fallback for every other role | **none — Sony system font** | — |
-| **Microgramma** | `--font-eyebrow`: eyebrows and section labels | **none — Linotype/Monotype commercial** | — |
-| **GT America Expanded Bold** | `--font-display`: media titles | **none — Grilli Type commercial** | — |
-| **Mata Bold** | the lockup wordmark, and nothing else | **none — unverified** | — |
 
-## The four in bold cannot be redistributed
+## Rodin comes from the PS3, not from this repo
 
-This file used to say, correctly, that Arial/Helvetica/Netflix Sans/Tiresias
-"are all proprietary and cannot ship in a GPLv3 package". Three faces that went
-in with the XMB revamp are in exactly that category, and saying so here is the
-point of this file:
+Rodin is the PS3's own system font and is what makes the interface look like it
+belongs on the console. Sony's licence does not allow it to be redistributed, so
+the app reads it from every console's firmware at startup:
+`/dev_flash/data/font/SCE-PS3-RD-R-LATIN.TTF` (`rodin_load()` in
+`source/ui/render/ui_text.cpp`). If it cannot be read, the interface falls back to
+Open Sans.
 
-- **SCE-PS3 Rodin LATIN** is the PS3's own system font, extracted from console
-  firmware. It is what makes the UI look like it belongs on the machine, and
-  there is no licence under which it may be redistributed.
-- **Microgramma** is a Linotype/Monotype retail face. The bundled
-  `microgramma-web.ttf` is a web-font conversion, which does not change that.
-- **GT America Expanded Bold** is a Grilli Type retail face, bundled as a
-  99-glyph subset (see below).
-- **Mata Bold** arrived in the design bundle with no licence statement at all,
-  which is not the same as a permissive one. It draws exactly one string —
-  "JELLYFIN" in the lockup — so it is also the cheapest of the four to
-  substitute: one `face_of()` case and one embed.
+The host tests and `tools/ui_preview` read a copy through the `JF_RODIN_TTF`
+environment variable. Copy the file from your own console into `tests/local/`
+(git-ignored) and point the variable at it. Without it the tests use Open Sans.
 
-They are in the tree because the design specifies them and the owner of this
-build asked for them. That is a legitimate choice for a personal build. It does
-mean **this package as built is not redistributable**, and a public release
-would have to substitute open faces for those three. The renderer makes that
-substitution cheap: each role resolves through `face_of()` in
-`render/ui_text.cpp`, so swapping a face is a one-line change plus an embed.
+## Archivo is a Latin instance of the variable font
 
-## GT America Expanded Bold is a subset, and the renderer knows it
-
-The bundled file is 15,860 bytes and carries **99 glyphs**: `A-Z`, `a-z`, `0-9`
-and `! ( ) , . : ; ? _` and space. It has **no hyphen, ampersand, slash,
-apostrophe, quote or accented character**.
-
-As a single face that would render "Spider-Man" as "SpiderMan" and "Amélie" as
-"Amlie", silently, because a missing codepoint is `.notdef` and `.notdef` is
-usually a zero-width nothing. So `--font-display` is not one face: it is a
-chain, per the design's own CSS (`"GT America Expanded", "Rodin", …`), and
-`chain_of()` resolves it per codepoint with Rodin behind it. `tests/test_utf8`
-section 7 is the guard — it asserts the subset really is missing those
-characters, that they come back from Rodin, and that they land on the run's
-baseline rather than their own.
+`Archivo-ExpandedBold.ttf` and `Archivo-ExpandedExtraBold.ttf` are fixed instances
+(width 125, weight 700 and 800) of Archivo's variable font from
+[google/fonts](https://github.com/google/fonts/tree/main/ofl/archivo), subset to
+Latin-1, Latin Extended-A and common punctuation. stb_truetype cannot read
+variable fonts, hence the instances. Anything outside the subset comes from Rodin
+through `chain_of()`.
 
 ## Why these three for subtitles
 
@@ -115,3 +96,10 @@ Regenerate with 3719 characters requested (needs
 ); it reads the characters the catalog needs from
 , so it must be re-run when a translation brings in a
 character the subset lacks.  fails when it does.
+
+## History
+
+Before 3.3.0 the build embedded Rodin itself, plus Microgramma, GT America Expanded
+Bold and Mata Bold, none of which may be redistributed. Microgramma was replaced by
+Michroma (drawn after it), GT America Expanded by Archivo Expanded Bold, and Mata by
+Archivo Expanded ExtraBold.

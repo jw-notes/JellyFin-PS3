@@ -15,7 +15,7 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
 
-#include "rodin_latin.h"
+#include "opensans_regular.h"
 #include "notosansjp.h"
 #include "i18n.h"
 #include "settings_model.h"
@@ -154,7 +154,19 @@ static void settings_layout_fits(void) {
 }
 
 int main(void) {
-    CHECK(stbtt_InitFont(&s_rodin, (unsigned char *)Rodin_Latin_ttf, 0));
+    // Rodin is the PS3's own font and is not in the repo: JF_RODIN_TTF points
+    // at a copy (from /dev_flash/data/font/), else Open Sans stands in.
+    static unsigned char *rodin = NULL;
+    if (const char *p = getenv("JF_RODIN_TTF")) {
+        if (FILE *f = fopen(p, "rb")) {
+            fseek(f, 0, SEEK_END); const long n = ftell(f); fseek(f, 0, SEEK_SET);
+            rodin = (unsigned char *)malloc((size_t)n);
+            if (fread(rodin, 1, (size_t)n, f) != (size_t)n) { free(rodin); rodin = NULL; }
+            fclose(f);
+        }
+    }
+    if (!rodin) puts("Rodin: JF_RODIN_TTF not set, using Open Sans in its place");
+    CHECK(stbtt_InitFont(&s_rodin, rodin ? rodin : (unsigned char *)OpenSans_Regular_ttf, 0));
     CHECK(stbtt_InitFont(&s_jp, (unsigned char *)NotoSansJP_otf, 0));
     int asc = 0, desc = 0;
     stbtt_GetFontVMetrics(&s_rodin, &asc, &desc, NULL);

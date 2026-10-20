@@ -40,15 +40,14 @@ Every commit, and who made it, is in the git history.
 | What | Licence |
 |---|---|
 | Open Sans, Roboto Condensed, Material Icons | Apache 2.0 |
-| Noto Sans, Noto Sans JP, Michroma | SIL OFL 1.1 |
+| Archivo, Noto Sans, Noto Sans JP, Michroma | SIL OFL 1.1 |
 | Tabler Icons | MIT |
 | Satoshi (Fontshare) | ITF Free Font License |
 | PlayStation button sprites ([Kenney](https://kenney.nl)) | CC0 |
 | Jellyfin logo ([Jellyfin project](https://github.com/jellyfin/jellyfin-ux)) | CC BY-SA 4.0 |
 
-Four fonts in the build are **not** freely licensed: the PS3's own Rodin system font,
-Microgramma, GT America Expanded and Mata. See
-[source/gfx/fonts/LICENSES.md](source/gfx/fonts/LICENSES.md).
+The interface's main font, Rodin, is the PS3's own. It is not included: the app reads
+it from the console's firmware. See [source/gfx/fonts/LICENSES.md](source/gfx/fonts/LICENSES.md).
 
 ## License
 

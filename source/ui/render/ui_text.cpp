@@ -24,13 +24,11 @@
 // That is not decoration: GT America Expanded Bold is a 99-glyph subset with no
 // hyphen, ampersand, slash or accent, so "Spider-Man" needs Rodin for one
 // character in the middle of the word.  See face_chain() below.
-#include "rodin_latin.h"          // --font-system / --font-tech, and every fallback
-#include "gtamerica_expanded.h"   // --font-display  (subset; falls back to Rodin)
-#include "microgramma.h"          // --font-eyebrow  (was --font-display before v1.0)
+#include "archivo_expanded_bold.h"    // --font-display: Archivo Expanded Bold (OFL)
 #include "satoshi_bold.h"         // --font-tab      700: tab labels, clock
 #include "satoshi_regular.h"      // --font-tab      400/500: date, cast names
-#include "michroma.h"             // --font-spec
-#include "mata_bold.h"            // the lockup wordmark, and nothing else
+#include "michroma.h"             // --font-spec, and --font-eyebrow
+#include "archivo_expanded_xbold.h"   // the lockup wordmark, and nothing else
 #include "notosansjp.h"           // kana and kanji: the last link of every chain (Noto Sans JP, subset)
 #include "icons.h"
 
@@ -1321,10 +1319,39 @@ void drawIconA(u32 x, u32 y, int codepoint, float px, u32 color, u32 alpha) {
 // Lifecycle
 // -------------------------------------------------------
 
+// --font-system is the PS3's own Rodin, read from the console's firmware rather
+// than shipped: it is Sony's, and every PS3 has it.  Host builds (the tests)
+// can point JF_RODIN_TTF at a copy; with neither, the UI falls back to Open
+// Sans.  Read once and kept for the life of the app (38 KB).
+#define RODIN_FIRMWARE "/dev_flash/data/font/SCE-PS3-RD-R-LATIN.TTF"
+
+static unsigned char *read_font_file(const char *path) {
+    if (!path || !path[0]) return NULL;
+    FILE *f = fopen(path, "rb");
+    if (!f) return NULL;
+    unsigned char *buf = NULL;
+    if (fseek(f, 0, SEEK_END) == 0) {
+        const long n = ftell(f);
+        if (n > 1024 && n < 4 * 1024 * 1024 && fseek(f, 0, SEEK_SET) == 0) {
+            buf = (unsigned char *)malloc((size_t)n);
+            if (buf && fread(buf, 1, (size_t)n, f) != (size_t)n) { free(buf); buf = NULL; }
+        }
+    }
+    fclose(f);
+    return buf;
+}
+
+static unsigned char *rodin_load(void) {
+    unsigned char *b = read_font_file(RODIN_FIRMWARE);
+    if (!b) b = read_font_file(getenv("JF_RODIN_TTF"));
+    return b;
+}
+
 void ttf_init(void) {
     gamma_init();
     bitmapSetXpm(&fontBitmap, font8x8_xpm);
-    // --font-system (handoff section 3.0): SCE-PS3 Rodin LATIN, for everything.
+    // --font-system (handoff section 3.0): SCE-PS3 Rodin LATIN, for everything,
+    // from the firmware (rodin_load).
     //
     // BOTH the regular and bold slots point at Rodin, because section 3.0 is
     // explicit that "hierarchy comes from size, weight and opacity, not from
@@ -1332,17 +1359,19 @@ void ttf_init(void) {
     // — never weight".  Mixing Rodin with OpenSans-Bold would put two
     // different typefaces on one screen, which is worse than losing the weight.
     //
-    // If Rodin ever fails to parse we fall back to OpenSans rather than losing
-    // text entirely -- the same rule the subtitle faces follow in face_of().
-    s_font_buf = (unsigned char*)Rodin_Latin_ttf;
-    if (stbtt_InitFont(&s_font, s_font_buf, 0)) {
+    // If Rodin is missing or fails to parse we fall back to OpenSans rather than
+    // losing text entirely -- the same rule the subtitle faces follow in face_of().
+    static unsigned char *s_rodin = NULL;
+    if (!s_rodin) s_rodin = rodin_load();
+    s_font_buf = s_rodin;
+    if (s_font_buf && stbtt_InitFont(&s_font, s_font_buf, 0)) {
         s_ttf_ok = true;
     } else {
         s_font_buf = (unsigned char*)OpenSans_Regular_ttf;
         if (stbtt_InitFont(&s_font, s_font_buf, 0)) s_ttf_ok = true;
-        plog("ttf: Rodin failed to parse, fell back to OpenSans");
+        plog("ttf: Rodin not available from the firmware, using OpenSans");
     }
-    if (stbtt_InitFont(&s_font_bold, (unsigned char*)Rodin_Latin_ttf, 0))
+    if (s_rodin && stbtt_InitFont(&s_font_bold, s_rodin, 0))
         s_ttf_bold_ok = true;
     else if (stbtt_InitFont(&s_font_bold, (unsigned char*)OpenSans_Bold_ttf, 0))
         s_ttf_bold_ok = true;
@@ -1358,12 +1387,13 @@ void ttf_init(void) {
     memset(s_pick, -1, sizeof(s_pick));
     s_pick_init = true;
 
-    // --font-display: media titles.  Subset -- chain_of() gives it Rodin.
-    if (stbtt_InitFont(&s_font_display, (unsigned char*)GTAmerica_Expanded_ttf, 0))
+    // --font-display: media titles.  Archivo Expanded Bold, Latin; anything
+    // else comes from Rodin through chain_of().
+    if (stbtt_InitFont(&s_font_display, (unsigned char*)Archivo_ExpBold_ttf, 0))
         s_display_ok = true;
-    // --font-eyebrow: section labels and eyebrows.  Microgramma held the
-    // display role before v1.0 and is still bundled, so this costs nothing new.
-    if (stbtt_InitFont(&s_font_eyebrow, (unsigned char*)Microgramma_ttf, 0))
+    // --font-eyebrow: section labels and eyebrows.  Michroma, the free face
+    // drawn after the Microgramma the design names.
+    if (stbtt_InitFont(&s_font_eyebrow, (unsigned char*)Michroma_ttf, 0))
         s_eyebrow_ok = true;
     // --font-tab: tab labels, the clock, cast names.  Two weights, which the
     // design does use -- 700 for the strip and clock, 400/500 for the date.
@@ -1375,7 +1405,7 @@ void ttf_init(void) {
     if (stbtt_InitFont(&s_font_spec, (unsigned char*)Michroma_ttf, 0))
         s_spec_ok = true;
     // The lockup wordmark.  One string, once a frame -- see UI_FACE_LOCKUP.
-    if (stbtt_InitFont(&s_font_lockup, (unsigned char*)Mata_Bold_otf, 0))
+    if (stbtt_InitFont(&s_font_lockup, (unsigned char*)Archivo_ExpXBold_ttf, 0))
         s_lockup_ok = true;
     if (stbtt_InitFont(&s_icons, (unsigned char*)TablerIcons_ttf, 0))
         s_icons_ok = true;

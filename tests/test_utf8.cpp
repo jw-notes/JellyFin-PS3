@@ -487,41 +487,30 @@ static void test_escapes(void)
 }
 
 // ---------------------------------------------------------------------------
-// 7. The fallback chain.
+// 7. The display face covers real titles.
 //
-// v1.0's --font-display is GT America Expanded Bold, a 99-glyph subset: A-Z,
-// a-z, 0-9 and `! ( ) , . : ; ? _` and nothing else.  No hyphen, ampersand,
-// slash, apostrophe or accent.  Used as a single face it would render
-// "Spider-Man" as "SpiderMan" -- SILENTLY, because a missing codepoint is
-// .notdef and .notdef in most faces is a zero-width nothing.  Nothing crashes,
-// nothing logs, a character just stops existing.
-//
-// So the role falls back to Rodin per codepoint.  What has to hold:
-//   * the missing characters actually appear, and take width
-//   * they sit on the SAME BASELINE as the primary's glyphs, because each face
-//     is scaled to the pixel height independently and their ascents differ
+// --font-display is Archivo Expanded Bold, subset to Latin (tools/fonts/make.py).
+// The face it replaced was a 99-glyph subset with no hyphen, ampersand, slash,
+// apostrophe or accent, which the chain had to borrow from Rodin.  These now
+// come from the display face itself, and what has to hold is unchanged:
+//   * the characters actually appear, and take width
+//   * they sit on the run's baseline
 //   * all five walkers agree, since each carries its own copy of the loop
 // ---------------------------------------------------------------------------
 static void test_fallback(void)
 {
-    puts("-- 7: the display face's missing glyphs come from Rodin --");
+    puts("-- 7: the display face covers real titles --");
 
     stbtt_fontinfo *gt = face_of(UI_FACE_DISPLAY);
 
-    // First, state the premise rather than assuming it: this only matters
-    // because the subset really is missing these.
-    static const struct { int cp; const char *nm; } gone[] = {
+    static const struct { int cp; const char *nm; } need[] = {
         { '-', "hyphen" }, { '&', "ampersand" }, { '/', "slash" },
-        { '\'', "apostrophe" }, { '"', "quote" },
+        { '\'', "apostrophe" }, { '"', "quote" }, { 0x00E9, "e-acute" },
+        { 0x2019, "right single quote" }, { 0x00B7, "middle dot" },
     };
-    for (size_t i = 0; i < sizeof(gone) / sizeof(gone[0]); i++) {
-        ok(stbtt_FindGlyphIndex(gt, gone[i].cp) == 0,
-           "display face unexpectedly HAS %s -- this test is now testing nothing",
-           gone[i].nm);
-        ok(stbtt_FindGlyphIndex(ref_face_for(UI_FACE_DISPLAY, gone[i].cp),
-                                gone[i].cp) != 0,
-           "%s has nowhere to come from in the display chain", gone[i].nm);
-    }
+    for (size_t i = 0; i < sizeof(need) / sizeof(need[0]); i++)
+        ok(stbtt_FindGlyphIndex(gt, need[i].cp) != 0,
+           "the display face is missing the %s", need[i].nm);
 
     const float px = 32.0f;
 
@@ -589,7 +578,6 @@ static void test_fallback(void)
     // started resolving through Rodin the tab strip would change shape for
     // reasons nobody would think to look for.
     for (int f = 0; f < NFACES; f++) {
-        if (FACES[f].face == UI_FACE_DISPLAY) continue;
         int borrowed = 0;
         for (int cp = 32; cp < 127; cp++)
             if (ref_face_for(FACES[f].face, cp) != face_of(FACES[f].face)) borrowed++;

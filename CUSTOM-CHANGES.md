@@ -80,6 +80,10 @@ the boot animation running forever.
   step it stopped in and the last step the GPU finished. This is what found the
   compiler problem. Every crash log line also shows free memory.
 
+- **Only free fonts are shipped.** The PS3's Rodin font is read from the console's own
+  firmware instead of being bundled, and three commercial fonts were replaced with
+  free ones (Michroma, Archivo Expanded), so the app can be shared openly.
+
 ## Tests
 
 New host tests: version comparison, sign-in escaping and saved sessions, and both

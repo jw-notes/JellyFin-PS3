@@ -103,3 +103,4 @@ tests/test_login_drawn
 tests/test_release_version
 tools/*.tar.gz
 tests/test_search_model
+tests/local/

@@ -20,7 +20,6 @@ extern "C" {
 #include "../../source/ui/settings_model.h"
 #include "../../source/i18n/i18n.h"
 }
-#include "../../source/gfx/rodin_latin.h"
 #include "../../source/gfx/notosansjp.h"
 #include "../../source/ui/fonts/tabler_icons.h"
 #include "../../source/ui/icons.h"
@@ -255,7 +254,19 @@ static void frame(const char *name, int w, int h, int lang, int cat, int catsel,
 }
 
 int main() {
-    stbtt_InitFont(&s_rodin, load_blob(Rodin_Latin_ttf), 0);
+    // Rodin is the PS3's own font, not in the repo: JF_RODIN_TTF is a copy of
+    // /dev_flash/data/font/SCE-PS3-RD-R-LATIN.TTF.
+    static unsigned char *rodin = NULL;
+    if (const char *rp = getenv("JF_RODIN_TTF")) {
+        if (FILE *rf = fopen(rp, "rb")) {
+            fseek(rf, 0, SEEK_END); const long n = ftell(rf); fseek(rf, 0, SEEK_SET);
+            rodin = (unsigned char *)malloc((size_t)n);
+            if (fread(rodin, 1, (size_t)n, rf) != (size_t)n) { free(rodin); rodin = NULL; }
+            fclose(rf);
+        }
+    }
+    if (!rodin) { fprintf(stderr, "set JF_RODIN_TTF to a copy of the PS3's SCE-PS3-RD-R-LATIN.TTF\n"); return 1; }
+    stbtt_InitFont(&s_rodin, rodin, 0);
     stbtt_InitFont(&s_jp, load_blob(NotoSansJP_otf), 0);
     stbtt_InitFont(&s_icons, load_blob(TablerIcons_ttf), 0);
     int asc, desc;
