@@ -178,6 +178,7 @@ static void grid_motion_end(bool on, bool gpu) {
 }
 
 static void xmb_draw_gpu_phase(int tab) {
+    if (xmb_classic_active(tab)) { xmb_classic_gpu(); return; }
     // The hairline goes first and is NOT gated on the card path: it is a
     // blended quad over the wave, and at 1,351 us of CPU VRAM reads it was the
     // single largest item in the frame.  It has to be issued here, before the
@@ -222,6 +223,7 @@ static void xmb_draw_gpu_phase(int tab) {
 
 // CPU draw phase — direct framebuffer writes, runs after rsxSync().
 static void xmb_draw_cpu_phase(int tab) {
+    if (xmb_classic_active(tab)) { xmb_classic_cpu(); return; }
     // Only when the GPU phase did not already lay it down as a blended quad.
     if (!s_div_on_gpu && spine_divider_alpha() >= 0.5f)
         xmb_draw_divider();
@@ -262,6 +264,7 @@ static void xmb_draw_cpu_phase(int tab) {
 
 // TTF/RSX draw phase — text and icons on top of the CPU-drawn layer.
 static void xmb_draw_text_phase(int tab) {
+    if (xmb_classic_active(tab)) { xmb_classic_text(); return; }
     xmb_draw_topbar();
 
     wd_stage("topbar done");
@@ -428,6 +431,7 @@ static void draw_hints_vis(const Hint *h, int n) {
 
 // Contextual hints bar for the current tab / mode.
 static void xmb_draw_hints(int tab) {
+    if (xmb_classic_active(tab)) { xmb_classic_hints(); return; }
     bool in_tv_sub  = (g_tv_depth > 0);
     bool in_col_sub = (g_col_depth > 0);
 
@@ -621,6 +625,7 @@ void ui_run_xmb(void) {
         wd_stage("13.5d wave_draw"); if (first_iter) crash_log("13.5d wave_draw");
         wave_snow_ambient();   // a menu: Menu Particles may show here
         wd_stage("13.5d2 wave_draw");
+        wave_set_plain(ui_layout() == UI_LAYOUT_CLASSIC);
         wave_draw();
         s_fc.gpu += timing_get_us() - t_gpu0;
         wd_stage("13.6 wave_draw done"); if (first_iter) crash_log("13.6 wave_draw done");
@@ -653,6 +658,8 @@ void ui_run_xmb(void) {
             xmb_update_popup_input();   // modal: the screen below keeps focus state
         else if (peek_active())
             peek_input();               // the quick-peek owns the pad while up
+        else if (xmb_classic_active(tab))
+            should_exit = xmb_classic_input();  // Classic: its own Home
         else if (BTN_PRESSED(square) && tab != XMB_TAB_SEARCH) {
             // Square: the visualiser, JellyWave -> JellyDrop -> Off (ui_wave.h).
             // Not on Search, where Square deletes a character.
@@ -670,6 +677,11 @@ void ui_run_xmb(void) {
         else
             should_exit = xmb_handle_input_browse();
         if (should_exit) break;
+        // Classic: Home is the top level.  Backing out of a library, Search or
+        // Settings to the spine's category row lands back on Home instead.
+        if (ui_layout() == UI_LAYOUT_CLASSIC && g_active_tab != XMB_TAB_HOME &&
+            spine_at_base() && g_tabs[XMB_TAB_HOME].enabled)
+            xmb_switch_tab(XMB_TAB_HOME);
 
         slog_menu_tick();   // STATE: MENU ... (emulator-only, emits on change)
 
@@ -713,7 +725,7 @@ void ui_run_xmb(void) {
             // The popup and the quick-peek draw their own hints.
             if (!popup && !peek_visible()) xmb_draw_hints(tab);
             wd_stage("13.8d tabs"); if (first_iter) crash_log("13.8d tabs");
-            spine_draw();
+            if (!xmb_classic_active(tab)) spine_draw();
             if (popup) {
                 // The popup GPU-dims the whole screen and then lays an opaque
                 // panel on it, so everything queued so far has to be on the

@@ -58,6 +58,9 @@ const char *wave_vis_next_label(void);   // what Square switches TO: the hint
 // ~1.3 s) now -- the cold boot fires it as its veil starts to lift.  Only
 // when the mode is JellyWave.  Render thread.
 void        wave_reveal_start(void);
+// Draw the background gradient alone, whatever the visualiser is set to, while
+// `on` (the Classic layout).  Not saved: the visualiser setting is unchanged.
+void        wave_set_plain(bool on);
 
 // True when CPU framebuffer writes are cheap (emulator): the whole XMB
 // background is composited on the CPU so the flip presents CPU-drawn content.

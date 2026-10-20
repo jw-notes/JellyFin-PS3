@@ -146,5 +146,7 @@
   "JellyFin [PS3] is free software under the GNU GPL, version 3 or later.": {"ja": "JellyFin [PS3] は GNU GPL バージョン3以降のフリーソフトウェアです。", "pt-BR": "JellyFin [PS3] é software livre sob a GNU GPL, versão 3 ou posterior.", "de": "JellyFin [PS3] ist freie Software unter der GNU GPL, Version 3 oder neuer.", "fr": "JellyFin [PS3] est un logiciel libre sous GNU GPL, version 3 ou ultérieure.", "es": "JellyFin [PS3] es software libre bajo la GNU GPL, versión 3 o posterior."},
   "It comes with no warranty. Each component keeps its own licence.": {"ja": "保証はありません。各コンポーネントはそれぞれのライセンスに従います。", "pt-BR": "Não há garantia. Cada componente mantém sua própria licença.", "de": "Ohne jede Gewährleistung. Jede Komponente behält ihre eigene Lizenz.", "fr": "Aucune garantie. Chaque composant garde sa propre licence.", "es": "No tiene garantía. Cada componente conserva su propia licencia."},
   "Source code and the full licence texts:": {"ja": "ソースコードとライセンス全文:", "pt-BR": "Código-fonte e textos completos das licenças:", "de": "Quellcode und vollständige Lizenztexte:", "fr": "Code source et textes complets des licences :", "es": "Código fuente y textos completos de las licencias:"},
-  "Scroll": {"ja": "スクロール", "pt-BR": "Rolar", "de": "Blättern", "fr": "Défiler", "es": "Desplazar"}
+  "Scroll": {"ja": "スクロール", "pt-BR": "Rolar", "de": "Blättern", "fr": "Défiler", "es": "Desplazar"},
+  "My Media": {"ja": "マイメディア", "pt-BR": "Minha mídia", "de": "Meine Medien", "fr": "Mes médias", "es": "Mis medios"},
+  "Latest %s": {"ja": "%sの新着", "pt-BR": "Últimos em %s", "de": "Neu in %s", "fr": "Derniers ajouts : %s", "es": "Lo último en %s"}
 }

@@ -216,6 +216,7 @@ bool wave_drop_on(void) { jd_load(); return s_jd_want; }
 #define VIS_FILE "jellyfin_visualiser.txt"
 static int  s_vis      = -1;          // -1 = not loaded yet
 static bool s_vis_off  = false;       // mode Off: gradient only
+static bool s_plain    = false;       // the Classic layout: gradient only, setting untouched
 static u64  s_reveal_t0 = 0;          // Off -> JellyWave: the wave extends in from the left
 #define VIS_REVEAL_US 1300000.0f
 
@@ -236,6 +237,8 @@ static void vis_load(void)
 }
 
 int wave_vis_mode(void) { vis_load(); return s_vis; }
+
+void wave_set_plain(bool on) { s_plain = on; }
 
 void wave_vis_set(int mode)
 {
@@ -2535,7 +2538,7 @@ void wave_draw(void) {
         }
 
         vis_load();
-        if (jellywave && s_vis_off) {
+        if (jellywave && (s_vis_off || s_plain)) {
             // Visualiser Off (Select): the gradient above, nothing over it.
             // s_jw_drawn stays false, so wave_draw_front stands down too.
         } else if (jellywave) {

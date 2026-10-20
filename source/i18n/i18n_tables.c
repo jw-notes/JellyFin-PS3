@@ -9,9 +9,9 @@ extern const int i18n_n;
 extern const char *const i18n_keys[];
 extern const char *const *const i18n_text[LANG__COUNT];
 
-const int i18n_n = 586;
+const int i18n_n = 591;
 
-const char *const i18n_keys[586] = {
+const char *const i18n_keys[591] = {
     "  %s  %s free",
     "  (can't be decoded yet)",
     "%.1f MB",
@@ -230,7 +230,9 @@ const char *const i18n_keys[586] = {
     "LIVE",
     "Language",
     "Later",
+    "Latest %s",
     "Latino",
+    "Layout",
     "Left",
     "Let the floating particles drift behind the menus too,\nnot only while music is playing.",
     "Library",
@@ -261,6 +263,7 @@ const char *const i18n_keys[586] = {
     "Movies",
     "Music",
     "My Channels",
+    "My Media",
     "NEXT EPISODE",
     "NEXT MOVIE",
     "Nav",
@@ -580,6 +583,8 @@ const char *const i18n_keys[586] = {
     "Wrong username or password.",
     "X to send",
     "X: sign in again",
+    "XMB",
+    "XMB browses like the PS3's own menu. Classic lays Home out\nlike Jellyfin in a web browser: rows of posters under a header.",
     "You have downloads on this console, or a drive to play from. Open them?",
     "You'll need to sign in again to browse your library.",
     "Your sign-in and settings are kept.",
@@ -600,7 +605,7 @@ const char *const i18n_keys[586] = {
     "\342\200\271 back %ds",
 };
 
-static const char *const i18n_text_ja[586] = {
+static const char *const i18n_text_ja[591] = {
     "  %s  %s \347\251\272\343\201\215",
     "  \357\274\210\343\201\276\343\201\240\343\203\207\343\202\263\343\203\274\343\203\211\343\201\247\343\201\215\343\201\276\343\201\233\343\202\223\357\274\211",
     "%.1f MB",
@@ -819,7 +824,9 @@ static const char *const i18n_text_ja[586] = {
     "\343\203\251\343\202\244\343\203\226",
     "\350\250\200\350\252\236",
     "\345\276\214\343\201\247",
+    "%s\343\201\256\346\226\260\347\235\200",
     "\343\203\251\343\203\206\343\203\263",
+    "\343\203\254\343\202\244\343\202\242\343\202\246\343\203\210",
     "\345\267\246",
     "\346\274\202\343\201\206\347\262\222\345\255\220\343\202\222\343\200\201\351\237\263\346\245\275\343\201\256\345\206\215\347\224\237\344\270\255\343\201\240\343\201\221\343\201\247\343\201\252\343\201\217\n\343\203\241\343\203\213\343\203\245\343\203\274\343\201\256\350\203\214\345\276\214\343\201\253\343\202\202\350\241\250\347\244\272\343\201\227\343\201\276\343\201\231\343\200\202",
     "\343\203\251\343\202\244\343\203\226\343\203\251\343\203\252",
@@ -850,6 +857,7 @@ static const char *const i18n_text_ja[586] = {
     "\346\230\240\347\224\273",
     "\351\237\263\346\245\275",
     "\343\203\236\343\202\244\343\203\201\343\203\243\343\203\263\343\203\215\343\203\253",
+    "\343\203\236\343\202\244\343\203\241\343\203\207\343\202\243\343\202\242",
     "\346\254\241\343\201\256\343\202\250\343\203\224\343\202\275\343\203\274\343\203\211",
     "\346\254\241\343\201\256\346\230\240\347\224\273",
     "\347\247\273\345\213\225",
@@ -1169,6 +1177,8 @@ static const char *const i18n_text_ja[586] = {
     "\343\203\246\343\203\274\343\202\266\343\203\274\345\220\215\343\201\276\343\201\237\343\201\257\343\203\221\343\202\271\343\203\257\343\203\274\343\203\211\343\201\214\351\201\225\343\201\204\343\201\276\343\201\231\343\200\202",
     "X\343\201\247\351\200\201\344\277\241",
     "X\357\274\232\343\202\202\343\201\206\344\270\200\345\272\246\343\202\265\343\202\244\343\203\263\343\202\244\343\203\263",
+    "XMB",
+    "XMB\343\201\257PS3\346\234\254\344\275\223\343\201\256\343\203\241\343\203\213\343\203\245\343\203\274\343\201\256\343\202\210\343\201\206\343\201\253\346\223\215\344\275\234\343\201\227\343\201\276\343\201\231\343\200\202\343\202\257\343\203\251\343\202\267\343\203\203\343\202\257\343\201\257\343\203\233\343\203\274\343\203\240\343\202\222\nWeb\343\203\226\343\203\251\343\202\246\343\202\266\343\201\256Jellyfin\343\201\256\343\202\210\343\201\206\343\201\253\343\200\201\343\203\230\343\203\203\343\203\200\343\203\274\343\201\256\344\270\213\343\201\253\343\203\235\343\202\271\343\202\277\343\203\274\343\201\256\345\210\227\343\201\247\350\241\250\347\244\272\343\201\227\343\201\276\343\201\231\343\200\202",
     "\343\201\223\343\201\256\346\234\254\344\275\223\343\201\253\343\203\200\343\202\246\343\203\263\343\203\255\343\203\274\343\203\211\346\270\210\343\201\277\343\201\256\351\240\205\347\233\256\343\200\201\343\201\276\343\201\237\343\201\257\345\206\215\347\224\237\343\201\247\343\201\215\343\202\213\343\203\211\343\203\251\343\202\244\343\203\226\343\201\214\343\201\202\343\202\212\343\201\276\343\201\231\343\200\202\351\226\213\343\201\215\343\201\276\343\201\231\343\201\213\357\274\237",
     "\343\203\251\343\202\244\343\203\226\343\203\251\343\203\252\343\202\222\350\246\213\343\202\213\343\201\253\343\201\257\343\200\201\343\202\202\343\201\206\344\270\200\345\272\246\343\202\265\343\202\244\343\203\263\343\202\244\343\203\263\343\201\214\345\277\205\350\246\201\343\201\247\343\201\231\343\200\202",
     "\343\202\265\343\202\244\343\203\263\343\202\244\343\203\263\343\201\250\350\250\255\345\256\232\343\201\257\343\201\235\343\201\256\343\201\276\343\201\276\346\256\213\343\202\212\343\201\276\343\201\231\343\200\202",
@@ -1189,7 +1199,7 @@ static const char *const i18n_text_ja[586] = {
     "\342\200\271 %d\347\247\222\346\210\273\343\202\213",
 };
 
-static const char *const i18n_text_pt_BR[586] = {
+static const char *const i18n_text_pt_BR[591] = {
     "  %s  %s livres",
     "  (ainda n\303\243o pode ser decodificado)",
     "%.1f MB",
@@ -1408,7 +1418,9 @@ static const char *const i18n_text_pt_BR[586] = {
     "AO VIVO",
     "Idioma",
     "Depois",
+    "\303\232ltimos em %s",
     "Latino",
+    "Layout",
     "Esquerda",
     "Deixa as part\303\255culas flutuantes aparecerem atr\303\241s dos menus tamb\303\251m,\nn\303\243o s\303\263 durante a m\303\272sica.",
     "Biblioteca",
@@ -1439,6 +1451,7 @@ static const char *const i18n_text_pt_BR[586] = {
     "Filmes",
     "M\303\272sica",
     "Meus canais",
+    "Minha m\303\255dia",
     "PR\303\223XIMO EPIS\303\223DIO",
     "PR\303\223XIMO FILME",
     "Navegar",
@@ -1758,6 +1771,8 @@ static const char *const i18n_text_pt_BR[586] = {
     "Usu\303\241rio ou senha incorretos.",
     "X para enviar",
     "X: entrar novamente",
+    "XMB",
+    "XMB navega como o menu do pr\303\263prio PS3. Cl\303\241ssico organiza o In\303\255cio\ncomo o Jellyfin no navegador: fileiras de p\303\264steres sob um cabe\303\247alho.",
     "Voc\303\252 tem downloads neste console ou uma unidade para reproduzir. Abrir?",
     "Voc\303\252 precisar\303\241 entrar de novo para navegar pela biblioteca.",
     "Seu login e suas configura\303\247\303\265es s\303\243o mantidos.",
@@ -1778,7 +1793,7 @@ static const char *const i18n_text_pt_BR[586] = {
     "\342\200\271 voltar %ds",
 };
 
-static const char *const i18n_text_de[586] = {
+static const char *const i18n_text_de[591] = {
     "  %s  %s frei",
     "  (kann noch nicht decodiert werden)",
     "%.1f MB",
@@ -1997,7 +2012,9 @@ static const char *const i18n_text_de[586] = {
     "LIVE",
     "Sprache",
     "Sp\303\244ter",
+    "Neu in %s",
     "Lateinamerika",
+    "Layout",
     "Links",
     "L\303\244sst die schwebenden Partikel auch hinter den Men\303\274s treiben,\nnicht nur bei laufender Musik.",
     "Mediathek",
@@ -2028,6 +2045,7 @@ static const char *const i18n_text_de[586] = {
     "Filme",
     "Musik",
     "Meine Sender",
+    "Meine Medien",
     "N\303\204CHSTE FOLGE",
     "N\303\204CHSTER FILM",
     "Navigieren",
@@ -2347,6 +2365,8 @@ static const char *const i18n_text_de[586] = {
     "Benutzername oder Passwort falsch.",
     "X zum Senden",
     "X: erneut anmelden",
+    "XMB",
+    "XMB bedient sich wie das Men\303\274 der PS3. Klassisch zeigt die Startseite\nwie Jellyfin im Browser: Posterreihen unter einer Kopfleiste.",
     "Auf dieser Konsole gibt es Downloads oder ein Laufwerk zum Abspielen. \303\226ffnen?",
     "Zum Durchsuchen Ihrer Mediathek m\303\274ssen Sie sich erneut anmelden.",
     "Anmeldung und Einstellungen bleiben erhalten.",
@@ -2367,7 +2387,7 @@ static const char *const i18n_text_de[586] = {
     "\342\200\271 %ds zur\303\274ck",
 };
 
-static const char *const i18n_text_fr[586] = {
+static const char *const i18n_text_fr[591] = {
     "  %s  %s libres",
     "  (ne peut pas encore \303\252tre d\303\251cod\303\251)",
     "%.1f Mo",
@@ -2586,7 +2606,9 @@ static const char *const i18n_text_fr[586] = {
     "DIRECT",
     "Langue",
     "Plus tard",
+    "Derniers ajouts : %s",
     "Am\303\251rique latine",
+    "Disposition",
     "Gauche",
     "Laisse aussi flotter les particules derri\303\250re les menus,\npas seulement pendant la lecture de musique.",
     "Biblioth\303\250que",
@@ -2617,6 +2639,7 @@ static const char *const i18n_text_fr[586] = {
     "Films",
     "Musique",
     "Mes cha\303\256nes",
+    "Mes m\303\251dias",
     "\303\211PISODE SUIVANT",
     "FILM SUIVANT",
     "Naviguer",
@@ -2936,6 +2959,8 @@ static const char *const i18n_text_fr[586] = {
     "Nom d'utilisateur ou mot de passe incorrect.",
     "X pour envoyer",
     "X : se reconnecter",
+    "XMB",
+    "XMB se parcourt comme le menu de la PS3. Classique pr\303\251sente l'accueil\ncomme Jellyfin dans un navigateur : des rang\303\251es d'affiches sous un en-t\303\252te.",
     "Vous avez des t\303\251l\303\251chargements sur cette console, ou un disque \303\240 lire. Les ouvrir ?",
     "Vous devrez vous reconnecter pour parcourir votre biblioth\303\250que.",
     "Votre connexion et vos r\303\251glages sont conserv\303\251s.",
@@ -2956,7 +2981,7 @@ static const char *const i18n_text_fr[586] = {
     "\342\200\271 reculer de %ds",
 };
 
-static const char *const i18n_text_es[586] = {
+static const char *const i18n_text_es[591] = {
     "  %s  %s libres",
     "  (a\303\272n no se puede decodificar)",
     "%.1f MB",
@@ -3175,7 +3200,9 @@ static const char *const i18n_text_es[586] = {
     "EN VIVO",
     "Idioma",
     "M\303\241s tarde",
+    "Lo \303\272ltimo en %s",
     "Latino",
+    "Dise\303\261o",
     "Izquierda",
     "Deja que las part\303\255culas floten tambi\303\251n detr\303\241s de los men\303\272s,\nno solo mientras suena m\303\272sica.",
     "Biblioteca",
@@ -3206,6 +3233,7 @@ static const char *const i18n_text_es[586] = {
     "Pel\303\255culas",
     "M\303\272sica",
     "Mis canales",
+    "Mis medios",
     "SIGUIENTE EPISODIO",
     "SIGUIENTE PEL\303\215CULA",
     "Navegar",
@@ -3525,6 +3553,8 @@ static const char *const i18n_text_es[586] = {
     "Usuario o contrase\303\261a incorrectos.",
     "X para enviar",
     "X: iniciar sesi\303\263n de nuevo",
+    "XMB",
+    "XMB se usa como el men\303\272 de la PS3. Cl\303\241sico muestra el Inicio\ncomo Jellyfin en el navegador: filas de p\303\263steres bajo una cabecera.",
     "Tienes descargas en esta consola o una unidad desde la que reproducir. \302\277Abrirlas?",
     "Tendr\303\241s que iniciar sesi\303\263n de nuevo para ver tu biblioteca.",
     "Se conservan tu sesi\303\263n y tus ajustes.",

@@ -177,6 +177,20 @@ const char *ambient_mode_label(void);
 // Settings > Display > Screensaver Delay: idle time before it starts, 30 s to
 // 5 min.  Saved in jellyfin_screensaver_delay.txt (seconds).
 void        ambient_delay_step(int dir);
+// Settings > Display > Layout: the XMB (the depth spine) or Classic, a Home laid
+// out like Jellyfin's web client (xmb/ui_home_classic.inc).  Saved in
+// jellyfin_layout.txt.  In Classic, Home is drawn and driven by the
+// xmb_classic_* calls in place of the spine's.
+enum { UI_LAYOUT_XMB = 0, UI_LAYOUT_CLASSIC, UI_LAYOUT__COUNT };
+int         ui_layout(void);
+void        ui_layout_step(int dir);
+const char *ui_layout_label(void);
+bool        xmb_classic_active(int tab);     // Classic, and Home is the tab
+void        xmb_classic_gpu(void);
+void        xmb_classic_cpu(void);
+void        xmb_classic_text(void);
+void        xmb_classic_hints(void);
+bool        xmb_classic_input(void);
 // Settings > System > About (render/ui_about.cpp): version, credits, licences.
 void        xmb_show_about(void);
 const char *ambient_delay_label(void);

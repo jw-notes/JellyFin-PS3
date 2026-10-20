@@ -21,6 +21,8 @@
 #include "player.h"       // show_player_offline
 #include "dl_manager.h"
 #include "dl_library.h"
+#include "jf_paths.h"
+#include "ui_sfx.h"
 
 // -------------------------------------------------------
 // Model
@@ -445,6 +447,7 @@ void xmb_home_on_enter(void) {
 }
 
 #include "ui_home_stage.inc"
+#include "ui_home_classic.inc"
 
 static void home_stage_dynamic_reset(void) {
     s_row_col[HR_CONTINUE] = 0;

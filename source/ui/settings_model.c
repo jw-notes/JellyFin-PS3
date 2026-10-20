@@ -59,6 +59,9 @@ static const setting_row k_rows[] = {
     { SET_LANGUAGE,  SEC_DISPLAY, TRN("Language"),
       TRN("The language the menus are shown in.\n"
       "Auto follows the PS3's own language setting.") },
+    { SET_LAYOUT,    SEC_DISPLAY, TRN("Layout"),
+      TRN("XMB browses like the PS3's own menu. Classic lays Home out\n"
+      "like Jellyfin in a web browser: rows of posters under a header.")},
     { SET_THEME,     SEC_DISPLAY, TRN("Theme"),
       TRN("The interface colour theme.\n"
       "Jellywave is the default; extra .ini themes appear here too.")},

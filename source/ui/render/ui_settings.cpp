@@ -97,6 +97,7 @@ static void v_subcolor(char *b, int c, bool *l) { val_text(b, c, l, tr(subcolor_
 static void v_theme(char *b, int c, bool *l)    { val_text(b, c, l, theme_current_name(), true); }
 static void v_wave(char *b, int c, bool *l)     { val_text(b, c, l, tr(wave_audio_level_label()), wave_audio_level() != 0); }
 static void v_language(char *b, int c, bool *l) { val_text(b, c, l, i18n_pref_label(i18n_pref()), true); }
+static void v_layout(char *b, int c, bool *l)   { val_text(b, c, l, ui_layout_label(), true); }
 static void v_saver(char *b, int c, bool *l)    { val_text(b, c, l, ambient_mode_label(), ambient_mode() != AMB_MODE_OFF); }
 static void v_saverdelay(char *b, int c, bool *l) { val_text(b, c, l, ambient_delay_label(), ambient_mode() != AMB_MODE_OFF); }
 static void v_screen(char *b, int c, bool *l) {
@@ -236,6 +237,7 @@ static void s_theme(int d)     { theme_step(d); }
 static void s_wave(int d)      { wave_audio_step(d); }
 static void s_language(int d)  { i18n_step_pref(d); }
 static void s_saver(int d)     { ambient_mode_step(d); }
+static void s_layout(int d)    { ui_layout_step(d); }
 static void s_saverdelay(int d) { ambient_delay_step(d); }
 
 // A toggle takes X and either direction as the same flip; a value row takes X
@@ -258,6 +260,7 @@ static const UiRow k_ui[] = {
     VALUE (SET_SUB_FONT,    ICON_TV,          v_subfont,   s_subfont),
     VALUE (SET_SUB_COLOUR,  ICON_TV,          v_subcolor,  s_subcolor),
     VALUE (SET_LANGUAGE,    ICON_TV,          v_language,  s_language),
+    VALUE (SET_LAYOUT,      ICON_DESKTOP,     v_layout,    s_layout),
     VALUE (SET_THEME,       ICON_PHOTO,       v_theme,     s_theme),
     VALUE (SET_SCREENSAVER, ICON_PHOTO,       v_saver,     s_saver),
     VALUE (SET_SAVER_DELAY, ICON_PHOTO,       v_saverdelay, s_saverdelay),
