@@ -135,5 +135,16 @@
   "Remove": {"ja": "消去", "pt-BR": "Remover", "de": "Entfernen", "fr": "Retirer", "es": "Quitar"},
   "All": {"ja": "すべて", "pt-BR": "Tudo", "de": "Alle", "fr": "Tout", "es": "Todo"},
   "Recent searches": {"ja": "最近の検索", "pt-BR": "Pesquisas recentes", "de": "Letzte Suchen", "fr": "Recherches récentes", "es": "Búsquedas recientes"},
-  "Because you watched %s": {"ja": "%sを見た方へ", "pt-BR": "Porque você assistiu %s", "de": "Weil du %s gesehen hast", "fr": "Parce que vous avez regardé %s", "es": "Porque viste %s"}
+  "Because you watched %s": {"ja": "%sを見た方へ", "pt-BR": "Porque você assistiu %s", "de": "Weil du %s gesehen hast", "fr": "Parce que vous avez regardé %s", "es": "Porque viste %s"},
+  "Made by": {"ja": "制作", "pt-BR": "Feito por", "de": "Gemacht von", "fr": "Créé par", "es": "Creado por"},
+  "With contributions from Ethan Hammer, Lucian, orbisai0security and others.": {"ja": "Ethan Hammer、Lucian、orbisai0security ほかの協力を得ています。", "pt-BR": "Com contribuições de Ethan Hammer, Lucian, orbisai0security e outros.", "de": "Mit Beiträgen von Ethan Hammer, Lucian, orbisai0security und anderen.", "fr": "Avec les contributions d'Ethan Hammer, Lucian, orbisai0security et d'autres.", "es": "Con aportaciones de Ethan Hammer, Lucian, orbisai0security y otros."},
+  "Thanks to": {"ja": "謝辞", "pt-BR": "Agradecimentos", "de": "Dank an", "fr": "Remerciements", "es": "Agradecimientos"},
+  "Open-source software": {"ja": "オープンソースソフトウェア", "pt-BR": "Software de código aberto", "de": "Open-Source-Software", "fr": "Logiciels libres", "es": "Software de código abierto"},
+  "Fonts and art": {"ja": "フォントとアート", "pt-BR": "Fontes e arte", "de": "Schriften und Grafik", "fr": "Polices et illustrations", "es": "Fuentes e ilustraciones"},
+  "Rodin is the PS3's own system font, read from the console.": {"ja": "RodinはPS3本体のシステムフォントで、本体から読み込んでいます。", "pt-BR": "Rodin é a fonte do próprio PS3, lida do console.", "de": "Rodin ist die Systemschrift der PS3 und wird von der Konsole gelesen.", "fr": "Rodin est la police système de la PS3, lue depuis la console.", "es": "Rodin es la fuente del sistema de la PS3, leída desde la consola."},
+  "License": {"ja": "ライセンス", "pt-BR": "Licença", "de": "Lizenz", "fr": "Licence", "es": "Licencia"},
+  "JellyFin [PS3] is free software under the GNU GPL, version 3 or later.": {"ja": "JellyFin [PS3] は GNU GPL バージョン3以降のフリーソフトウェアです。", "pt-BR": "JellyFin [PS3] é software livre sob a GNU GPL, versão 3 ou posterior.", "de": "JellyFin [PS3] ist freie Software unter der GNU GPL, Version 3 oder neuer.", "fr": "JellyFin [PS3] est un logiciel libre sous GNU GPL, version 3 ou ultérieure.", "es": "JellyFin [PS3] es software libre bajo la GNU GPL, versión 3 o posterior."},
+  "It comes with no warranty. Each component keeps its own licence.": {"ja": "保証はありません。各コンポーネントはそれぞれのライセンスに従います。", "pt-BR": "Não há garantia. Cada componente mantém sua própria licença.", "de": "Ohne jede Gewährleistung. Jede Komponente behält ihre eigene Lizenz.", "fr": "Aucune garantie. Chaque composant garde sa propre licence.", "es": "No tiene garantía. Cada componente conserva su propia licencia."},
+  "Source code and the full licence texts:": {"ja": "ソースコードとライセンス全文:", "pt-BR": "Código-fonte e textos completos das licenças:", "de": "Quellcode und vollständige Lizenztexte:", "fr": "Code source et textes complets des licences :", "es": "Código fuente y textos completos de las licencias:"},
+  "Scroll": {"ja": "スクロール", "pt-BR": "Rolar", "de": "Blättern", "fr": "Défiler", "es": "Desplazar"}
 }

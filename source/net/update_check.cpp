@@ -26,6 +26,7 @@
 
 #include "update_check.h"
 #include "release_version.h"
+#include "release_asset.h"
 #include "jf_paths.h"
 #include "https_client.h"
 #include "http.h"    // HTTP_USER_AGENT (GitHub rejects requests without one)
@@ -50,6 +51,8 @@ static bool          s_newer = false;
 static bool          s_disabled = false;
 static bool          s_ok    = false;   // a release tag was read, newer or not
 static char          s_latest[64];
+static release_asset s_asset;          // the release's package, when it has one
+static bool          s_have_asset = false;
 
 // The tag_name field sits near the front of the response; 16K is plenty even
 // with long release notes before it.
@@ -229,6 +232,9 @@ static void do_check(void) {
         if (cmp > 0) {
             snprintf(s_latest, sizeof(s_latest), "%s", tag);
             s_newer = true;
+            s_have_asset = release_asset_find(s_resp, "JellyFin-PS3.pkg", &s_asset);
+            ulog("asset: %s size=%u sha256=%s", s_have_asset ? s_asset.url : "(none)",
+                 s_asset.size, s_asset.sha256[0] ? s_asset.sha256 : "(none)");
         }
         char msg[96];
         snprintf(msg, sizeof(msg), "update: latest=%s newer=%d",
@@ -256,6 +262,7 @@ void update_check_start(void) {
     if (s_started) return;
     s_done = false;
     s_newer = false;
+    s_have_asset = false;
     s_ok = false;
     s_latest[0] = '\0';
     s_log_t0 = timing_get_us();
@@ -299,6 +306,12 @@ bool update_check_result(char *out, int out_size) {
 
 bool update_check_done(void) {
     return s_done;
+}
+
+bool update_check_asset(release_asset *out) {
+    if (!s_done || !s_newer || !s_have_asset) return false;
+    *out = s_asset;
+    return true;
 }
 
 int update_check_state(void) {

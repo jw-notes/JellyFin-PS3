@@ -177,6 +177,8 @@ const char *ambient_mode_label(void);
 // Settings > Display > Screensaver Delay: idle time before it starts, 30 s to
 // 5 min.  Saved in jellyfin_screensaver_delay.txt (seconds).
 void        ambient_delay_step(int dir);
+// Settings > System > About (render/ui_about.cpp): version, credits, licences.
+void        xmb_show_about(void);
 const char *ambient_delay_label(void);
 
 // The Triangle quick-peek (xmb/ui_peek.cpp): on any focused poster under the

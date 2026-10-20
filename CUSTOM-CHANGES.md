@@ -80,6 +80,12 @@ the boot animation running forever.
   step it stopped in and the last step the GPU finished. This is what found the
   compiler problem. Every crash log line also shows free memory.
 
+- **Updates from inside the app.** When a new release is out (at launch, or Settings →
+  System → Software Update), the app offers to download it, checks it against the
+  SHA-256 GitHub publishes, and has webMAN MOD install it once the app closes. Without
+  webMAN the package is left in `/dev_hdd0/packages` for Package Manager.
+- **Settings → System → About**: the version, credits and the licence of everything
+  in the app.
 - **Only free fonts are shipped.** The PS3's Rodin font is read from the console's own
   firmware instead of being bundled, and three commercial fonts were replaced with
   free ones (Michroma, Archivo Expanded), so the app can be shared openly.

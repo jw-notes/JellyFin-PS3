@@ -79,8 +79,11 @@ static const setting_row k_rows[] = {
       "not only while music is playing.")},
     // ---- System
     { SET_UPDATE,    SEC_SYSTEM, TRN("Software Update"),
-      TRN("Checked at every launch. X checks again. New versions:\n"
-      UPDATE_PAGE_TEXT) },
+      TRN("Checked at every launch. X checks again, and offers to\n"
+      "download and install a new version when there is one.") },
+    { SET_ABOUT,     SEC_SYSTEM, TRN("About"),
+      TRN("The version, who made the app, and the licences of\n"
+      "everything in it.")},
     { SET_SEND_LOG,  SEC_SYSTEM, TRN("Send Log to Server"),
       TRN("Send the diagnostic log to your Jellyfin server (X). It is saved\n"
       "under Dashboard > Logs as upload_PS3_...log: share that file.")},

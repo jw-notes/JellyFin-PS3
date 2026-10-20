@@ -31,6 +31,12 @@ bool update_check_done(void);
 // a render loop — it never blocks.
 bool update_check_result(char *out, int out_size);
 
+// The newer release's package (download URL, size, SHA-256), for
+// net/update_install.cpp.  False when there is no newer release or it has no
+// .pkg asset.
+struct release_asset;
+bool update_check_asset(struct release_asset *out);
+
 // Where the check stands, for Settings > Software Update.
 enum { UPD_IDLE, UPD_CHECKING, UPD_CURRENT, UPD_AVAILABLE, UPD_FAILED };
 int update_check_state(void);

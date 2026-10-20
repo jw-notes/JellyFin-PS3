@@ -104,3 +104,5 @@ tests/test_release_version
 tools/*.tar.gz
 tests/test_search_model
 tests/local/
+tests/test_sha256
+tests/test_release_asset

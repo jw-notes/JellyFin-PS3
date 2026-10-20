@@ -155,6 +155,13 @@ static void a_update(void) {
     else                                       update_check_again();
 }
 static void a_sendlog(void)    { log_upload_start(); }
+static void a_about(void) {
+    // Finish this frame first, as every screen opened from a menu does.
+    rsxSync();
+    flip();
+    xmb_show_about();
+}
+static void v_about(char *b, int c, bool *l) { val_text(b, c, l, "", false); }
 
 // Wake-on-LAN (net/wol.h): the server PC's MAC, entered once, and the send.
 static u64 s_wake_sent_us = 0;
@@ -261,6 +268,7 @@ static const UiRow k_ui[] = {
     TOGGLE(SET_24HZ,        ICON_TV,          v_24hz,      t_24hz),
     TOGGLE(SET_DIRECT_STREAM, ICON_MOVIE,     v_direct,    t_direct),
     ACTION(SET_UPDATE,      ICON_TV,          v_update,    a_update),
+    ACTION(SET_ABOUT,       ICON_STAR,        v_about,     a_about),
     ACTION(SET_SEND_LOG,    ICON_BUG,         v_sendlog,   a_sendlog),
     ACTION(SET_WOL_MAC,     ICON_SETTINGS,    v_wolmac,    a_wolmac),
     ACTION(SET_WAKE,        ICON_TV,          v_wake,      a_wake),
