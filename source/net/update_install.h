@@ -19,7 +19,8 @@ void        update_dl_cancel(void);
 void        update_dl_poll(void);           // render thread, every frame while shown
 int         update_dl_state(void);
 void        update_dl_progress(u32 *got, u32 *total);
-const char *update_dl_error(void);          // why it failed, for the screen
+const char *update_dl_error(void);          // why it failed: a catalog string, show it with tr()
+u32         update_dl_error_code(bool *http);   // the firmware error (or HTTP status) behind it, 0 = none
 const char *update_dl_path(void);           // the downloaded package
 
 // Ask webMAN to install the downloaded package.  True when webMAN accepted it

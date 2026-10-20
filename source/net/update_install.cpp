@@ -27,6 +27,7 @@
 #include "http.h"
 #include "sha256.h"
 #include "plog.h"
+#include "i18n.h"
 
 #define PKG_DIR        "/dev_hdd0/packages"
 #define DL_TIMEOUT_US  (15 * 1000 * 1000)
@@ -43,11 +44,21 @@ static volatile u32     s_got = 0, s_total = 0;
 static release_asset    s_asset;
 static char             s_tag[64];
 static char             s_path[160];
-static char             s_err[96];
+// Why the last attempt failed: a catalog string (TRN, shown through tr()), and
+// the firmware error or HTTP status behind it, 0 when there is none.
+static const char      *s_err = "";
+static u32              s_err_code = 0;
+static bool             s_err_http = false;
 
-static void fail(const char *why) {
-    snprintf(s_err, sizeof s_err, "%s", why);
-    plog(why);
+static void fail(const char *why, u32 code = 0, bool http = false) {
+    s_err = why;
+    s_err_code = code;
+    s_err_http = http;
+    char m[160];
+    if (!code)     snprintf(m, sizeof m, "update: %s", why);
+    else if (http) snprintf(m, sizeof m, "update: %s (HTTP %u)", why, (unsigned)code);
+    else           snprintf(m, sizeof m, "update: %s (0x%08x)", why, (unsigned)code);
+    plog(m);
 }
 
 // GitHub's certificate chain is newer than the firmware's CA store: the
@@ -76,9 +87,9 @@ static int fetch(const char *url, const char *accept) {
     char m[160];
 
     s_got = s_total = 0;
-    if (!https_rt_acquire()) { fail("update: the secure connection could not start"); goto out; }
+    if (!https_rt_acquire()) { fail(TRN("The secure connection could not start.")); goto out; }
     have_rt = true;
-    if (httpCreateClient(&client) < 0) { client = 0; fail("update: no HTTP client"); goto out; }
+    if (httpCreateClient(&client) < 0) { client = 0; fail(TRN("The download could not start.")); goto out; }
     httpClientSetConnTimeout(client, DL_TIMEOUT_US);
     httpClientSetSendTimeout(client, DL_TIMEOUT_US);
     httpClientSetRecvTimeout(client, DL_TIMEOUT_US);
@@ -91,10 +102,10 @@ static int fetch(const char *url, const char *accept) {
         if (httpUtilParseUri(&uri, url, NULL, 0, &pool) < 0 ||
             !(uri_pool = malloc(pool)) ||
             httpUtilParseUri(&uri, url, uri_pool, pool, NULL) < 0) {
-            fail("update: bad download address"); goto out;
+            fail(TRN("The download could not start.")); goto out;
         }
         if (httpCreateTransaction(&trans, client, HTTP_METHOD_GET, &uri) < 0) {
-            trans = 0; fail("update: could not start the download"); goto out;
+            trans = 0; fail(TRN("The download could not start.")); goto out;
         }
     }
     if (accept) {
@@ -104,16 +115,14 @@ static int fetch(const char *url, const char *accept) {
     }
     rc = httpSendRequest(trans, NULL, 0, NULL);
     if (rc < 0) {
-        snprintf(m, sizeof m, "update: could not reach GitHub (0x%08x)", (u32)rc);
-        fail(m); goto out;
+        fail(TRN("Could not reach GitHub."), (u32)rc); goto out;
     }
     {
         s32 code = 0;
         httpResponseGetStatusCode(trans, &code);
         if (code == 404) { result = -1; snprintf(m, sizeof m, "update: not found at %.100s", url); plog(m); goto out; }
         if (code != 200) {
-            snprintf(m, sizeof m, "update: GitHub answered %d", (int)code);
-            fail(m); goto out;
+            fail(TRN("GitHub sent an unexpected answer."), (u32)code, true); goto out;
         }
         u64 len = 0;
         if (httpResponseGetContentLength(trans, &len) == 0 && len > 0 && len < 0xFFFFFFFFull)
@@ -123,34 +132,33 @@ static int fetch(const char *url, const char *accept) {
     }
     sysLv2FsMkdir(PKG_DIR, 0777);
     f = fopen(part, "wb");
-    if (!f) { fail("update: cannot write to /dev_hdd0/packages"); goto out; }
+    if (!f) { fail(TRN("Could not write to /dev_hdd0/packages.")); goto out; }
     buf = (char *)malloc(DL_CHUNK);
-    if (!buf) { fail("update: out of memory"); goto out; }
+    if (!buf) { fail(TRN("Not enough free memory.")); goto out; }
     sha256_init(&sha);
     for (;;) {
-        if (s_cancel) { fail("update: cancelled"); goto out; }
+        if (s_cancel) { fail(TRN("Cancelled.")); goto out; }
         u32 n = 0;
         rc = httpRecvResponse(trans, buf, DL_CHUNK, &n);
         if (rc != 0) {
-            snprintf(m, sizeof m, "update: the download was interrupted (0x%08x)", (u32)rc);
-            fail(m); goto out;
+            fail(TRN("The download was interrupted."), (u32)rc); goto out;
         }
         if (n == 0) break;
-        if (fwrite(buf, 1, n, f) != n) { fail("update: the hard disk is full"); goto out; }
+        if (fwrite(buf, 1, n, f) != n) { fail(TRN("The hard disk is full.")); goto out; }
         sha256_update(&sha, buf, n);
         s_got += n;
     }
-    if (fclose(f) != 0) { f = NULL; fail("update: could not finish writing the package"); goto out; }
+    if (fclose(f) != 0) { f = NULL; fail(TRN("The package could not be saved.")); goto out; }
     f = NULL;
-    if (s_asset.size && s_got != s_asset.size) { fail("update: the download is incomplete"); goto out; }
+    if (s_asset.size && s_got != s_asset.size) { fail(TRN("The download was incomplete.")); goto out; }
     if (s_asset.sha256[0]) {
         uint8_t d[32]; char hex[65];
         sha256_final(&sha, d);
         sha256_hex(d, hex);
-        if (strcmp(hex, s_asset.sha256) != 0) { fail("update: the download is damaged (checksum)"); goto out; }
+        if (strcmp(hex, s_asset.sha256) != 0) { fail(TRN("The download was damaged, so it was deleted.")); goto out; }
     }
     remove(s_path);
-    if (rename(part, s_path) != 0) { fail("update: could not save the package"); goto out; }
+    if (rename(part, s_path) != 0) { fail(TRN("The package could not be saved.")); goto out; }
     result = 1;
     snprintf(m, sizeof m, "update: package downloaded and verified from %.90s", url);
     plog(m);
@@ -173,12 +181,13 @@ static bool download(void) {
     int r = fetch(mirror, "application/vnd.github.raw");
     if (r == 1) return true;
     if (s_cancel) return false;
-    char first[96];
-    snprintf(first, sizeof first, "%s", s_err);
+    const char *first = s_err;
+    const u32 first_code = s_err_code;
+    const bool first_http = s_err_http;
     r = fetch(s_asset.url, NULL);
     if (r == 1) return true;
-    if (r == -1 && first[0]) snprintf(s_err, sizeof s_err, "%s", first);
-    if (!s_err[0]) fail("update: the package is not on GitHub");
+    if (r == -1 && first[0]) { s_err = first; s_err_code = first_code; s_err_http = first_http; }
+    if (!s_err[0]) fail(TRN("The new version is not on GitHub yet."));
     return false;
 }
 
@@ -194,7 +203,7 @@ static void dl_thread(void *arg) {
 bool update_dl_start(void) {
     if (s_thread || s_state == UDL_RUNNING) return false;
     if (!update_check_asset(&s_asset) || !update_check_result(s_tag, sizeof s_tag)) {
-        fail("update: this release has no package to download");
+        fail(TRN("The new version has no package to download."));
         s_state = UDL_FAILED;
         return false;
     }
@@ -206,13 +215,14 @@ bool update_dl_start(void) {
     safe[n] = '\0';
     snprintf(s_path, sizeof s_path, PKG_DIR "/JellyFin-PS3-%s.pkg", n ? safe : "update");
     s_got = s_total = 0;
-    s_err[0] = '\0';
+    s_err = "";
+    s_err_code = 0;
     s_cancel = false;
     s_done = false;
     s_state = UDL_RUNNING;
     static char name[] = "jf_update_dl";
     if (sysThreadCreate(&s_tid, dl_thread, NULL, 1500, 64 * 1024, THREAD_JOINABLE, name) != 0) {
-        fail("update: could not start the download");
+        fail(TRN("The download could not start."));
         s_state = UDL_FAILED;
         return false;
     }
@@ -232,6 +242,7 @@ void update_dl_poll(void) {
 int update_dl_state(void) { return s_state; }
 void update_dl_progress(u32 *got, u32 *total) { if (got) *got = s_got; if (total) *total = s_total; }
 const char *update_dl_error(void) { return s_err; }
+u32 update_dl_error_code(bool *http) { if (http) *http = s_err_http; return s_err_code; }
 const char *update_dl_path(void) { return s_path; }
 
 bool update_install(void) {

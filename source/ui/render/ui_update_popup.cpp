@@ -157,10 +157,16 @@ void xmb_update_popup_draw(void) {
         break;
     case UDL_FAILED:
         centred(mx, mw, my + UIS_H(28), TR("The update did not download"), UIS_TF(21), XMB_TEXT, true);
+        centred(mx, mw, my + UIS_H(76), tr(update_dl_error()), UIS_TF(14), XMB_TEXT_DIM);
         {
-            const char *e = update_dl_error();
-            if (!strncmp(e, "update: ", 8)) e += 8;
-            centred(mx, mw, my + UIS_H(76), e, UIS_TF(14), XMB_TEXT_DIM);
+            // The code behind it, for a bug report; the sentence above is the explanation.
+            bool http = false;
+            const u32 code = update_dl_error_code(&http);
+            if (code) {
+                if (http) snprintf(line, sizeof line, "HTTP %u", (unsigned)code);
+                else      snprintf(line, sizeof line, TR("Error code 0x%08x"), (unsigned)code);
+                centred(mx, mw, my + UIS_H(102), line, UIS_TF(12), XMB_TEXT_FAINT);
+            }
         }
         {
             static const Hint h[] = {{'X', TRN("Try again")}, {'C', TRN("Close")}};
