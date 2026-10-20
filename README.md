@@ -7,8 +7,8 @@
 </div>
 
 <p align="center">
-  <img src="docs/screenshots/3.1/01-home-next-up.png" width="49%">
-  <img src="docs/screenshots/3.1/07-details-backrooms.png" width="49%">
+  <img src="docs/screenshots/3.3/home.png" width="49%">
+  <img src="docs/screenshots/3.3/movies.png" width="49%">
 </p>
 
 Watch your Jellyfin films, shows and music on a PS3, with a menu that looks and
@@ -17,7 +17,7 @@ feels like the console's own.
 This is my continuation of
 [vortigauntlet's LosslessAudio fork](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio),
 which itself started from [MontyMcK's JellyFin-PS3](https://github.com/MontyMcK/JellyFin-PS3).
-All of their work is still here, I i just fixed and added things on top.
+All of their work is still here, I just fixed and added things on top.
 
 ## Features
 
@@ -27,6 +27,12 @@ All of their work is still here, I i just fixed and added things on top.
 - Nine themes; each one recolours the whole app, the wave and the logo included
 - Sign in with a Quick Connect code from your phone or computer, no typing needed
 - Music player with visualisers, offline downloads, Live TV, and files from USB drives
+
+<p align="center">
+  <img src="docs/screenshots/3.3/search.png" width="32%">
+  <img src="docs/screenshots/3.3/themes.png" width="32%">
+  <img src="docs/screenshots/3.3/music.png" width="32%">
+</p>
 
 ## Install
 

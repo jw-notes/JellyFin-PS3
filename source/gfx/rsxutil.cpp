@@ -9,6 +9,7 @@
 
 #include "rsxutil.h"
 #include "plog.h"
+#include "screenshot.h"
 
 extern void crash_log(const char *msg);
 
@@ -198,6 +199,9 @@ void waitflip()
 	while(gcmGetFlipStatus()!=0)
 		usleep(50);
 	gcmResetFlipStatus();
+	// The frame just shown is complete and nothing draws into it now: the
+	// moment for a screenshot, when one was asked for (util/screenshot.cpp).
+	screenshot_frame(color_buffer[curr_fb ^ 1]);
 }
 
 void rsxSync(void)

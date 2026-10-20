@@ -1,4 +1,4 @@
-# JellyFin [PS3] 3.3.0: changes
+# JellyFin [PS3] 3.3.1: changes
 
 By jw-notes, based on [vortigauntlet/JellyFin-PS3-LosslessAudio](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio) `v3.2.3`.
 Tested on a retail PS3 with CFW at 1080p.
@@ -22,7 +22,7 @@ Free memory after startup goes from ~3.7 MB to ~32 MB.
 
 **False "new version" popup.**
 A suffixed version (`3.2.3-custom`) was treated as older than `v3.2.3`. The app now has its
-own version (3.3.0) and checks this repo's releases for updates.
+own version (3.3.x) and checks this repo's releases for updates.
 
 **Sign-in.**
 - Usernames and passwords with quotes, backslashes or spaces are escaped properly in
