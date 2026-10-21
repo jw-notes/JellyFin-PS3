@@ -37,6 +37,20 @@ Tested on a retail PS3 with CFW at 1080p.
   source answering 403) is marked for this run and the change carries on to
   the next one in the same direction, up to three; later presses step over
   it. Channel changes retry once instead of three times.
+- **Remote-style controls while watching Live TV.** D-pad Left/Right change
+  channel and Up/Down change the volume (a level readout shows for two
+  seconds). The left stick moves around the control bar instead of changing
+  channel.
+- **Classic Live TV page redesigned.** A full-width grid of channel cards
+  (large logo, number and name, the programme on now and its progress) under
+  the same heading layout as the library pages. Categories are tabs in the
+  Music page's style, switched with L2/R2. Square opens the guide.
+- **Genre tabs.** Channels are sorted into genres (News, Sports, Movies,
+  Kids, Crime & Mystery, Comedy, Food and more) from their names, since
+  Jellyfin passes on no channel categories. A genre needs three channels for
+  a tab; Customise (Start) hides any. The main tab is now All Channels and
+  starred channels are under Favourites.
+- **L1/R1 hints use button icons**, like L2/R2 (e.g. Picture size).
 - Server tip: if channels stop at ad breaks, turn *Read input at native frame
   rate* off on the M3U tuner. At an HLS discontinuity ffmpeg's -re pacing
   waits on the jumped timestamps; the player reconnects after 15 s without a
