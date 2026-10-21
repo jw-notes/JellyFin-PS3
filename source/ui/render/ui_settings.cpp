@@ -523,7 +523,7 @@ void xmb_draw_settings(void) {
         const int footer_y = bottom_y() - UIS_H(26);
         if (footer_y > last_bottom + 6) {
             char ver[96];
-            snprintf(ver, sizeof ver, TR("Jellyfin for PS3 %s \xC2\xB7 built %s"), APP_VERSION, __DATE__);
+            snprintf(ver, sizeof ver, TR("JellyFin [PS] %s \xC2\xB7 built %s"), APP_VERSION, __DATE__);
             const int vw = ttf_text_width(ver, UIS_TF(13));
             drawTTF((u32)((W - vw) / 2), (u32)footer_y, ver, UIS_TF(13), XMB_TEXT_FAINT);
         }

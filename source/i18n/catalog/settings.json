@@ -75,7 +75,7 @@
   "Account": {"ja": "アカウント", "pt-BR": "Conta", "de": "Konto", "fr": "Compte", "es": "Cuenta"},
   "(unknown)": {"ja": "（不明）", "pt-BR": "(desconhecido)", "de": "(unbekannt)", "fr": "(inconnu)", "es": "(desconocido)"},
   "(no server)": {"ja": "（サーバーなし）", "pt-BR": "(sem servidor)", "de": "(kein Server)", "fr": "(aucun serveur)", "es": "(sin servidor)"},
-  "Jellyfin for PS3 %s · built %s": {"ja": "PS3版Jellyfin %s · ビルド %s", "pt-BR": "Jellyfin para PS3 %s · compilado em %s", "de": "Jellyfin für PS3 %s · erstellt am %s", "fr": "Jellyfin pour PS3 %s · compilé le %s", "es": "Jellyfin para PS3 %s · compilado el %s"},
+  "JellyFin [PS] %s · built %s": {"ja": "JellyFin [PS] %s · ビルド %s", "pt-BR": "JellyFin [PS] %s · compilado em %s", "de": "JellyFin [PS] %s · erstellt %s", "fr": "JellyFin [PS] %s · compilé le %s", "es": "JellyFin [PS] %s · compilado el %s"},
   "Match the corners to the edges of your screen": {"ja": "四隅を画面の端に合わせてください", "pt-BR": "Alinhe os cantos com as bordas da tela", "de": "Ecken an den Bildschirmrändern ausrichten", "fr": "Alignez les coins sur les bords de l'écran", "es": "Alinea las esquinas con los bordes de la pantalla"},
   "D-pad Left / Right to adjust": {"ja": "方向キー左右で調整", "pt-BR": "Esquerda / Direita no direcional para ajustar", "de": "Steuerkreuz Links / Rechts zum Anpassen", "fr": "Croix directionnelle gauche / droite pour régler", "es": "Cruceta izquierda / derecha para ajustar"},
   "Cross  Save        Circle  Cancel": {"ja": "× 保存        ○ キャンセル", "pt-BR": "X  Salvar        Círculo  Cancelar", "de": "Kreuz  Speichern        Kreis  Abbrechen", "fr": "Croix  Enregistrer        Rond  Annuler", "es": "Cruz  Guardar        Círculo  Cancelar"},

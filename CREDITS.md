@@ -1,6 +1,6 @@
 # Credits
 
-JellyFin [PS3] is built on other people's work. Thank you to all of them.
+JellyFin [PS] is built on other people's work. Thank you to all of them.
 
 ## People
 
@@ -51,4 +51,4 @@ it from the console's firmware. See [source/gfx/fonts/LICENSES.md](source/gfx/fo
 
 ## License
 
-JellyFin [PS3] is GPLv3, see [LICENSE](LICENSE). Each bundled component keeps its own licence.
+JellyFin [PS] is GPLv3, see [LICENSE](LICENSE). Each bundled component keeps its own licence.

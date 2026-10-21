@@ -1,4 +1,4 @@
-# Developing JellyFin [PS3]
+# Developing JellyFin [PS]
 
 How to build, test, try out and release the app. For what the app does, see the
 [manual](MANUAL.md); for what changed in each version, see

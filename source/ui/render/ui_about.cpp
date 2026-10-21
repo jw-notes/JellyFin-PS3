@@ -21,7 +21,7 @@ struct Line { Kind kind; const char *a; const char *b; };   // b: right column (
 // Proper names are not translated; headings and sentences are.
 const Line k_lines[] = {
     { K_HEAD, TRN("Made by"), NULL },
-    { K_NAME, "jw-notes", "JellyFin [PS3]" },
+    { K_NAME, "jw-notes", "JellyFin [PS]" },
     { K_NAME, "vortigauntlet", "JellyFin-PS3-LosslessAudio" },
     { K_NAME, "MontyMcK", "JellyFin-PS3, the original" },
     { K_TEXT, TRN("With contributions from Ethan Hammer, Lucian, orbisai0security and others."), NULL },
@@ -52,7 +52,7 @@ const Line k_lines[] = {
     { K_TEXT, TRN("Rodin is the PS3's own system font, read from the console."), NULL },
     { K_GAP, NULL, NULL },
     { K_HEAD, TRN("License"), NULL },
-    { K_TEXT, TRN("JellyFin [PS3] is free software under the GNU GPL, version 3 or later."), NULL },
+    { K_TEXT, TRN("JellyFin [PS] is free software under the GNU GPL, version 3 or later."), NULL },
     { K_TEXT, TRN("It comes with no warranty. Each component keeps its own licence."), NULL },
     { K_TEXT, TRN("Source code and the full licence texts:"), NULL },
     { K_TEXT, "github.com/jw-notes/JellyFin-PS3", NULL },
@@ -109,7 +109,7 @@ void draw_about(int top) {
     drawRect(0, 0, (u32)W, (u32)(list_top - UIS_H(15)), XMB_BG);
     drawRect((u32)x0, (u32)(list_top - UIS_H(16)), (u32)col_w, 1, XMB_HAIRLINE);
     {
-        const char *t = "JellyFin [PS3]";
+        const char *t = "JellyFin [PS]";
         const float px = UIS_TF(32.0f);
         drawTTF((u32)((W - ttf_text_width(t, px, true)) / 2), (u32)y_title, t, px, XMB_TEXT, true);
         char v[64];

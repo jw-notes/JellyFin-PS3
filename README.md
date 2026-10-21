@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="docs/brand/jellyfin-ps3-mark.png" alt="JellyFin [PS3]" width="150" height="150">
+  <img src="docs/brand/jellyfin-ps3-mark.png" alt="JellyFin [PS]" width="150" height="150">
 
-  <h1>JellyFin [PS3]</h1>
+  <h1>JellyFin [PS]</h1>
 
   A Jellyfin homebrew application for the PlayStation 3.
 
@@ -224,5 +224,5 @@ Every library, font and icon set, with its licence, is listed in [CREDITS.md](CR
 GPLv3, see [LICENSE](LICENSE). Copyright (C) 2026 vortigauntlet and MontyMcK;
 changes since 3.2.3 copyright (C) 2026 jw-notes.
 
-<sub>JellyFin [PS3] is an independent project and is not affiliated with Jellyfin or Sony.
+<sub>JellyFin [PS] is an independent project and is not affiliated with Jellyfin or Sony.
 PlayStation is a trademark of Sony Interactive Entertainment.</sub>

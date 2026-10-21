@@ -44,7 +44,7 @@ static void upload_thread(void *arg) {
         s_status = -1; s_state = LOGUP_FAILED;
     } else {
         int n = snprintf(buf, 1024,
-            "=== JellyFin-PS3 %s client log ===\n"
+            "=== JellyFin [PS] %s client log ===\n"
             "display=%ux%u\n\n", APP_VERSION,
             (unsigned)display_width, (unsigned)display_height);
         // The previous run first: a crash or power-off ends it, and that is

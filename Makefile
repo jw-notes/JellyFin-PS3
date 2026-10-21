@@ -31,7 +31,7 @@ INCLUDES    := source/audio source/audio/dcahd \
                source/util source/cache source/video source/music source/spu \
                source/offline source/local third_party/mohasi_fs source/i18n
 
-TITLE       := JellyFin [PS3]
+TITLE       := JellyFin [PS]
 APPID       := JFPS30000
 CONTENTID   := UP0001-$(APPID)_00-0000000000000000
 

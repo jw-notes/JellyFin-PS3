@@ -1,6 +1,7 @@
 # Changelog
 
-What changed in each release of JellyFin [PS3], newest first.
+What changed in each release of JellyFin [PS] (called JellyFin [PS3] until
+3.3.10), newest first.
 
 Releases from 3.3 on are by jw-notes. They start from
 [vortigauntlet's](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio)

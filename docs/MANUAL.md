@@ -1,4 +1,4 @@
-# JellyFin [PS3] manual
+# JellyFin [PS] manual
 
 Everything about settings, sound, controls and how the app works. Most of it was
 written by vortigauntlet for the LosslessAudio fork and still applies. For what

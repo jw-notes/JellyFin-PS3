@@ -39,7 +39,7 @@ with tempfile.TemporaryDirectory() as scratch:
         if fmt == 0x204:
             pos = data_start + data_off
             values[key] = sfo[pos:pos + length].rstrip(b"\0").decode()
-    for key, expected in {"CATEGORY": "AT", "TITLE": "JellyFin [PS3]",
+    for key, expected in {"CATEGORY": "AT", "TITLE": "JellyFin [PS]",
                           "TITLE_ID": "JFPS30000", "APP_VER": "03.39"}.items():
         require(values.get(key) == expected, f"Unexpected {key}: {values.get(key)}")
     require((extracted / "USRDIR/EBOOT.BIN").read_bytes()[:4] == b"SCE\0",

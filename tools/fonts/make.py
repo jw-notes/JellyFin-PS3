@@ -1,4 +1,4 @@
-"""Archivo Expanded instances for JellyFin [PS3], subset to Latin and written as C headers.
+"""Archivo Expanded instances for JellyFin [PS], subset to Latin and written as C headers.
 
     pip install fonttools; python tools/fonts/make.py "Archivo[wdth,wght].ttf" source/gfx
 
