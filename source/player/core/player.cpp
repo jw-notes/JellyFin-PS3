@@ -603,6 +603,39 @@ static const u64 LIVE_CHANNEL_QUIET_US = 600000ULL;    // presses closer than th
 static const u64 LIVE_BANNER_US        = 3000000ULL;
 static const int LIVE_REOPEN_TRIES     = 3;            // after the first failure, 1 / 2 / 4 s apart
 static char s_live_last_id[40] = "";
+
+// Channels the server could not open this run (an M3U entry whose source
+// refuses us, e.g. HTTP 403 from the CDN).  Channel changes step over them;
+// they are not saved, so a channel that comes back is tried again next run.
+#define LIVE_DEAD_MAX 32
+static char s_live_dead[LIVE_DEAD_MAX][40];
+static int  s_live_dead_n = 0;
+static const int LIVE_SKIP_MAX = 3;      // dead channels stepped over per press
+
+static bool live_is_dead(const char *id) {
+    for (int i = 0; i < s_live_dead_n; i++)
+        if (strcmp(s_live_dead[i], id) == 0) return true;
+    return false;
+}
+
+static void live_mark_dead(const char *id) {
+    if (!id[0] || live_is_dead(id)) return;
+    const int slot = s_live_dead_n < LIVE_DEAD_MAX ? s_live_dead_n++ : LIVE_DEAD_MAX - 1;
+    snprintf(s_live_dead[slot], sizeof s_live_dead[slot], "%s", id);
+}
+
+// The next channel from `cur` in direction `dir` that is not known dead, or
+// -1 when every other channel is.
+static int live_step_alive(int cur, int n, int dir) {
+    int to = cur;
+    for (int i = 0; i < n; i++) {
+        to = livetv_step_channel(to, n, dir);
+        if (to < 0 || to == cur) return -1;
+        JFChannel ch;
+        if (xmb_livetv_get(to, &ch) && !live_is_dead(ch.id)) return to;
+    }
+    return -1;
+}
 const char *player_live_last_channel(void) { return s_live_last_id; }
 
 static u32 s_last_pos_secs = 0;
@@ -701,15 +734,18 @@ bool player_live_preroll(PlayerState *ps, bool startup) {
 // Reopen the live stream, labelled for the wait screen.  After a failure it
 // asks again up to LIVE_REOPEN_TRIES more times, 1 / 2 / 4 s apart, with the
 // spinner up and O to give up.  False ends playback.
-static bool live_reopen(PlayerState *ps, const char *label) {
+// A channel change passes fewer `retries`: a channel the server cannot open
+// is skipped rather than waited on.
+static bool live_reopen(PlayerState *ps, const char *label, int retries = LIVE_REOPEN_TRIES) {
     static const unsigned BACKOFF_MS[LIVE_REOPEN_TRIES] = { 1000, 2000, 4000 };
+    if (retries > LIVE_REOPEN_TRIES) retries = LIVE_REOPEN_TRIES;
     s_seekwait_label = label;
     bool ok = false;
-    for (int attempt = 0; attempt <= LIVE_REOPEN_TRIES; attempt++) {
+    for (int attempt = 0; attempt <= retries; attempt++) {
         if (attempt > 0) {
             char b[96];
             snprintf(b, sizeof b, "live: reopen failed, asking again in %u s (try %d of %d)",
-                     BACKOFF_MS[attempt - 1] / 1000u, attempt + 1, LIVE_REOPEN_TRIES + 1);
+                     BACKOFF_MS[attempt - 1] / 1000u, attempt + 1, retries + 1);
             plog(b);
             const u64 w0 = timing_get_us();
             bool gave_up = false;
@@ -1420,7 +1456,25 @@ void show_player_run(const JFItem *item, u32 resume_secs,
     // Live TV: a channel change waits for a quiet 600 ms (the banner follows
     // each press); live_watch.h decides when the stream must be asked for again.
     int       live_target   = -1;       // the channel a pending change is heading for
+    int       live_dir      = +1;       // its direction, for stepping past dead channels
     u64       live_press_us = 0;
+    // The next channel replaces this one's identity and tracks.
+    auto live_adopt = [&](const JFChannel &ch) {
+        snprintf(s_live_item.id,   sizeof s_live_item.id,   "%s", ch.id);
+        snprintf(s_live_item.name, sizeof s_live_item.name, "%s", ch.name);
+        snprintf(s_live_last_id, sizeof s_live_last_id, "%s", ch.id);
+        memset(&ps.tracks, 0, sizeof ps.tracks);
+        ps.have_tracks = false;
+        ps.cur_audio   = -1;
+        ps.cur_sub     = -1;
+        ps.sub_is_text = ps.sub_is_pgs = false;
+        ps.live_no_copy = false;
+        hud_set_cc_active(false);
+        live_ch = ch;
+        char b[96];
+        snprintf(b, sizeof b, "live: channel -> %.40s", ch.name);
+        plog(b);
+    };
     u64       live_hud_us   = 0;
     LiveWatch live_w;
     live_watch_init(&live_w, timing_get_us());
@@ -1589,7 +1643,8 @@ void show_player_run(const JFItem *item, u32 resume_secs,
                 JFChannel ch;
                 if (n > 1) {
                     const int cur = live_target >= 0 ? live_target : xmb_livetv_index_of(item->id);
-                    const int to  = livetv_step_channel(cur, n, act == HUD_ACTION_CHANNEL_NEXT ? +1 : -1);
+                    live_dir      = act == HUD_ACTION_CHANNEL_NEXT ? +1 : -1;
+                    const int to  = live_step_alive(cur, n, live_dir);
                     if (to >= 0 && xmb_livetv_get(to, &ch)) {
                         live_target   = to;
                         live_press_us = now_lv;
@@ -1604,22 +1659,9 @@ void show_player_run(const JFItem *item, u32 resume_secs,
                 const int to = live_target;
                 live_target = -1;
                 if (to != xmb_livetv_index_of(item->id) && xmb_livetv_get(to, &ch)) {
-                    // The next channel replaces this one's identity and tracks.
-                    snprintf(s_live_item.id,   sizeof s_live_item.id,   "%s", ch.id);
-                    snprintf(s_live_item.name, sizeof s_live_item.name, "%s", ch.name);
-                    snprintf(s_live_last_id, sizeof s_live_last_id, "%s", ch.id);
-                    memset(&ps.tracks, 0, sizeof ps.tracks);
-                    ps.have_tracks = false;
-                    ps.cur_audio   = -1;
-                    ps.cur_sub     = -1;
-                    ps.sub_is_text = ps.sub_is_pgs = false;
-                    hud_set_cc_active(false);
-                    live_ch = ch;
+                    live_adopt(ch);
                     live_label   = TR("Changing channel");
                     live_changed = true;
-                    char b[96];
-                    snprintf(b, sizeof b, "live: channel -> %.40s", ch.name);
-                    plog(b);
                 }
             }
         }
@@ -1663,8 +1705,28 @@ void show_player_run(const JFItem *item, u32 resume_secs,
 
         if (act == HUD_ACTION_SEEK) {
             g_prog.pos_valid = false;
-            const bool seek_ok = live ? live_reopen(&ps, live_label ? live_label : TR("Waiting for the server"))
-                                      : player_execute_seek(&ps);
+            bool seek_ok;
+            if (live && live_changed) {
+                // A channel the server cannot open is marked dead and the
+                // change carries on to the next one, a few at most.
+                seek_ok = live_reopen(&ps, live_label, 1);
+                for (int skip = 0; !seek_ok && skip < LIVE_SKIP_MAX &&
+                                   !ps.open_cancelled && running; skip++) {
+                    plog("live: channel would not open -- skipping it");
+                    live_mark_dead(item->id);
+                    const int n  = xmb_livetv_count();
+                    const int to = live_step_alive(xmb_livetv_index_of(item->id), n, live_dir);
+                    JFChannel ch;
+                    if (to < 0 || !xmb_livetv_get(to, &ch)) break;
+                    live_adopt(ch);
+                    live_banner(&ch, live_utc);
+                    ps.playing = true;
+                    seek_ok = live_reopen(&ps, live_label, 1);
+                }
+            } else {
+                seek_ok = live ? live_reopen(&ps, live_label ? live_label : TR("Waiting for the server"))
+                               : player_execute_seek(&ps);
+            }
             snprintf(g_prog.sess, sizeof g_prog.sess, "%s", ps.session_id);
             if (live) {
                 snprintf(g_prog.item, sizeof g_prog.item, "%s", item->id);

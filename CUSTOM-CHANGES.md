@@ -23,11 +23,30 @@ Tested on a retail PS3 with CFW at 1080p.
 - If the server answers a channel with HTTP 500, the reopen asks for a
   re-encode for the rest of that viewing.
 - **Circle cancels "Connecting to server..."** while the server opens a
-  channel (up to a minute). Before, the only way out was switching off.
-- Server tip: with *Read input at native frame rate* on the M3U tuner, the
-  server sends live channels at exactly real time, so the reserve fills no
-  faster than it plays. Turning it off lets the server send what the source
-  already has, which fills the buffer almost at once.
+  channel (up to a minute), and quitting from the PS menu works there too.
+  Before, the only way out was switching off.
+- **Live requests ask for High profile** at every size. A VA-API (AMD VCE)
+  Baseline encode froze the console; High plays at 30 fps.
+- **No more freezes from oversized pictures.** With VA-API the server sends a
+  live channel at its source 1920x1080 whatever MaxWidth/MaxHeight say (its
+  probe reads the smallest HLS variant). Live slots now always hold 1080p,
+  and any picture larger than the slots ends playback as a decoder error
+  instead of overrunning them. The live read-ahead ring is capped at 10 MB so
+  the larger slots leave memory for a channel change.
+- **No server crash on channel changes.** Start/progress reports leave the
+  LiveStreamId out: with it, Jellyfin 10.11's transcode kill timer looks the
+  stream up with a null PlaySessionId and takes the whole server down
+  (jellyfin/jellyfin#18035). The player closes the stream itself.
+- **Dead channels are skipped.** A channel the server cannot open (an M3U
+  source answering 403) is marked for this run and the change carries on to
+  the next one in the same direction, up to three; later presses step over
+  it. Channel changes retry once instead of three times.
+- Server notes for this setup (AMD GX-217GA, 2 cores): live TV needs VA-API.
+  The Kabini GPU must use amdgpu (kernel `radeon.cik_support=0
+  amdgpu.cik_support=1`); under radeon the kernel rejects the encoder's work.
+  Turn *Read input at native frame rate* off on the M3U tuner: at an ad-break
+  discontinuity ffmpeg's -re pacing waits on the jumped timestamps and the
+  channel stops (seen at 21.78 s with no further frames).
 
 ## New in 3.3.5
 
