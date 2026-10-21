@@ -9,9 +9,9 @@ extern const int i18n_n;
 extern const char *const i18n_keys[];
 extern const char *const *const i18n_text[LANG__COUNT];
 
-const int i18n_n = 594;
+const int i18n_n = 596;
 
-const char *const i18n_keys[594] = {
+const char *const i18n_keys[596] = {
     "  %s  %s free",
     "  (can't be decoded yet)",
     "%.1f MB",
@@ -209,6 +209,7 @@ const char *const i18n_keys[594] = {
     "High",
     "Home",
     "How long the menus wait, untouched, before the screensaver\nstarts: 30 seconds to 5 minutes.",
+    "How much of a channel is saved before it plays.\nShorter starts channels sooner; longer rides out Wi-Fi gaps.",
     "How strongly the wave reacts to music.\nOff keeps it calm; Max makes every beat hit hard.",
     "Initializing decoder...",
     "Install Package Files > Standard.",
@@ -240,6 +241,7 @@ const char *const i18n_keys[594] = {
     "License",
     "List",
     "Live TV",
+    "Live TV Buffer",
     "Live TV Quality",
     "Live TV is unavailable",
     "Loading",
@@ -608,7 +610,7 @@ const char *const i18n_keys[594] = {
     "\342\200\271 back %ds",
 };
 
-static const char *const i18n_text_ja[594] = {
+static const char *const i18n_text_ja[596] = {
     "  %s  %s \347\251\272\343\201\215",
     "  \357\274\210\343\201\276\343\201\240\343\203\207\343\202\263\343\203\274\343\203\211\343\201\247\343\201\215\343\201\276\343\201\233\343\202\223\357\274\211",
     "%.1f MB",
@@ -806,6 +808,7 @@ static const char *const i18n_text_ja[594] = {
     "\351\253\230",
     "\343\203\233\343\203\274\343\203\240",
     "\346\223\215\344\275\234\343\201\214\343\201\252\343\201\204\343\201\276\343\201\276\343\200\201\343\202\271\343\202\257\343\203\252\343\203\274\343\203\263\343\202\273\343\203\274\343\203\220\343\203\274\343\201\214\345\247\213\343\201\276\343\202\213\343\201\276\343\201\247\343\201\256\346\231\202\351\226\223\343\200\202\n30\347\247\222\343\201\213\343\202\2115\345\210\206\343\201\276\343\201\247\351\201\270\343\201\271\343\201\276\343\201\231\343\200\202",
+    "\345\206\215\347\224\237\345\211\215\343\201\253\343\203\201\343\203\243\343\203\263\343\203\215\343\203\253\343\202\222\343\201\251\343\202\214\343\201\240\343\201\221\350\252\255\343\201\277\350\276\274\343\202\223\343\201\247\343\201\212\343\201\217\343\201\213\343\200\202\n\347\237\255\343\201\204\343\201\250\346\227\251\343\201\217\345\247\213\343\201\276\343\202\212\343\200\201\351\225\267\343\201\204\343\201\250Wi-Fi\343\201\256\351\200\224\345\210\207\343\202\214\343\201\253\345\274\267\343\201\217\343\201\252\343\202\212\343\201\276\343\201\231\343\200\202",
     "\343\202\246\343\202\247\343\203\274\343\203\226\343\201\214\351\237\263\346\245\275\343\201\253\343\201\251\343\202\214\343\201\240\343\201\221\345\217\215\345\277\234\343\201\231\343\202\213\343\201\213\343\202\222\346\261\272\343\202\201\343\201\276\343\201\231\343\200\202\n\343\202\252\343\203\225\343\201\252\343\202\211\347\251\217\343\202\204\343\201\213\343\201\253\343\200\201\346\234\200\345\244\247\343\201\247\343\201\257\343\203\223\343\203\274\343\203\210\343\201\224\343\201\250\343\201\253\345\274\267\343\201\217\345\213\225\343\201\215\343\201\276\343\201\231\343\200\202",
     "\343\203\207\343\202\263\343\203\274\343\203\200\343\203\274\343\202\222\345\210\235\346\234\237\345\214\226\344\270\255...",
     "Install Package Files > Standard \343\202\222\351\201\270\343\202\223\343\201\247\343\201\217\343\201\240\343\201\225\343\201\204\343\200\202",
@@ -837,6 +840,7 @@ static const char *const i18n_text_ja[594] = {
     "\343\203\251\343\202\244\343\202\273\343\203\263\343\202\271",
     "\344\270\200\350\246\247",
     "\343\203\251\343\202\244\343\203\226TV",
+    "\343\203\251\343\202\244\343\203\226TV\343\201\256\343\203\220\343\203\203\343\203\225\343\202\241",
     "\343\203\251\343\202\244\343\203\226TV\343\201\256\347\224\273\350\263\252",
     "\343\203\251\343\202\244\343\203\226TV\343\201\257\345\210\251\347\224\250\343\201\247\343\201\215\343\201\276\343\201\233\343\202\223",
     "\350\252\255\343\201\277\350\276\274\343\201\277\344\270\255",
@@ -1205,7 +1209,7 @@ static const char *const i18n_text_ja[594] = {
     "\342\200\271 %d\347\247\222\346\210\273\343\202\213",
 };
 
-static const char *const i18n_text_pt_BR[594] = {
+static const char *const i18n_text_pt_BR[596] = {
     "  %s  %s livres",
     "  (ainda n\303\243o pode ser decodificado)",
     "%.1f MB",
@@ -1403,6 +1407,7 @@ static const char *const i18n_text_pt_BR[594] = {
     "Alta",
     "In\303\255cio",
     "Quanto tempo os menus esperam, sem uso, antes da prote\303\247\303\243o\nde tela come\303\247ar: de 30 segundos a 5 minutos.",
+    "Quanto do canal \303\251 guardado antes de tocar.\nMais curto come\303\247a antes; mais longo resiste a falhas do Wi-Fi.",
     "O quanto a onda reage \303\240 m\303\272sica.\nDesligado a mant\303\251m calma; M\303\241x. faz cada batida pesar.",
     "Iniciando o decodificador...",
     "Install Package Files > Standard.",
@@ -1434,6 +1439,7 @@ static const char *const i18n_text_pt_BR[594] = {
     "Licen\303\247a",
     "Lista",
     "TV ao vivo",
+    "Buffer da TV ao vivo",
     "Qualidade da TV ao vivo",
     "A TV ao vivo est\303\241 indispon\303\255vel",
     "Carregando",
@@ -1802,7 +1808,7 @@ static const char *const i18n_text_pt_BR[594] = {
     "\342\200\271 voltar %ds",
 };
 
-static const char *const i18n_text_de[594] = {
+static const char *const i18n_text_de[596] = {
     "  %s  %s frei",
     "  (kann noch nicht decodiert werden)",
     "%.1f MB",
@@ -2000,6 +2006,7 @@ static const char *const i18n_text_de[594] = {
     "Hoch",
     "Start",
     "Wie lange die Men\303\274s unber\303\274hrt warten, bis der Bildschirmschoner\nstartet: 30 Sekunden bis 5 Minuten.",
+    "Wie viel eines Senders vor dem Abspielen geladen wird.\nK\303\274rzer startet schneller; l\303\244nger \303\274berbr\303\274ckt WLAN-Aussetzer.",
     "Wie stark die Welle auf Musik reagiert.\nAus h\303\244lt sie ruhig; Max l\303\244sst jeden Beat kr\303\244ftig einschlagen.",
     "Decoder wird initialisiert...",
     "Install Package Files > Standard.",
@@ -2031,6 +2038,7 @@ static const char *const i18n_text_de[594] = {
     "Lizenz",
     "Liste",
     "Live-TV",
+    "Live-TV-Puffer",
     "Live-TV-Qualit\303\244t",
     "Live-TV ist nicht verf\303\274gbar",
     "Wird geladen",
@@ -2399,7 +2407,7 @@ static const char *const i18n_text_de[594] = {
     "\342\200\271 %ds zur\303\274ck",
 };
 
-static const char *const i18n_text_fr[594] = {
+static const char *const i18n_text_fr[596] = {
     "  %s  %s libres",
     "  (ne peut pas encore \303\252tre d\303\251cod\303\251)",
     "%.1f Mo",
@@ -2597,6 +2605,7 @@ static const char *const i18n_text_fr[594] = {
     "\303\211lev\303\251e",
     "Accueil",
     "Dur\303\251e d'inactivit\303\251 des menus avant le lancement de l'\303\251conomiseur\nd'\303\251cran : de 30 secondes \303\240 5 minutes.",
+    "Quantit\303\251 de la cha\303\256ne charg\303\251e avant la lecture.\nPlus court d\303\251marre plus vite ; plus long r\303\251siste aux coupures Wi-Fi.",
     "\303\200 quel point la vague r\303\251agit \303\240 la musique.\nD\303\251sactiv\303\251 la garde calme ; Max fait claquer chaque temps.",
     "Initialisation du d\303\251codeur...",
     "Install Package Files > Standard.",
@@ -2628,6 +2637,7 @@ static const char *const i18n_text_fr[594] = {
     "Licence",
     "Liste",
     "TV en direct",
+    "M\303\251moire tampon TV en direct",
     "Qualit\303\251 TV en direct",
     "La TV en direct est indisponible",
     "Chargement",
@@ -2996,7 +3006,7 @@ static const char *const i18n_text_fr[594] = {
     "\342\200\271 reculer de %ds",
 };
 
-static const char *const i18n_text_es[594] = {
+static const char *const i18n_text_es[596] = {
     "  %s  %s libres",
     "  (a\303\272n no se puede decodificar)",
     "%.1f MB",
@@ -3194,6 +3204,7 @@ static const char *const i18n_text_es[594] = {
     "Alta",
     "Inicio",
     "Cu\303\241nto esperan los men\303\272s sin uso antes de que empiece\nel salvapantallas: de 30 segundos a 5 minutos.",
+    "Cu\303\241nto del canal se guarda antes de reproducirlo.\nM\303\241s corto empieza antes; m\303\241s largo aguanta cortes del Wi-Fi.",
     "Cu\303\241nto reacciona la onda a la m\303\272sica.\nDesactivado la mantiene tranquila; M\303\241x. hace que cada golpe se note.",
     "Inicializando el decodificador...",
     "Install Package Files > Standard.",
@@ -3225,6 +3236,7 @@ static const char *const i18n_text_es[594] = {
     "Licencia",
     "Lista",
     "TV en vivo",
+    "B\303\272fer de TV en directo",
     "Calidad de TV en directo",
     "La TV en vivo no est\303\241 disponible",
     "Cargando",

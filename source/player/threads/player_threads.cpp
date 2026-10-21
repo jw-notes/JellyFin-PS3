@@ -22,6 +22,7 @@
 #include "player_stats.h"
 #include "jellyfin_api.h"
 #include "lclog.h"
+#include "../core/live_buffer.h"
 
 extern u32 running;
 
@@ -77,7 +78,10 @@ static u8 *s_ring     = NULL;   // cap * TS_PACKET_SIZE bytes
 static int s_ring_cap = 0;      // packets
 static int s_ring_rd = 0, s_ring_wr = 0, s_ring_n = 0;
 
-static void ring_reset(void) { s_ring_rd = s_ring_wr = s_ring_n = 0; }
+// Programme time received since the last reset, for the live reserve.
+static live_pcr s_pcr;
+
+static void ring_reset(void) { s_ring_rd = s_ring_wr = s_ring_n = 0; live_pcr_reset(&s_pcr); }
 
 bool decode_ring_alloc(u32 want_bytes) {
     decode_ring_free();
@@ -112,6 +116,7 @@ void decode_ring_free(void) {
 
 int decode_ring_fill(void) { return s_ring_n; }
 int decode_ring_cap(void)  { return s_ring_cap; }
+unsigned decode_ring_pcr_ms(void) { return live_pcr_ms(&s_pcr); }
 
 static void ring_push(const u8 *pkt) {
     memcpy(s_ring + (size_t)s_ring_wr * TS_PACKET_SIZE, pkt, TS_PACKET_SIZE);
@@ -263,6 +268,7 @@ void decode_thread_fn(void *arg) {
                 continue;
             }
             lc_zero_since_us = 0;
+            live_pcr_feed(&s_pcr, ts_pkt);
             if (!lc_got_pkt) {
                 lc_got_pkt = true;
                 lc_logf("decode: first packet after spawn");

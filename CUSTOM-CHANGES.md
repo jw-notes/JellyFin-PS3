@@ -3,6 +3,19 @@
 By jw-notes, based on [vortigauntlet/JellyFin-PS3-LosslessAudio](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio) `v3.2.3`.
 Tested on a retail PS3 with CFW at 1080p.
 
+## Unreleased
+
+- **Faster Live TV start.** The live reserve is now measured in programme time
+  from the stream's own clock (PCR), not in bytes at the quality ceiling. A
+  2.5 Mbps channel under the 4 Mbps ceiling used to wait 11-16 s for "8 s";
+  it now waits about 8 s, less when the server sends a burst. The byte target
+  stays as the memory ceiling and for streams without a PCR.
+- **Live TV Buffer** (Settings > Playback): 4, 8 (default) or 15 seconds.
+- Server tip: with *Read input at native frame rate* on the M3U tuner, the
+  server sends live channels at exactly real time, so the reserve fills no
+  faster than it plays. Turning it off lets the server send what the source
+  already has, which fills the buffer almost at once.
+
 ## New in 3.3.5
 
 - **Live TV in Classic.** My Media includes the server's Live TV tab even though

@@ -19,6 +19,9 @@ static const setting_row k_rows[] = {
     { SET_LIVETV_QUALITY, SEC_PLAYBACK, TRN("Live TV Quality"),
       TRN("Lower quality reduces bandwidth and helps on Wi-Fi.\n"
       "Applies only to live channels; movies keep their own quality.")},
+    { SET_LIVETV_BUFFER, SEC_PLAYBACK, TRN("Live TV Buffer"),
+      TRN("How much of a channel is saved before it plays.\n"
+      "Shorter starts channels sooner; longer rides out Wi-Fi gaps.")},
     { SET_24HZ,      SEC_PLAYBACK, TRN("24Hz Output"),
       TRN("Auto: 24fps films switch the TV to 24Hz for smooth motion.\n"
       "Each TV is checked once first. Off keeps everything at 60Hz.")},

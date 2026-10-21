@@ -261,6 +261,8 @@ bool decode_ring_alloc(u32 want_bytes);
 void decode_ring_free(void);
 int  decode_ring_fill(void);
 int  decode_ring_cap(void);
+// Programme time received since the stream (re)opened, from its PCR; 0 until one arrives.
+unsigned decode_ring_pcr_ms(void);
 
 // -------------------------------------------------------
 // GPU blit state (defined in gpu/player_gpu.cpp)

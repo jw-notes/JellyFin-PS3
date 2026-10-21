@@ -23,6 +23,7 @@
 #include "hd1080.h"
 #include "vquality.h"
 #include "livetv_quality.h"
+#include "livetv_buffer.h"
 #include "surround.h"
 #include "stream.h"
 #include "audio.h"
@@ -650,20 +651,26 @@ static void live_banner(const JFChannel *ch, int utc) {
     hud_set_banner(label, sub, timing_get_us() + LIVE_BANNER_US);
 }
 
-// Startup and reconnect share the same bounded live reserve.
+// Startup and reconnect share the same bounded live reserve.  It is measured
+// in programme time from the stream's PCR; the packet target is only the
+// memory ceiling (and the measure for a stream without a PCR).
 bool player_live_preroll(PlayerState *ps, bool startup) {
     if (!ps->live || !ps->playing || decode_ring_cap() <= 0) return true;
     const unsigned rate = livetv_quality_bps();
-    const int target = live_buffer_target(rate, decode_ring_cap());
+    const unsigned seconds = livetv_buffer_seconds();
+    const unsigned want_ms = seconds * 1000u;
+    const u64 deadline = (u64)seconds * 1000000ULL + LIVE_BUFFER_GRACE_US;
+    const int target = live_buffer_target(rate, decode_ring_cap(), seconds);
     const u64 began = timing_get_us();
     char line[120];
-    snprintf(line, sizeof line, "live buffer: target=%d packets (~%u ms) rate=%u", target,
-             (unsigned)((u64)target * 1504ULL * 1000ULL / rate), rate);
+    snprintf(line, sizeof line, "live buffer: want=%u ms, ceiling=%d packets rate=%u",
+             want_ms, target, rate);
     plog(line);
     init_btns();
     if (startup && buffering_active()) buffering_step(TR("Buffering"), true, TR("Start now"));
     while (running && ps->playing && !s_vdec_error && !ps->stream_ended &&
-           decode_ring_fill() < target && timing_get_us() - began < LIVE_BUFFER_MAX_US) {
+           decode_ring_fill() < target && decode_ring_pcr_ms() < want_ms &&
+           timing_get_us() - began < deadline) {
         sysUtilCheckCallback();
         // Audio is paused during the wait. Its bounded queue can fill first;
         // the decode thread then stops reading, so waiting longer cannot help.
@@ -672,7 +679,9 @@ bool player_live_preroll(PlayerState *ps, bool startup) {
             poll_buttons();
             if (BTN_PRESSED(circle)) { plog("live buffer: start now"); break; }
             if (buffering_active()) {
-                buffering_progress((float)decode_ring_fill() / (float)target);
+                const float by_time  = (float)decode_ring_pcr_ms() / (float)want_ms;
+                const float by_bytes = (float)decode_ring_fill() / (float)target;
+                buffering_progress(by_time > by_bytes ? by_time : by_bytes);
                 buffering_frame_paced(33000ULL);
             } else player_status_screen(ps->item->name, TR("Buffering"));
         } else if (!player_seek_wait((unsigned)((timing_get_us() - began) / 1000ULL))) {
@@ -681,9 +690,9 @@ bool player_live_preroll(PlayerState *ps, bool startup) {
         }
         usleep(20000);
     }
-    snprintf(line, sizeof line, "live buffer: ready=%d/%d packets waited=%u ms ended=%d",
-             decode_ring_fill(), target, (unsigned)((timing_get_us() - began) / 1000ULL),
-             (int)ps->stream_ended);
+    snprintf(line, sizeof line, "live buffer: ready=%u ms, %d/%d packets waited=%u ms ended=%d",
+             decode_ring_pcr_ms(), decode_ring_fill(), target,
+             (unsigned)((timing_get_us() - began) / 1000ULL), (int)ps->stream_ended);
     plog(line);
     init_btns();
     return running && ps->playing;
