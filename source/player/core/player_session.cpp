@@ -121,7 +121,11 @@ void build_stream_url(char *url, int url_sz, const PlayerState *ps,
                       u64 start_ticks) {
     StreamPrefs prefs;
     stream_prefs_current(&prefs);
-    if (ps->live) { prefs.quality = livetv_quality_get(); prefs.budget = true; }
+    if (ps->live) {
+        prefs.quality = livetv_quality_get();
+        prefs.budget  = true;
+        if (ps->live_no_copy) prefs.no_video_copy = true;
+    }
     StreamSelection sel = { ps->item->id, player_current_source(ps),
                             &ps->tracks, ps->cur_audio, ps->cur_sub,
                             ps->sub_is_text || ps->sub_is_pgs, ps->live };

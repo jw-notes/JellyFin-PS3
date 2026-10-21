@@ -890,7 +890,8 @@ void show_player_run(const JFItem *item, u32 resume_secs,
             while (!pi.done) {
                 sysUtilCheckCallback();
                 poll_buttons();
-                if (!gave_up && BTN_PRESSED(circle)) {
+                // Quit from the PS menu has to get through this wait too.
+                if (!gave_up && (BTN_PRESSED(circle) || !running)) {
                     plog("show_player: PlaybackInfo cancelled");
                     gave_up = true;
                     http_cancel_fire();
@@ -1108,9 +1109,12 @@ void show_player_run(const JFItem *item, u32 resume_secs,
                     : stream_open(url);
     // The server can lose a channel it opened moments ago and answer the
     // stream with HTTP 500 (Jellyfin 10.11: "live stream not found").
-    // Open the channel again, once, before giving up.
+    // Open the channel again, once, before giving up.  A refused copy has
+    // also been seen to answer 500 at once (2026-10-21), so the second try
+    // asks for a re-encode, and the rest of this session keeps to it.
     if (live && ps.sock < 0 && strstr(stream_last_error(), "HTTP 5")) {
-        plog("live: stream refused -- reopening the channel once");
+        plog("live: stream refused -- reopening the channel once, re-encoded");
+        ps.live_no_copy = true;
         usleep(1000 * 1000);
         http_set_first_byte_secs(60);
         const bool reopened = jellyfin_get_playback_info(item->id, media_source_id, ps.session_id,

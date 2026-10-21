@@ -109,6 +109,7 @@ struct PlayerState {
     bool     live;
     volatile bool stream_ended;  // live: the decode thread reached the end
     bool     open_cancelled;     // the last reopen ended because the user pressed O
+    bool     live_no_copy;       // live: the server refused a copy; re-encode this session
     const JFItem *item;
     u32      req_w, req_h;       // transcode size (H.264 level 3.1 cap)
     char     session_id[64];     // Jellyfin PlaySessionId (re-minted per seek)

@@ -404,6 +404,12 @@ bool player_execute_seek(PlayerState *ps) {
             snprintf(b, sizeof b, "seek: stream_open FAILED (%.100s)", stream_last_error());
             plog(b);
         }
+        // A live channel refused with a 500 is asked for re-encoded on the
+        // caller's next try (see the same fallback in show_player).
+        if (ps->live && nsock < 0 && !ps->live_no_copy && strstr(stream_last_error(), "HTTP 5")) {
+            plog("live: stream refused -- the next try is re-encoded");
+            ps->live_no_copy = true;
+        }
         if (cancelled) ps->open_cancelled = true;
         if (cancelled || attempt + 1 >= max_tries || !running) {
             plog("playing=0 reason=seek_stream_open_failed");
