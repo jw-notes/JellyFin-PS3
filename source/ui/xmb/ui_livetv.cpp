@@ -279,6 +279,7 @@ int list_x(void) { return ((int)display_width - XMB_LIST_W) / 2; }
 // gaps.  Three rows: a channel card needs less height than a poster.  The
 // XMB layout and the guide keep the list.
 struct LiveGrid { int cols, rows, card_w, card_h, stride, x0; };
+const u32 LIVE_CARD_FILL = 0x0A0C12;
 bool classic_grid(void) { return xmb_classic_livetv(g_active_tab) && !s_guide; }
 LiveGrid live_grid(void) {
     LiveGrid g;
@@ -1129,8 +1130,10 @@ void xmb_livetv_gpu(void) {
         const bool focus = xmb_classic_library_header_focus(g_active_tab) < 0;
         for (int rel = 0; rel < g.cols * g.rows && s_top + rel < s_n; rel++) {
             const int x = card_x(g, rel), y = card_y(g, rel);
+            // Near-black, as most channel logos are drawn on black: the logo
+            // then reads as the card rather than a square pasted on it.
             wave_draw_rrect_outline_gpu(x, y, g.card_w, g.card_h, UIS_H(8), 1,
-                                        XMB_HAIRLINE, 255, XMB_PANEL, XMB_PANEL, 150);
+                                        XMB_HAIRLINE, 255, LIVE_CARD_FILL, LIVE_CARD_FILL, 235);
         }
         const int rel = s_sel - s_top;
         if (focus && rel >= 0 && rel < g.cols * g.rows && s_sel < s_n)
@@ -1193,9 +1196,9 @@ void xmb_cpu_draw_livetv(void) {
             const int x = card_x(g, rel), y = card_y(g, rel);
             if (!ui_card_gpu_ready())
                 drawRect((u32)x, (u32)y, (u32)g.card_w, (u32)g.card_h,
-                         (focus && i == s_sel) ? XMB_PANEL_HI : XMB_PANEL);
+                         (focus && i == s_sel) ? XMB_PANEL_HI : LIVE_CARD_FILL);
             // The logo, square, in the middle of the card.
-            const int ls = g.card_h * 3 / 5;
+            const int ls = g.card_h * 4 / 5;
             draw_logo(&s_ch[i], x + (g.card_w - ls) / 2, y + (g.card_h - ls) / 2, ls, ls);
             // The programme's progress along the card's foot.
             NowNext nn;
