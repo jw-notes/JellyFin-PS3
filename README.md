@@ -46,7 +46,8 @@ All of their work is still here; I fixed and added things on top.
 | 🔍 **Search** | Results as you type, recent searches, and Movies / Shows / Episodes filters |
 | 🎵 **Music** | Albums, artists, playlists and lossless FLAC, with audio-reactive visualisers |
 | 💾 **Offline and USB** | Download films and episodes to the PS3, or play MKV, .m2ts and .ts files from USB drives with no server |
-| 🎨 **Make it yours** | Two layouts, nine themes that each recolour the whole app, an artwork screensaver, six languages |
+| 🎨 **Make it yours** | Two layouts (Classic and XMB), nine themes that each recolour the whole app in either layout, an artwork screensaver |
+| 🌍 **Your language** | English, 日本語, Português (Brasil), Deutsch, Français and Español; follows the PS3's language, or pick one in Settings → Display |
 | 🔐 **Easy sign-in** | Quick Connect: approve a code from your phone or computer instead of typing |
 | ⬆️ **Updates built in** | Settings → System → Software Update downloads and installs new releases |
 
@@ -78,7 +79,7 @@ All of their work is still here; I fixed and added things on top.
 <tr>
 <td colspan="2" align="center">
   <img src="docs/screenshots/3.3/themes.png" alt="Synthwave theme in the XMB layout" width="70%"><br>
-  <sub><b>Themes and the XMB layout</b>: every theme recolours the whole app, the wave and the logo included (shown: Synthwave)</sub>
+  <sub><b>Themes</b>: every theme recolours the whole app in both layouts, the wave and the logo included (shown: Synthwave in the XMB layout)</sub>
 </td>
 </tr>
 </table>
