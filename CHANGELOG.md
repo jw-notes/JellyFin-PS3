@@ -1,7 +1,7 @@
 # Changelog
 
 What changed in each release of JellyFin [PS] (called JellyFin [PS3] until
-3.3.10), newest first.
+3.4.0), newest first.
 
 Releases from 3.3 on are by jw-notes. They start from
 [vortigauntlet's](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio)
@@ -9,6 +9,15 @@ Releases from 3.3 on are by jw-notes. They start from
 public: it froze on the Home screen on real hardware, ran out of memory at
 1080p, and had sign-in and update-check bugs (see 3.3.0 below). vortigauntlet's own release notes for 3.2.3
 and earlier are kept at the end, as he wrote them.
+
+## 3.4.0
+
+- **New name: JellyFin [PS].** The app is still for the PS3, but the name leaves
+  room for PS4 and PS5 versions in future. It shows on the XMB, the About page
+  and the Settings footer. It installs over earlier versions as before, keeping
+  your sign-in and settings, and updates keep coming from the same place.
+- The README, manual and developer guide are rewritten and reorganised, with a
+  single changelog (this file).
 
 ## 3.3.9
 
