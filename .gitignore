@@ -108,3 +108,13 @@ tests/test_sha256
 tests/test_release_asset
 
 tests/test_classic_library
+
+# Personal editor / assistant settings
+.claude/
+.vscode/
+
+# Rebuilt by every build
+data/jf_spu_kernel.bin
+
+# Preview renderer intermediates (the PNGs are kept)
+tools/ui_preview/*.ppm

@@ -4,7 +4,7 @@
 # PowerShell 5.1 must be named by codepage (28591); the string 'latin-1' is not
 # a valid encoding name there.
 #
-#   .\ftp.ps1 -Local <path> [-Remote <path>] [-Ip <addr>] [-NoUpload]
+#   .\ftp.ps1 -Local <path> -Ip <addr> [-Remote <path>] [-NoUpload]
 #
 # Always reads the file back afterwards and compares SHA256, because a short
 # write over FTP looks exactly like a successful one.
@@ -12,7 +12,7 @@
 param(
     [Parameter(Mandatory = $true)][string]$Local,
     [string]$Remote = '/dev_hdd0/game/JFPS30000/USRDIR/EBOOT.BIN',
-    [string]$Ip     = '192.168.0.202',
+    [Parameter(Mandatory = $true)][string]$Ip,      # the console's address
     [string]$OutDir = $PSScriptRoot,
     [switch]$NoUpload
 )
