@@ -7,7 +7,7 @@
 
   <p>
     <a href="https://github.com/jw-notes/JellyFin-PS3/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/jw-notes/JellyFin-PS3?label=release&color=00a4dc"></a>
-    <img alt="Platform" src="https://img.shields.io/badge/platform-PS3%20CFW%20%2F%20HEN-003791">
+    <img alt="Platform" src="https://img.shields.io/badge/PS3-Evilnat%20CFW%204.93-003791">
     <img alt="Jellyfin" src="https://img.shields.io/badge/Jellyfin-10.11%20%7C%2012-aa5cc3">
     <a href="LICENSE"><img alt="Licence" src="https://img.shields.io/badge/licence-GPLv3-blue"></a>
   </p>
@@ -87,8 +87,9 @@ All of their work is still here; I fixed and added things on top.
 
 ## Install
 
-**You need:** a PS3 running **CFW** (e.g. Evilnat) or **HEN**, and a **Jellyfin
-10.11 or 12** server the console can reach on your network.
+**You need:** a PS3 running **custom firmware** and a **Jellyfin 10.11 or 12**
+server the console can reach on your network. It is developed and tested on
+**Evilnat CFW 4.93**; other CFW should work, and HEN is untested.
 
 1. Download **`JellyFin-PS3.pkg`** from the [latest release](https://github.com/jw-notes/JellyFin-PS3/releases/latest).
 2. Copy it to the root of a USB stick, or to `/dev_hdd0/packages/` over FTP.
