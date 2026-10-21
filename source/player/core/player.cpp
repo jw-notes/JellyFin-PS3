@@ -601,7 +601,11 @@ static int chain_find_audio(const JFTracks *t) {
 // ---- Live TV -----------------------------------------------------------------
 static const u64 LIVE_CHANNEL_QUIET_US = 600000ULL;    // presses closer than this collapse
 static const u64 LIVE_BANNER_US        = 3000000ULL;
-static const int LIVE_REOPEN_TRIES     = 3;            // after the first failure, 1 / 2 / 4 s apart
+// After the first failure, 1 / 2 / 4 / 8 / 15 / 30 s apart: about a minute.
+// A Wi-Fi drop took the console's network away for over a minute
+// (2026-10-21: every receive failing "no buffer space"), and three tries in
+// seven seconds dumped a channel that would have come back.
+static const int LIVE_REOPEN_TRIES     = 6;
 static char s_live_last_id[40] = "";
 
 // Channels the server could not open this run (an M3U entry whose source
@@ -732,12 +736,12 @@ bool player_live_preroll(PlayerState *ps, bool startup) {
 }
 
 // Reopen the live stream, labelled for the wait screen.  After a failure it
-// asks again up to LIVE_REOPEN_TRIES more times, 1 / 2 / 4 s apart, with the
+// asks again up to LIVE_REOPEN_TRIES more times, 1 s to 30 s apart, with the
 // spinner up and O to give up.  False ends playback.
 // A channel change passes fewer `retries`: a channel the server cannot open
 // is skipped rather than waited on.
 static bool live_reopen(PlayerState *ps, const char *label, int retries = LIVE_REOPEN_TRIES) {
-    static const unsigned BACKOFF_MS[LIVE_REOPEN_TRIES] = { 1000, 2000, 4000 };
+    static const unsigned BACKOFF_MS[LIVE_REOPEN_TRIES] = { 1000, 2000, 4000, 8000, 15000, 30000 };
     if (retries > LIVE_REOPEN_TRIES) retries = LIVE_REOPEN_TRIES;
     s_seekwait_label = label;
     bool ok = false;
