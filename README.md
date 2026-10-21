@@ -7,9 +7,10 @@
 </div>
 
 <p align="center">
-  <img src="docs/screenshots/3.3/search.png" width="32%">
-  <img src="docs/screenshots/3.3/settings.png" width="32%">
-  <img src="docs/screenshots/3.3/themes.png" width="32%">
+  <img src="docs/screenshots/3.3/livetv.png" width="49%">
+  <img src="docs/screenshots/3.3/search.png" width="49%">
+  <img src="docs/screenshots/3.3/settings.png" width="49%">
+  <img src="docs/screenshots/3.3/themes.png" width="49%">
 </p>
 
 Watch your Jellyfin films, shows and music on a PS3, with a menu that looks and
@@ -27,7 +28,8 @@ All of their work is still here, I just fixed and added things on top.
 - A full-screen artwork screensaver that shows what each title is about
 - Nine themes; each one recolours the whole app, the wave and the logo included
 - Sign in with a Quick Connect code from your phone or computer, no typing needed
-- Music player with visualisers, offline downloads, Live TV, and files from USB drives
+- Live TV with a channel grid, automatic genre tabs and remote-style controls
+- Music player with visualisers, offline downloads, and files from USB drives
 
 ## Install
 

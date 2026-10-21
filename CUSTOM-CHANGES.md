@@ -1,9 +1,9 @@
-# JellyFin [PS3] 3.3.5: changes
+# JellyFin [PS3] 3.3.6: changes
 
 By jw-notes, based on [vortigauntlet/JellyFin-PS3-LosslessAudio](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio) `v3.2.3`.
 Tested on a retail PS3 with CFW at 1080p.
 
-## Unreleased
+## New in 3.3.6
 
 - **Faster Live TV start.** The live reserve is now measured in programme time
   from the stream's own clock (PCR), not in bytes at the quality ceiling. A
