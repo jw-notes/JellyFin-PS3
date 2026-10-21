@@ -965,7 +965,7 @@ void show_player_run(const JFItem *item, u32 resume_secs,
     }
     lc_logf("play-session CREATED psid=%s item=%s resume=%us",
             ps.session_id[0] ? ps.session_id : "(none)", item->id, resume_secs);
-    stream_window_new_title();
+    stream_window_new_title(live);
 
     if (live && !ps.source.id[0]) {
         plog("live: the server opened no stream for this channel");

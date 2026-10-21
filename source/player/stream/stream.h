@@ -52,7 +52,11 @@ bool stream_readable(int sock, int timeout_ms);
 bool stream_window_reopen_pending(void);
 bool stream_window_reopen_take(void);
 // A new title is starting: forget a fallback the previous one triggered.
-void stream_window_new_title(void);
+// A live channel starts on the small window: it needs a few Mbps, and on a
+// laggy Wi-Fi link the large one let in more than the console's network
+// memory could hold (every receive failing "no buffer space", the whole
+// console's networking with it, 2026-10-21).
+void stream_window_new_title(bool live = false);
 
 // Cumulative receive stats since process start: bytes delivered by netRecv,
 // microseconds spent blocked inside it, and how many times it was called.

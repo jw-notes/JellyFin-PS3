@@ -216,9 +216,11 @@ static void gap_note(u64 t0, u64 t1, int n) {
 }
 
 bool stream_window_reopen_pending(void) { return s_win_reopen != 0; }
-void stream_window_new_title(void) {
-    if (s_win_fallback_kb) lc_logf("stream: new title -- back to a %d KB window", WIN_KB_FAST);
-    s_win_fallback_kb = 0;
+void stream_window_new_title(bool live) {
+    const int kb = live ? WIN_KB_SAFE : 0;
+    if (s_win_fallback_kb != kb)
+        lc_logf("stream: new title -- a %d KB window", kb ? kb : WIN_KB_FAST);
+    s_win_fallback_kb = kb;
 }
 bool stream_window_reopen_take(void) {
     if (!s_win_reopen) return false;

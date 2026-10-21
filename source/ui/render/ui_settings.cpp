@@ -348,7 +348,11 @@ static int cat_icon(setting_section s) {
 #define DESC_H     UIS_H(60)
 
 static int list_x(void)      { return ((int)display_width - XMB_LIST_W) / 2; }
-static int top_y(void)       { return XMB_CONTENT_Y + UIS_H(12); }
+// Classic's header is a single row of tabs, not the XMB's icon band, so the
+// list starts right under it and all seven categories fit without scrolling.
+static int top_y(void) {
+    return ui_layout() == UI_LAYOUT_CLASSIC ? XMB_OY + UIS_H(96) : XMB_CONTENT_Y + UIS_H(12);
+}
 static int bottom_y(void)    { return (int)display_height - XMB_BOTTOM_PAD; }
 static int rows_top(void)    { return top_y() + HEAD_H; }
 static int rows_bottom(void) { return bottom_y() - DESC_H - UIS_H(8); }
