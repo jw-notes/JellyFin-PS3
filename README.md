@@ -32,7 +32,10 @@ H.264 decoding up to 1080p and lossless surround sound. Browse in the
 This is my continuation of
 [vortigauntlet's LosslessAudio fork](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio),
 which itself started from [MontyMcK's JellyFin-PS3](https://github.com/MontyMcK/JellyFin-PS3).
-All of their work is still here; I fixed and added things on top.
+All of their work is still here. Before making this version public I fixed
+vortigauntlet's 3.2.3, which froze on a real console and ran out of memory at
+1080p, with much of that work written by hand, and I've kept building on it
+since. See the [changelog](CHANGELOG.md) for everything that changed.
 
 ---
 
