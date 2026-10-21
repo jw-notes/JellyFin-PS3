@@ -51,7 +51,7 @@ extern volatile bool g_auth_expired;
 extern int g_source_fps_milli;
 
 // One credited person (cast/crew) for the detail page's Cast & Crew row.
-#define JF_MAX_PEOPLE 12
+#define JF_MAX_PEOPLE 30   // the cast row scrolls (Classic)
 typedef struct {
     char id[64];      // person item id (for the headshot image)
     char name[64];    // "Arnold Schwarzenegger"

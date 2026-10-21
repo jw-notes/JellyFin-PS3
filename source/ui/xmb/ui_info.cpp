@@ -414,11 +414,22 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
     // Row 0: the action buttons; row 1: the selectors.  Built per title.
     int row0[4], n0 = 0, row1[3], n1 = 0;
     int frow = 0, fcol = 0;
+    // Row 3 (Classic): the cast, scrolled a photo at a time.
+    int cast_sel = 0, cast_top = 0;
 
     // Layout, from the canvas.
-    const int PX = IX(57), PY = IY(187), PW = UIS_W(216), PH = UIS_H(324);
-    const int TX = IX(313);
-    const int TW = UIS_W(700);
+    int PX = IX(57), PY = IY(187);
+    const int PW = UIS_W(216), PH = UIS_H(324);
+    int TX = IX(313);
+    int TW = UIS_W(700);
+    // Rows, from the XMB canvas.  Classic moves them every frame (below).
+    int Y_TITLE = PY, Y_META = IY(228), Y_SCORE = IY(252), Y_CHIPS = IY(278),
+        Y_OVER = IY(318), Y_DIR = IY(402), Y_CAST = IY(426), Y_ACT = IY(562),
+        Y_SEL = IY(634), Y_TOAST = IY(609), Y_SEASON = IY(523);
+    int over_w = UIS_W(620), over_lines = 3, cast_max = 5;
+    float title_px = 25.0f;
+    bool show_poster = true;
+    int PWd = PW, PHd = PH;              // the poster as drawn
 
     while (running) {
         if (reload) {
@@ -509,6 +520,7 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
                 strcmp(it->type, "Video") == 0)
                 row1[n1++] = F3_DOWNLOAD;
             frow = 0; fcol = 0;
+            cast_sel = 0; cast_top = 0;
             exit_armed = false;
             init_btns();
             slog_state("INFO3_OPEN item_id=%s name=%.40s", it->id, it->name);
@@ -538,6 +550,17 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
             }
         }
         const XMBItem *it = &cur_item;
+        // The cast; crew is left out except the director, who gets a row.
+        const char *director = NULL;
+        int cast_all[JF_MAX_PEOPLE], cast_total = 0;
+        for (int i = 0; i < detail.n_people && i < JF_MAX_PEOPLE; i++) {
+            if (strcmp(detail.people[i].role, "Director") == 0) {
+                if (!director) director = detail.people[i].name;
+                continue;
+            }
+            cast_all[cast_total++] = i;
+        }
+        const bool cast_row = classic && cast_total > 0;
         const bool dl_capable = strcmp(it->type, "Movie") == 0 ||
                                 strcmp(it->type, "Episode") == 0 ||
                                 strcmp(it->type, "Video") == 0;
@@ -570,7 +593,10 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
             // once the focus left the first button (2026-09-27).
             const bool nav_l = BTN_REPEAT(left);
             const bool nav_r = BTN_REPEAT(right);
-            if (frow == 2) {
+            if (frow == 3) {
+                if (nav_l && cast_sel > 0)              cast_sel--;
+                if (nav_r && cast_sel < cast_total - 1) cast_sel++;
+            } else if (frow == 2) {
                 if (nav_r) { frow = 0; fcol = 0; }
             } else if (nav_l && fcol == 0 && frow == 0 && can_season) {
                 frow = 2;
@@ -604,9 +630,16 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
                 init_btns();
                 break;
             }
-            if (BTN_PRESSED(down) && frow == 0 && n1 > 0) { frow = 1; if (fcol >= n1) fcol = n1 - 1; }
-            if (BTN_PRESSED(up)   && frow == 1)           { frow = 0; if (fcol >= n0) fcol = n0 - 1; }
-            if (frow != 2 && BTN_PRESSED(cross)) {
+            const bool nav_d = BTN_PRESSED(down), nav_u = BTN_PRESSED(up);
+            if (nav_d && frow == 0 && n1 > 0)              { frow = 1; if (fcol >= n1) fcol = n1 - 1; }
+            else if (nav_d && (frow == 1 || (frow == 0 && n1 == 0)) && cast_row) frow = 3;
+            if (nav_u && frow == 1)                        { frow = 0; if (fcol >= n0) fcol = n0 - 1; }
+            else if (nav_u && frow == 3) {
+                frow = n1 > 0 ? 1 : 0;
+                const int nr = frow == 1 ? n1 : n0;
+                if (fcol >= nr) fcol = nr - 1;
+            }
+            if (frow < 2 && BTN_PRESSED(cross)) {
                 if ((focus == F3_RESUME || focus == F3_PLAY || focus == F3_START) &&
                     versions.n_sources == 0 && versions.n_placeholder > 0) {
                     // Gelato listed only its placeholder: there is nothing to
@@ -705,18 +738,38 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
 
         // ---- GPU phase ---------------------------------------------------
         const int W = (int)display_width, H = (int)display_height;
+        if (classic) {
+            // Classic is laid out like Jellyfin's web page: the backdrop
+            // shows on the right, the poster sits top left, and the title,
+            // details and buttons stack beside it with Play right under the
+            // details; the synopsis follows, and the cast runs along the
+            // bottom at full width.
+            show_poster = true;
+            // (IY already lifts Classic by its shorter header.)
+            PWd = UIS_W(288); PHd = UIS_H(432);
+            PX = IX(57); PY = IY(146);
+            TX = PX + PWd + UIS_W(40);
+            TW = W - TX - XMB_OX - UIS_W(57);
+            Y_SEASON = IY(104); Y_TITLE = IY(146); Y_META = IY(198); Y_SCORE = IY(224);
+            Y_CHIPS = IY(250);  Y_ACT = IY(300);   Y_SEL = IY(358);  Y_TOAST = IY(400);
+            Y_OVER = IY(414);   Y_DIR = IY(484);   Y_CAST = IY(560);
+            over_w = TW;
+            over_lines = 3; title_px = 34.0f;
+            cast_max = (W - XMB_OX - TX) / UIS_W(130);
+            if (cast_max > 7) cast_max = 7;
+        }
         // How far the arrival has got: 0 where it was opened, 1 at L3.
         const float arr = classic
             ? spine_ease(spine_clampf((float)(timing_get_us() - arrival_us) / 240000.0f, 0.0f, 1.0f))
             : d_from < 1.999f
             ? spine_ease(spine_clampf((spine_depth() - d_from) / (2.0f - d_from), 0.0f, 1.0f))
             : 1.0f;
-        int PXa = PX, PYa = PY, PWa = PW, PHa = PH;
+        int PXa = PX, PYa = PY, PWa = PWd, PHa = PHd;
         if (have_org && arr < 1.0f) {
             PXa = org_x + (int)((float)(PX - org_x) * arr + 0.5f);
             PYa = org_y + (int)((float)(PY - org_y) * arr + 0.5f);
-            PWa = org_w + (int)((float)(PW - org_w) * arr + 0.5f);
-            PHa = org_h + (int)((float)(PH - org_h) * arr + 0.5f);
+            PWa = org_w + (int)((float)(PWd - org_w) * arr + 0.5f);
+            PHa = org_h + (int)((float)(PHd - org_h) * arr + 0.5f);
         }
         if (back_gpu) ui_gpu_tex_draw_a(GPU_TEX_BACKDROP, 0, 0, W, H, depth_a8(arr));
         {
@@ -725,10 +778,15 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
             // which keeps the text contrast the same either way.
             static const float hp[3] = { 0.0f, 0.46f, 1.0f };
             static const u8    ha[3] = { 245, 224, 87 };
-            wave_draw_ramp_gpu(0, 0, W, H, 0x00030408, false, 3, hp, ha);
+            // Classic lets the artwork through on the right; the left stays
+            // dark enough for the text.
+            static const u8    ha_c[3] = { 238, 190, 30 };
+            wave_draw_ramp_gpu(0, 0, W, H, 0x00030408, false, 3, hp,
+                               classic && back_gpu ? ha_c : ha);
             static const float vp[2] = { 0.0f, 1.0f };
             static const u8    va[2] = { 0, 242 };
-            wave_draw_ramp_gpu(0, IY(519), W, H - IY(519), 0x00030408, true, 2, vp, va);
+            const int scrim_y = classic ? IY(520) : IY(519);
+            wave_draw_ramp_gpu(0, scrim_y, W, H - scrim_y, 0x00030408, true, 2, vp, va);
         }
         if (classic) xmb_classic_header_gpu(g_active_tab);
         else {
@@ -737,7 +795,7 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
             const u8 da = (u8)(72.0f * L.divider_a);
             if (da) wave_draw_divider_gpu(IY((int)L.divider_y), 0x8A, 0x93, 0xC8, da);
         }
-        if (poster_gpu) ui_gpu_tex_draw(GPU_TEX_POSTER, PXa, PYa, PWa, PHa);
+        if (poster_gpu && show_poster) ui_gpu_tex_draw(GPU_TEX_POSTER, PXa, PYa, PWa, PHa);
 
         // Chips (y=262, h=29, pill).
         // The facts worker's words when they have arrived ("DTS-HD MA 5.1",
@@ -791,7 +849,7 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
             if (qbr == 0) snprintf(pchip, sizeof pchip, "direct play");
             else          snprintf(pchip, sizeof pchip, "transcode %u Mbps", qbr / 1000000u);
         }
-        const int CY = IY(278), CH = UIS_H(29), CG = UIS_W(8);
+        const int CY = Y_CHIPS, CH = UIS_H(29), CG = UIS_W(8);
         const float apx = UIS_TF(10.0f), cpx = UIS_TF(11.0f);
         int cx = TX;
         // 2026-09-27: the audio chip in the regular face and the video chip in
@@ -812,7 +870,7 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
         // 2026-09-27: the row moved down into the wave's band (was y=410, above
         // the cast), and every button is see-through so the wave moves behind
         // it.  The director line and the cast moved up into its old place.
-        const int AY = IY(562), AH = UIS_H(44), AR = UIS_H(4), AG = UIS_W(12);
+        const int AY = Y_ACT, AH = UIS_H(44), AR = UIS_H(4), AG = UIS_W(12);
         // Label text for an action button.  Shared by the layout (which sizes
         // the box from it) and the draw below, so the two cannot disagree: a
         // fixed box width overflowed on 4:3, where text scales but the box doesn't.
@@ -867,11 +925,19 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
         // "Back to Season N" under the poster (episodes).  y 523, poster width.
         const bool season_btn = strcmp(it->type, "Episode") == 0 &&
                                 detail.series_id[0] && detail.season_id[0];
-        const int BSY = IY(523), BSH = UIS_H(34);
+        const int BSY = Y_SEASON, BSH = UIS_H(34);
+        char season_lab[48] = "";
         if (season_btn) {
-            wave_draw_rrect_outline_gpu(PX, BSY, PW, BSH, AR, 1, XMB_HAIRLINE, 255,
+            if (detail.season_num == 0)      snprintf(season_lab, sizeof season_lab, TR("\xE2\x80\xB9  Back to Specials"));
+            else if (detail.season_num > 0)  snprintf(season_lab, sizeof season_lab, TR("\xE2\x80\xB9  Back to Season %d"), detail.season_num);
+            else                             snprintf(season_lab, sizeof season_lab, TR("\xE2\x80\xB9  Back to Season"));
+        }
+        const int BSX = classic ? TX : PX;
+        const int BSW = classic ? ttf_text_width(season_lab, UIS_TF(13.0f), true) + UIS_W(32) : PW;
+        if (season_btn) {
+            wave_draw_rrect_outline_gpu(BSX, BSY, BSW, BSH, AR, 1, XMB_HAIRLINE, 255,
                                         XMB_PANEL, XMB_PANEL, 110);
-            if (frow == 2) spine_focus_ring_gpu(PX, BSY, PW, BSH);
+            if (frow == 2) spine_focus_ring_gpu(BSX, BSY, BSW, BSH);
         }
 
         // Selectors (y=634, h=34, r=4).
@@ -901,7 +967,7 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
                                        tr(vquality_label(vq)), qbr / 1000000u);
             }
         };
-        const int SY = IY(634), SH = UIS_H(34);
+        const int SY = Y_SEL, SH = UIS_H(34);
         int sx_[3], sw_[3];
         {
             int x = TX;
@@ -927,18 +993,38 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
             }
         }
 
+        // Portraits in the XMB's own shape: 2:3 cards (a headshot's native
+        // aspect, so no face is cropped) with a hairline frame, not circles.
+        // Classic: round photos on a wider pitch, names centred under them,
+        // a window of cast_max that follows the focus along row 3.
+        const int KY = Y_CAST;
+        const int KW = classic ? UIS_H(92) : UIS_W(58), KD = classic ? UIS_H(92) : UIS_H(87);
+        const int KP = classic ? UIS_W(130) : UIS_W(104);
+        const int KX = TX;
+        if (cast_sel >= cast_total) cast_sel = cast_total > 0 ? cast_total - 1 : 0;
+        if (cast_sel < cast_top) cast_top = cast_sel;
+        if (cast_sel >= cast_top + cast_max) cast_top = cast_sel - cast_max + 1;
+        if (cast_top > cast_total - cast_max) cast_top = cast_total > cast_max ? cast_total - cast_max : 0;
+        if (!classic) cast_top = 0;
+        int cast_idx[JF_MAX_PEOPLE], n_cast = 0;
+        for (int k = cast_top; k < cast_total && n_cast < cast_max; k++) cast_idx[n_cast++] = cast_all[k];
+        if (frow == 3 && cast_row) {
+            const int fk = cast_sel - cast_top;
+            spine_focus_ring_gpu(KX + fk * KP + (KP - KW) / 2, KY, KW, KD);
+        }
+
         rsxSync();
         ui_text_gpu_begin();
 
         // ---- CPU phase ---------------------------------------------------
         if (classic) xmb_classic_header_cpu(g_active_tab);
-        if (!poster_gpu) {
+        if (!poster_gpu && show_poster) {
             if (poster_cpu.pixels) info_blit(&poster_cpu, PX, PY);
             else xmb_cpu_blit_thumb_scaled(it->id, PX, PY, PW, PH);
         }
         // 1 px hairline ring just outside the poster (the canvas's box-shadow),
         // following it while it arrives.
-        if (PXa >= 1 && PYa >= 1) {
+        if (show_poster && PXa >= 1 && PYa >= 1) {
             drawRect((u32)(PXa - 1), (u32)(PYa - 1), (u32)(PWa + 2), 1, XMB_HAIRLINE);
             drawRect((u32)(PXa - 1), (u32)(PYa + PHa), (u32)(PWa + 2), 1, XMB_HAIRLINE);
             drawRect((u32)(PXa - 1), (u32)(PYa - 1), 1, (u32)(PHa + 2), XMB_HAIRLINE);
@@ -958,19 +1044,10 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
         // Cast: 58x87 (2:3) portraits on a 104 px pitch from x=313, y=493.  The
         // canvas has no crew here except the director, who gets the line
         // above, so crew entries are skipped.
-        const char *director = NULL;
-        int cast_idx[5], n_cast = 0;
-        for (int i = 0; i < detail.n_people; i++) {
-            if (strcmp(detail.people[i].role, "Director") == 0) {
-                if (!director) director = detail.people[i].name;
-                continue;
-            }
-            if (n_cast < 5) cast_idx[n_cast++] = i;
-        }
-        // Portraits in the XMB's own shape: 2:3 cards (a headshot's native
-        // aspect, so no face is cropped) with a hairline frame, not circles.
-        const int KY = IY(426), KW = UIS_W(58), KD = UIS_H(87), KP = UIS_W(104);   // was 493
-        for (int k = 0; k < n_cast; k++) {
+        for (int k = 0; classic && k < n_cast; k++)
+            xmb_cpu_blit_thumb_circle(detail.people[cast_idx[k]].id, KX + k * KP + (KP - KW) / 2,
+                                      KY, KW, XMB_HAIRLINE);
+        for (int k = 0; !classic && k < n_cast; k++) {
             const int kx = TX + k * KP;
             if (!xmb_cpu_blit_thumb(detail.people[cast_idx[k]].id, kx, KY, KW, KD))
                 drawRect((u32)kx, (u32)KY, (u32)KW, (u32)KD, XMB_THUMB_DIM);
@@ -986,13 +1063,13 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
 
         // Title: 25px/700 display face, -0.01em.
         {
-            const float tpx = UIS_TF(25.0f), trk = tpx * -0.01f;
+            const float tpx = UIS_TF(title_px), trk = tpx * -0.01f;
             char tbuf[132];
             snprintf(tbuf, sizeof tbuf, "%s", it->name);
             int len = (int)strlen(tbuf);
             while (len > 1 && ttf_text_width_tracked(tbuf, tpx, UI_FACE_DISPLAY, trk) > TW)
                 tbuf[--len] = 0;
-            drawTTF_tracked((u32)TX, (u32)PY, tbuf, tpx, XMB_TEXT, UI_FACE_DISPLAY, trk);
+            drawTTF_tracked((u32)TX, (u32)Y_TITLE, tbuf, tpx, XMB_TEXT, UI_FACE_DISPLAY, trk);
         }
 
         // Metadata gets two bounded rows: identity/certification, then scores
@@ -1011,16 +1088,17 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
             else snprintf(duration, sizeof duration, "%s", it->duration_str);
             const float mpx = UIS_TF(13.5f);
             const u32 sep_c = info_mix(XMB_TEXT_DIM, XMB_BG, 0.5f);
-            const char *parts[4] = { it->year_str, duration, detail.official_rating, detail.genres };
+            const char *parts[4] = { it->year_str, duration, detail.official_rating,
+                                     classic ? "" : detail.genres };
             int mx = TX;
             for (int i = 0; i < 4 && mx < TX + TW; i++) {
                 if (!parts[i][0]) continue;
                 if (mx != TX) {
-                    drawTTF((u32)(mx + UIS_W(6)), (u32)IY(228), "\xC2\xB7", mpx, sep_c);
+                    drawTTF((u32)(mx + UIS_W(6)), (u32)Y_META, "\xC2\xB7", mpx, sep_c);
                     mx += UIS_W(18);
                 }
                 if (mx >= TX + TW) break;
-                info_clip_text(mx, IY(228), parts[i], mpx, XMB_TEXT_DIM, TX + TW - mx, false);
+                info_clip_text(mx, Y_META, parts[i], mpx, XMB_TEXT_DIM, TX + TW - mx, false);
                 mx += ttf_text_width(parts[i], mpx);
             }
             const unsigned remaining = detail_remaining_seconds(runtime,
@@ -1035,20 +1113,20 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
             const int ratings_right = TX + TW - (end_w ? end_w + UIS_W(20) : 0);
             mx = TX;
             if (detail.community_rating[0] && mx + UIS_W(24) < ratings_right) {
-                drawIcon((u32)mx, (u32)IY(252), ICON_STAR, mpx, XMB_ACCENT_ALT);
+                drawIcon((u32)mx, (u32)Y_SCORE, ICON_STAR, mpx, XMB_ACCENT_ALT);
                 mx += UIS_W(22);
                 char score[24];
                 snprintf(score, sizeof score, "%s/10", detail.community_rating);
-                info_clip_text(mx, IY(252), score, mpx, XMB_ACCENT_ALT, ratings_right - mx, false);
+                info_clip_text(mx, Y_SCORE, score, mpx, XMB_ACCENT_ALT, ratings_right - mx, false);
                 mx += ttf_text_width(score, mpx) + UIS_W(24);
             }
             if (detail.critic_rating[0] && mx < ratings_right) {
                 char score[80];
                 snprintf(score, sizeof score, TR("Critics %s"), detail.critic_rating);
-                info_clip_text(mx, IY(252), score, mpx, XMB_TEXT, ratings_right - mx, false);
+                info_clip_text(mx, Y_SCORE, score, mpx, XMB_TEXT, ratings_right - mx, false);
             }
             if (ends[0])
-                info_clip_text(TX + TW - end_w, IY(252), ends, mpx, XMB_TEXT_DIM, end_w, false);
+                info_clip_text(TX + TW - end_w, Y_SCORE, ends, mpx, XMB_TEXT_DIM, end_w, false);
         }
 
         // Chip labels, vertically centred in the 29 px pills.
@@ -1068,8 +1146,8 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
 
         // Overview: three lines below the scores and codec chips.
         if (detail.overview[0])
-            info_wrap(TX, IY(318), detail.overview, UIS_TF(14.0f), XMB_TEXT_DIM,
-                      UIS_W(620), UIS_H(22), 3);
+            info_wrap(TX, Y_OVER, detail.overview, UIS_TF(14.0f), XMB_TEXT_DIM,
+                      over_w, UIS_H(22), over_lines);
 
         // Button labels.
         for (int i = 0; i < n0; i++) {
@@ -1099,32 +1177,60 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
         }
 
         if (season_btn) {
-            char sl[48];
-            if (detail.season_num == 0)      snprintf(sl, sizeof sl, TR("\xE2\x80\xB9  Back to Specials"));
-            else if (detail.season_num > 0)  snprintf(sl, sizeof sl, TR("\xE2\x80\xB9  Back to Season %d"), detail.season_num);
-            else                             snprintf(sl, sizeof sl, TR("\xE2\x80\xB9  Back to Season"));
             const float spx = UIS_TF(13.0f);
-            const int sw = ttf_text_width(sl, spx, frow == 2);
-            drawTTF((u32)(PX + (PW - sw) / 2), (u32)(BSY + (BSH - (int)spx) / 2 - UIS_H(1)), sl, spx,
+            const int sw = ttf_text_width(season_lab, spx, frow == 2);
+            drawTTF((u32)(BSX + (BSW - sw) / 2), (u32)(BSY + (BSH - (int)spx) / 2 - UIS_H(1)), season_lab, spx,
                     frow == 2 ? XMB_WHITE : XMB_TEXT, frow == 2);
         }
 
+        // Classic: labelled rows, as on Jellyfin's web page.
+        if (classic) {
+            const float lpx = UIS_TF(13.0f);
+            const int vx = TX + UIS_W(96);
+            int ry = Y_DIR;
+            if (detail.genres[0]) {
+                drawTTF((u32)TX, (u32)ry, TR("Genres"), lpx, XMB_TEXT_FAINT);
+                info_clip_text(vx, ry, detail.genres, lpx, XMB_TEXT, TX + TW - vx, true);
+                ry += UIS_H(24);
+            }
+            if (director) {
+                drawTTF((u32)TX, (u32)ry, TR("Director"), lpx, XMB_TEXT_FAINT);
+                info_clip_text(vx, ry, director, lpx, XMB_TEXT, TX + TW - vx, true);
+            }
+        }
         // Director line.
-        if (director) {
+        else if (director) {
             char line[140];
             snprintf(line, sizeof line, TR("Director \xC2\xB7 %s"), director);
-            drawTTF((u32)TX, (u32)IY(402), line, UIS_TF(13.0f), XMB_TEXT_FAINT);   // was 467
+            drawTTF((u32)TX, (u32)Y_DIR, line, UIS_TF(13.0f), XMB_TEXT_FAINT);   // was 467
         }
 
         // Cast names: actor above character, Satoshi one weight.
         for (int k = 0; k < n_cast; k++) {
             const JFPerson *pp = &detail.people[cast_idx[k]];
-            const int x = TX + k * KP;
-            info_clip_text(x, KY + KD + UIS_H(6), pp->name, UIS_TF(12.0f), XMB_TEXT,
-                           KP - UIS_W(8), false, UI_FACE_TAB_REG);
+            int x = KX + k * KP;
+            const int cw = KP - UIS_W(8);
+            // Classic centres each name under its photo (when it fits).
+            const int nw = ttf_text_width(pp->name, UIS_TF(12.0f));
+            const int rw = pp->role[0] ? ttf_text_width(pp->role, UIS_TF(11.5f)) : 0;
+            const int nx = classic && nw < cw ? x + (KP - nw) / 2 : x;
+            const int rx = classic && rw < cw ? x + (KP - rw) / 2 : x;
+            const bool cfoc = frow == 3 && cast_top + k == cast_sel;
+            info_clip_text(nx, KY + KD + UIS_H(6), pp->name, UIS_TF(12.0f),
+                           cfoc ? XMB_WHITE : XMB_TEXT, cw, false, UI_FACE_TAB_REG);
             if (pp->role[0])
-                info_clip_text(x, KY + KD + UIS_H(22), pp->role, UIS_TF(11.5f),
-                               XMB_TEXT_DIM, KP - UIS_W(8), false, UI_FACE_TAB_REG);
+                info_clip_text(rx, KY + KD + UIS_H(22), pp->role, UIS_TF(11.5f),
+                               XMB_TEXT_DIM, cw, false, UI_FACE_TAB_REG);
+        }
+
+        // More cast either side of the window.
+        if (cast_row && cast_total > cast_max) {
+            const float apx = UIS_TF(20.0f);
+            const int ay = KY + KD / 2 - (int)apx / 2;
+            if (cast_top > 0)
+                drawTTF((u32)(KX - UIS_W(22)), (u32)ay, "\xE2\x80\xB9", apx, XMB_TEXT_DIM);
+            if (cast_top + cast_max < cast_total)
+                drawTTF((u32)(KX + cast_max * KP + UIS_W(4)), (u32)ay, "\xE2\x80\xBA", apx, XMB_TEXT_DIM);
         }
 
         // Selector labels.
@@ -1148,10 +1254,13 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
 
         // The Download button's toast, a few seconds, above the selector row.
         if (dl_toast[0] && timing_get_us() < dl_toast_until)
-            drawTTF((u32)TX, (u32)IY(609), dl_toast, UIS_TF(13.0f), 0x00E8B64CUL);
+            drawTTF((u32)TX, (u32)Y_TOAST, dl_toast, UIS_TF(13.0f), 0x00E8B64CUL);
 
         // Hints: what X does on the focused control, and Back.
-        {
+        if (frow == 3) {
+            static const Hint hc[] = {{'E', TRN("Browse cast")}, {'C', TRN("Back")}};
+            draw_hints_bar(hc, 2);
+        } else {
             Hint h[2];
             h[0].glyph = 'X';
             h[0].label = focus == F3_RESUME ? TR("Resume") : focus == F3_PLAY ? TR("Play")

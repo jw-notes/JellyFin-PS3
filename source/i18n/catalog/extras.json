@@ -33,5 +33,7 @@
   "Westerns": {"ja": "西部劇", "pt-BR": "Faroeste", "de": "Western", "fr": "Westerns", "es": "Wésterns"},
   "Cars & Motors": {"ja": "クルマ・モーター", "pt-BR": "Carros e motores", "de": "Autos & Motoren", "fr": "Auto et moto", "es": "Coches y motor"},
   "Faith": {"ja": "宗教", "pt-BR": "Fé", "de": "Glaube", "fr": "Foi", "es": "Fe"},
-  "Shopping": {"ja": "ショッピング", "pt-BR": "Compras", "de": "Shopping", "fr": "Shopping", "es": "Compras"}
+  "Shopping": {"ja": "ショッピング", "pt-BR": "Compras", "de": "Shopping", "fr": "Shopping", "es": "Compras"},
+  "Director": {"ja": "監督", "pt-BR": "Direção", "de": "Regie", "fr": "Réalisation", "es": "Dirección"},
+  "Browse cast": {"ja": "キャストを見る", "pt-BR": "Ver elenco", "de": "Besetzung ansehen", "fr": "Parcourir la distribution", "es": "Ver reparto"}
 }

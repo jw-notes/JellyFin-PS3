@@ -9,9 +9,9 @@ extern const int i18n_n;
 extern const char *const i18n_keys[];
 extern const char *const *const i18n_text[LANG__COUNT];
 
-const int i18n_n = 608;
+const int i18n_n = 610;
 
-const char *const i18n_keys[608] = {
+const char *const i18n_keys[610] = {
     "  %s  %s free",
     "  (can't be decoded yet)",
     "%.1f MB",
@@ -78,6 +78,7 @@ const char *const i18n_keys[608] = {
     "Because you watched %s",
     "Blu-ray m2ts",
     "Brighten the background by day, back to the night look after\ndark, with a glow at dawn and dusk. Follows the console clock.",
+    "Browse cast",
     "Buffering",
     "CONTAINER",
     "Can't check free HDD space: downloads paused",
@@ -156,6 +157,7 @@ const char *const i18n_keys[608] = {
     "Details",
     "Dialogue Boost",
     "Direct Stream",
+    "Director",
     "Director \302\267 %s",
     "Display",
     "Done",
@@ -622,7 +624,7 @@ const char *const i18n_keys[608] = {
     "\342\200\271 back %ds",
 };
 
-static const char *const i18n_text_ja[608] = {
+static const char *const i18n_text_ja[610] = {
     "  %s  %s \347\251\272\343\201\215",
     "  \357\274\210\343\201\276\343\201\240\343\203\207\343\202\263\343\203\274\343\203\211\343\201\247\343\201\215\343\201\276\343\201\233\343\202\223\357\274\211",
     "%.1f MB",
@@ -689,6 +691,7 @@ static const char *const i18n_text_ja[608] = {
     "%s\343\202\222\350\246\213\343\201\237\346\226\271\343\201\270",
     "Blu-ray m2ts",
     "\346\230\274\343\201\257\350\203\214\346\231\257\343\202\222\346\230\216\343\202\213\343\201\217\343\201\227\343\200\201\346\227\245\343\201\214\346\232\256\343\202\214\343\202\213\343\201\250\345\244\234\343\201\256\350\246\213\343\201\237\347\233\256\343\201\253\346\210\273\343\201\227\343\201\276\343\201\231\343\200\202\n\345\244\234\346\230\216\343\201\221\343\201\250\345\244\225\346\232\256\343\202\214\343\201\253\343\201\257\345\205\211\343\201\214\343\201\253\343\201\230\343\201\277\343\201\276\343\201\231\343\200\202\346\234\254\344\275\223\343\201\256\346\231\202\350\250\210\343\201\253\345\276\223\343\201\204\343\201\276\343\201\231\343\200\202",
+    "\343\202\255\343\203\243\343\202\271\343\203\210\343\202\222\350\246\213\343\202\213",
     "\343\203\220\343\203\203\343\203\225\343\202\241\343\203\252\343\203\263\343\202\260\344\270\255",
     "\343\202\263\343\203\263\343\203\206\343\203\212",
     "HDD\343\201\256\347\251\272\343\201\215\345\256\271\351\207\217\343\202\222\347\242\272\350\252\215\343\201\247\343\201\215\343\201\276\343\201\233\343\202\223\357\274\232\343\203\200\343\202\246\343\203\263\343\203\255\343\203\274\343\203\211\343\202\222\344\270\200\346\231\202\345\201\234\346\255\242\343\201\227\343\201\276\343\201\227\343\201\237",
@@ -767,6 +770,7 @@ static const char *const i18n_text_ja[608] = {
     "\350\251\263\347\264\260",
     "\343\202\273\343\203\252\343\203\225\345\274\267\350\252\277",
     "\343\203\200\343\202\244\343\203\254\343\202\257\343\203\210\343\202\271\343\203\210\343\203\252\343\203\274\343\203\240",
+    "\347\233\243\347\235\243",
     "\347\233\243\347\235\243 \302\267 %s",
     "\350\241\250\347\244\272",
     "\345\256\214\344\272\206",
@@ -1233,7 +1237,7 @@ static const char *const i18n_text_ja[608] = {
     "\342\200\271 %d\347\247\222\346\210\273\343\202\213",
 };
 
-static const char *const i18n_text_pt_BR[608] = {
+static const char *const i18n_text_pt_BR[610] = {
     "  %s  %s livres",
     "  (ainda n\303\243o pode ser decodificado)",
     "%.1f MB",
@@ -1300,6 +1304,7 @@ static const char *const i18n_text_pt_BR[608] = {
     "Porque voc\303\252 assistiu %s",
     "Blu-ray m2ts",
     "Clareia o fundo de dia e volta ao visual noturno ao escurecer,\ncom um brilho ao amanhecer e ao entardecer. Segue o rel\303\263gio do console.",
+    "Ver elenco",
     "Carregando",
     "CONT\303\212INER",
     "N\303\243o foi poss\303\255vel verificar o espa\303\247o livre no HD: downloads pausados",
@@ -1378,6 +1383,7 @@ static const char *const i18n_text_pt_BR[608] = {
     "Detalhes",
     "Realce de di\303\241logo",
     "Transmiss\303\243o direta",
+    "Dire\303\247\303\243o",
     "Dire\303\247\303\243o \302\267 %s",
     "Tela",
     "Conclu\303\255do",
@@ -1844,7 +1850,7 @@ static const char *const i18n_text_pt_BR[608] = {
     "\342\200\271 voltar %ds",
 };
 
-static const char *const i18n_text_de[608] = {
+static const char *const i18n_text_de[610] = {
     "  %s  %s frei",
     "  (kann noch nicht decodiert werden)",
     "%.1f MB",
@@ -1911,6 +1917,7 @@ static const char *const i18n_text_de[608] = {
     "Weil du %s gesehen hast",
     "Blu-ray m2ts",
     "Hellt den Hintergrund tags\303\274ber auf und kehrt nach Einbruch der Dunkelheit\nzum Nachtlook zur\303\274ck, mit Gl\303\274hen in der D\303\244mmerung. Folgt der Konsolenuhr.",
+    "Besetzung ansehen",
     "Puffern",
     "CONTAINER",
     "Freier HDD-Speicher unbekannt: Downloads pausiert",
@@ -1989,6 +1996,7 @@ static const char *const i18n_text_de[608] = {
     "Details",
     "Dialogverst\303\244rkung",
     "Direktes Streaming",
+    "Regie",
     "Regie \302\267 %s",
     "Anzeige",
     "Fertig",
@@ -2455,7 +2463,7 @@ static const char *const i18n_text_de[608] = {
     "\342\200\271 %ds zur\303\274ck",
 };
 
-static const char *const i18n_text_fr[608] = {
+static const char *const i18n_text_fr[610] = {
     "  %s  %s libres",
     "  (ne peut pas encore \303\252tre d\303\251cod\303\251)",
     "%.1f Mo",
@@ -2522,6 +2530,7 @@ static const char *const i18n_text_fr[608] = {
     "Parce que vous avez regard\303\251 %s",
     "Blu-ray m2ts",
     "\303\211claircit l'arri\303\250re-plan le jour et revient \303\240 l'aspect nocturne la nuit,\navec une lueur \303\240 l'aube et au cr\303\251puscule. Suit l'horloge de la console.",
+    "Parcourir la distribution",
     "Mise en m\303\251moire",
     "CONTENEUR",
     "Impossible de v\303\251rifier l'espace libre : t\303\251l\303\251chargements en pause",
@@ -2600,6 +2609,7 @@ static const char *const i18n_text_fr[608] = {
     "D\303\251tails",
     "Renfort des dialogues",
     "Streaming direct",
+    "R\303\251alisation",
     "R\303\251alisation \302\267 %s",
     "Affichage",
     "Termin\303\251",
@@ -3066,7 +3076,7 @@ static const char *const i18n_text_fr[608] = {
     "\342\200\271 reculer de %ds",
 };
 
-static const char *const i18n_text_es[608] = {
+static const char *const i18n_text_es[610] = {
     "  %s  %s libres",
     "  (a\303\272n no se puede decodificar)",
     "%.1f MB",
@@ -3133,6 +3143,7 @@ static const char *const i18n_text_es[608] = {
     "Porque viste %s",
     "Blu-ray m2ts",
     "Aclara el fondo de d\303\255a y vuelve al aspecto nocturno al anochecer,\ncon un brillo al amanecer y al atardecer. Sigue el reloj de la consola.",
+    "Ver reparto",
     "Cargando",
     "CONTENEDOR",
     "No se puede comprobar el espacio libre: descargas en pausa",
@@ -3211,6 +3222,7 @@ static const char *const i18n_text_es[608] = {
     "Detalles",
     "Realce de di\303\241logos",
     "Transmisi\303\263n directa",
+    "Direcci\303\263n",
     "Direcci\303\263n \302\267 %s",
     "Pantalla",
     "Hecho",
