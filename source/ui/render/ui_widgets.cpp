@@ -332,7 +332,7 @@ void xmb_draw_divider(void) {
 // on a pitch roomy enough for 25 px type, fading toward its ends and gliding
 // (the spine's approach) as the current letter changes.  At the ends the
 // window stops rather than showing empty rows.  This IS a departure from the
-// canvas and is recorded in SPINE-PLAN.md.
+// canvas and is recorded in docs/history/xmb-spine-plan.md.
 //
 // The current letter is the jump cursor while the rail is focused, otherwise
 // the focused item's section.  Size is constant (cached runs stay cached);

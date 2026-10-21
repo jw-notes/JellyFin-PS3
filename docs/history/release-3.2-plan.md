@@ -1,3 +1,9 @@
+> **Historical record.** The plan the 3.2 release (by vortigauntlet) was built
+> from, October 2026. Everything in it shipped in 3.2.x. Paths, branches,
+> console addresses and build steps below are from that time; for building
+> today, see [DEVELOPMENT.md](../DEVELOPMENT.md), and for what has changed
+> since, [CUSTOM-CHANGES.md](../../CUSTOM-CHANGES.md).
+
 # JellyFin-PS3 3.2 — implementation plan
 
 Written 2026-10-03 for a Sonnet session to implement. Scope decided with the

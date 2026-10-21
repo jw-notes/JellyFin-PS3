@@ -285,6 +285,9 @@ Install `JellyFin-PS3.gnpdrm.pkg` with Package Manager.
 
 ## Releasing
 
+The full steps, including every file that carries the version, are in
+[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#releasing).
+
 1. Bump `APP_VERSION` in `source/net/update_check.h` and `APP_VER` in `sfo.xml`.
 2. Build, then copy `JellyFin-PS3.gnpdrm.pkg` to `release/JellyFin-PS3.pkg` and commit it with
    the source.

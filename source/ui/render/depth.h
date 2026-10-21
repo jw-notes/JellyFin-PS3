@@ -172,7 +172,7 @@ static inline int depth_kclamp(int k)
 // it.  A tipped card is a trapezoid, which two affine triangles warp with a
 // visible seam, and drawing under the wave means reordering the JellyWave
 // pass, which is off limits while its strobe work is open.  Scale and veil
-// carry the recession instead (SPINE-PLAN D8).
+// carry the recession instead (docs/history/xmb-spine-plan.md, D8).
 #define DEPTH_COL_TOP   318.0f
 #define DEPTH_COL_GAP    14.0f
 

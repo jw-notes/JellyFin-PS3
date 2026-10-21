@@ -4,7 +4,7 @@ Status: **built for 3.2.**  This started as the scoping document for "can the ap
 24-bit FLACs straight off a drive, with no Jellyfin server?"  The answer became yes: the Media tab, the file layer
 (`source/local/lfs`, read-only FAT32 / NTFS / exFAT), MKV / .m2ts / .ts playback through the existing player, local
 subtitles, and music files in the music screen.  What was built and in which order is in
-[release-3.2-plan.md](release-3.2-plan.md) (U1-U5); the sections below are the analysis the work started from, kept
+[release-3.2-plan.md](history/release-3.2-plan.md) (U1-U5); the sections below are the analysis the work started from, kept
 as it was, so "Today" and "not read" in them describe the app before 3.2.
 
 How the pieces fit, now:

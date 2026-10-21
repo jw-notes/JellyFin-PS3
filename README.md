@@ -197,8 +197,9 @@ docker run --rm --mount "type=bind,source=$PWD,target=/build,readonly" jellyfin-
 ```
 
 The result is `JellyFin-PS3.gnpdrm.pkg`. Host tests run with
-`make -f Makefile.host check` in `tests/`. See
-[CUSTOM-CHANGES.md](CUSTOM-CHANGES.md#building) for more, including how releases are made.
+`make -f Makefile.host check` in `tests/`. The
+[developer guide](docs/DEVELOPMENT.md) covers testing on a console, logs,
+screenshots and how releases are made.
 
 </details>
 

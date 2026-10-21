@@ -1,4 +1,4 @@
-// The spine, drawn and driven -- SPINE-PLAN.md S1 plus the base layer of S4.
+// The spine, drawn and driven -- docs/history/xmb-spine-plan.md S1 plus the base layer of S4.
 //
 // README 2.9 of the 2026-09-21 export replaces the tab strip with a spine: one
 // left-biased row of category icons, the active slot fixed at x=230, the rest

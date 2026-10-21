@@ -1,7 +1,7 @@
 // The spine, drawn and driven.  Geometry lives in spine.h; this is the
 // XMB-side glue.  Always on: the spine is the only menu.
 //
-// Two levels today (SPINE-PLAN.md S1 + the base layer of S4):
+// Two levels today (docs/history/xmb-spine-plan.md S1 + the base layer of S4):
 //
 //   base  (L1)  the spine IS the content.  Left/Right walks the tabs, and the
 //               active tab's items hang in a column under its icon.  Down or
