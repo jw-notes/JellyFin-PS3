@@ -14,7 +14,7 @@
 
   <b><a href="https://github.com/jw-notes/JellyFin-PS3/releases/latest">Download</a></b> ·
   <a href="docs/MANUAL.md">Manual</a> ·
-  <a href="CUSTOM-CHANGES.md">What's changed</a> ·
+  <a href="CHANGELOG.md">What's changed</a> ·
   <a href="CREDITS.md">Credits</a>
 </div>
 

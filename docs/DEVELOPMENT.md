@@ -2,7 +2,7 @@
 
 How to build, test, try out and release the app. For what the app does, see the
 [manual](MANUAL.md); for what changed in each version, see
-[CUSTOM-CHANGES.md](../CUSTOM-CHANGES.md).
+[CHANGELOG.md](../CHANGELOG.md).
 
 ## The short version
 
@@ -159,8 +159,9 @@ The screen holds still for about a second while each shot is taken.
    - `APP_VER` in `sfo.xml`
    - `APP_VER` in `tools/verify_pkg.py`
    - the expected version in `tests/test_release_version.cpp`
-2. Move "Unreleased" in [CUSTOM-CHANGES.md](../CUSTOM-CHANGES.md) to a "New in"
-   section, and update the manual and README if behaviour changed.
+2. Add a `## a.b.c` section at the top of [CHANGELOG.md](../CHANGELOG.md)
+   (`make -f Makefile.host check-app-version` in `tests/` checks it matches),
+   and update the manual and README if behaviour changed.
 3. Build, run the host tests and `tools/verify_pkg.py`, then copy
    `JellyFin-PS3.gnpdrm.pkg` to `release/JellyFin-PS3.pkg`.
 4. Commit, tag (`v3.3.9`, …), push, and publish a GitHub release with the same

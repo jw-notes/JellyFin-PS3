@@ -2,7 +2,7 @@
 
 Everything about settings, sound, controls and how the app works. Most of it was
 written by vortigauntlet for the LosslessAudio fork and still applies. For what
-changed since then, see [CUSTOM-CHANGES.md](../CUSTOM-CHANGES.md).
+changed since then, see [CHANGELOG.md](../CHANGELOG.md).
 
 ## Recommended settings
 
@@ -623,7 +623,7 @@ JellyFin PS3 is free software licensed under the **GNU General Public License v3
 
 Copyright (C) 2026 vortigauntlet
 Copyright (C) 2026 MontyMcK (the original JellyFin-PS3)
-Modifications copyright (C) 2026 jw-notes (see [CUSTOM-CHANGES.md](../CUSTOM-CHANGES.md))
+Modifications copyright (C) 2026 jw-notes (see [CHANGELOG.md](../CHANGELOG.md))
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY
 WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A

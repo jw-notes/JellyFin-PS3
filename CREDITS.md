@@ -11,7 +11,7 @@ JellyFin [PS3] is built on other people's work. Thank you to all of them.
 - **[MontyMcK](https://github.com/MontyMcK)** (Monty McKeefry, also Tuggs-Bunny): wrote the
   original [JellyFin-PS3](https://github.com/MontyMcK/JellyFin-PS3) client.
 - **Ethan Hammer**, **Lucian** and **orbisai0security**: contributions to the original and the fork.
-- **jw-notes**: this version (see [CUSTOM-CHANGES.md](CUSTOM-CHANGES.md)) and the seven extra themes.
+- **jw-notes**: this version (see [CHANGELOG.md](CHANGELOG.md)) and the seven extra themes.
 - Parts of the code across the projects were written with the help of Claude (Anthropic).
 
 Every commit, and who made it, is in the git history.

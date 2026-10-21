@@ -2,7 +2,7 @@
 > from, October 2026. Everything in it shipped in 3.2.x. Paths, branches,
 > console addresses and build steps below are from that time; for building
 > today, see [DEVELOPMENT.md](../DEVELOPMENT.md), and for what has changed
-> since, [CUSTOM-CHANGES.md](../../CUSTOM-CHANGES.md).
+> since, [CHANGELOG.md](../../CHANGELOG.md).
 
 # JellyFin-PS3 3.2 — implementation plan
 
