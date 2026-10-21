@@ -1102,6 +1102,7 @@ void show_player_run(const JFItem *item, u32 resume_secs,
 
     crash_log("p2 vdec_open begin");
     plog("show_player: vdec_open");
+    vdec_set_force_hd(live);
     if (!vdec_open()) {
         plog("show_player: vdec_open FAILED");
         live_abort();

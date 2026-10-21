@@ -37,6 +37,9 @@
 // ---- VDEC lifecycle ----
 bool vdec_open(void);
 void vdec_close(void);
+// Set the decoder up for 1080p whatever the quality settings say (live TV).
+// Holds until changed; the player sets it at the start of every playback.
+void vdec_set_force_hd(bool on);
 // Boot-time reservations: the VDEC arena and jitter-buffer slots are grabbed
 // once at startup (main.cpp) and cached forever — allocated per-session they
 // raced the UI for a heap with only a few MB of slack and lost at random.

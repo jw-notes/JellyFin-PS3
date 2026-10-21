@@ -88,8 +88,16 @@ static u32 vdec_cb(u32 handle, u32 msgtype, u32 msgdata, u32 arg) {
 //
 // VQ_AUTO still resolves via the toggle, so an install that never touches the
 // quality row behaves exactly as before.
+//
+// A live channel is always 1080p-class: a server encoding in hardware sends
+// the source's 1920x1080 whatever was asked for, and a decoder set up at
+// level 3.1 for it gave sound and no picture (2026-10-21).
+static bool s_force_hd = false;
+void vdec_set_force_hd(bool on) { s_force_hd = on; }
+
 static bool vdec_wants_hd(void)
 {
+    if (s_force_hd) return true;
     u32 w = 0, h = 0;
     vquality_params(vquality_get(), hd1080_enabled(), 0, 0, &w, &h,
                     NULL, NULL, NULL);
