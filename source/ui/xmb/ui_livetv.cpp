@@ -274,6 +274,35 @@ int rows_visible(void) {
 }
 int list_x(void) { return ((int)display_width - XMB_LIST_W) / 2; }
 
+// Classic shows the channels as a full-width grid of wide cards (logo,
+// number and name, the programme on now) with the library pages' margins and
+// gaps.  Three rows: a channel card needs less height than a poster.  The
+// XMB layout and the guide keep the list.
+struct LiveGrid { int cols, rows, card_w, card_h, stride, x0; };
+bool classic_grid(void) { return xmb_classic_livetv(g_active_tab) && !s_guide; }
+LiveGrid live_grid(void) {
+    LiveGrid g;
+    const int margin = XMB_OX + UIS_W(64), gap_y = UIS_H(10);
+    int usable_w = (int)display_width - margin * 2;
+    int usable_h = band_bottom() - band_top();
+    if (usable_w < 1) usable_w = 1;
+    if (usable_h < 3) usable_h = 3;
+    g.rows   = 3;
+    g.stride = usable_h / g.rows;
+    g.card_h = g.stride - XMB_CARD_TEXT_H - gap_y;
+    if (g.card_h < 1) g.card_h = 1;
+    g.card_w = g.card_h * 16 / 9;
+    if (g.card_w > usable_w) { g.card_w = usable_w; g.card_h = g.card_w * 9 / 16; }
+    g.cols = (usable_w + XMB_CARD_GAP_X) / (g.card_w + XMB_CARD_GAP_X);
+    if (g.cols < 1) g.cols = 1;
+    if (g.cols > 12) g.cols = 12;
+    const int grid_w = g.cols * g.card_w + (g.cols - 1) * XMB_CARD_GAP_X;
+    g.x0 = ((int)display_width - grid_w) / 2;
+    return g;
+}
+int card_x(const LiveGrid &g, int rel) { return g.x0 + (rel % g.cols) * (g.card_w + XMB_CARD_GAP_X); }
+int card_y(const LiveGrid &g, int rel) { return band_top() + (rel / g.cols) * g.stride; }
+
 // The guide spans the screen: a pinned logo column, then three hours.
 int guide_x0(void)     { return XMB_ITEM_PAD; }
 int guide_logo_w(void) { return UIS_W(150); }
@@ -630,6 +659,19 @@ void page_label(char *out, int cap) {
 }
 
 void keep_visible(void) {
+    if (classic_grid()) {
+        // The window scrolls a whole row of cards at a time.
+        const LiveGrid g = live_grid();
+        int top_row = s_top / g.cols;
+        const int sel_row = s_sel / g.cols;
+        if (sel_row < top_row) top_row = sel_row;
+        if (sel_row >= top_row + g.rows) top_row = sel_row - g.rows + 1;
+        const int last_row = s_n > 0 ? (s_n - 1) / g.cols : 0;
+        if (top_row > last_row - g.rows + 1) top_row = last_row - g.rows + 1;
+        if (top_row < 0) top_row = 0;
+        s_top = top_row * g.cols;
+        return;
+    }
     const int vis = s_guide ? guide_rows_visible() : rows_visible();
     if (s_sel < s_top) s_top = s_sel;
     if (s_sel >= s_top + vis) s_top = s_sel - vis + 1;
@@ -962,7 +1004,7 @@ int xmb_livetv_index_of(const char *id) {
     return -1;
 }
 
-bool xmb_livetv_at_top(void) { return s_sel <= 0; }
+bool xmb_livetv_at_top(void) { return classic_grid() ? s_sel < live_grid().cols : s_sel <= 0; }
 bool xmb_livetv_modal(void)  { return s_guide || s_in_details || s_search_on; }
 
 bool xmb_input_livetv(void) {
@@ -981,8 +1023,18 @@ bool xmb_input_livetv(void) {
 
     if (!s_guide) {
         const int was = s_sel;
-        if (BTN_REPEAT(up)   && s_sel > 0)       s_sel--;
-        if (BTN_REPEAT(down) && s_sel < s_n - 1) s_sel++;
+        if (classic_grid()) {
+            // The grid: every direction moves; Square opens the guide.
+            const int cols = live_grid().cols;
+            if (BTN_REPEAT(left)  && s_sel % cols > 0)                     s_sel--;
+            if (BTN_REPEAT(right) && s_sel % cols < cols - 1 && s_sel < s_n - 1) s_sel++;
+            if (BTN_REPEAT(up)    && s_sel >= cols)                        s_sel -= cols;
+            if (BTN_REPEAT(down)  && s_sel / cols < (s_n - 1) / cols)
+                s_sel = s_sel + cols < s_n ? s_sel + cols : s_n - 1;
+        } else {
+            if (BTN_REPEAT(up)   && s_sel > 0)       s_sel--;
+            if (BTN_REPEAT(down) && s_sel < s_n - 1) s_sel++;
+        }
         if (s_sel != was) { keep_visible(); ui_sfx_play(SFX_CURSOR); }
         if (BTN_PRESSED(cross)) { play_channel(s_sel); return false; }
         if (BTN_PRESSED(triangle)) {
@@ -1008,7 +1060,8 @@ bool xmb_input_livetv(void) {
                 ui_sfx_play(SFX_OPTION);
             }
         }
-        if (BTN_PRESSED(right) && have_guide()) { open_guide(); ui_sfx_play(SFX_CURSOR); }
+        const bool guide_btn = classic_grid() ? BTN_PRESSED(square) : BTN_PRESSED(right);
+        if (guide_btn && have_guide()) { open_guide(); ui_sfx_play(SFX_CURSOR); }
         return false;
     }
 
@@ -1042,7 +1095,7 @@ void xmb_livetv_hints(void) {
     if (!s_guide) {
         h[n].glyph = 'X'; h[n].label = TRN("Watch"); n++;
         h[n].glyph = 'T'; h[n].label = TRN("Favourite"); n++;
-        if (have_guide()) { h[n].glyph = 'E'; h[n].label = TRN("Guide"); n++; }
+        if (have_guide()) { h[n].glyph = classic_grid() ? 'S' : 'E'; h[n].label = TRN("Guide"); n++; }
         // L2 and R2 pair into one "Category" hint (an empty label pairs with the next).
         if (paging() && !s_search_on) {
             h[n].glyph = 'L'; h[n].label = ""; n++;
@@ -1071,6 +1124,19 @@ static const int ROW_MAX_PROGS = 24;
 
 void xmb_livetv_gpu(void) {
     tick();
+    if (classic_grid() && s_ch && s_n > 0 && ui_card_gpu_ready()) {
+        const LiveGrid g = live_grid();
+        const bool focus = xmb_classic_library_header_focus(g_active_tab) < 0;
+        for (int rel = 0; rel < g.cols * g.rows && s_top + rel < s_n; rel++) {
+            const int x = card_x(g, rel), y = card_y(g, rel);
+            wave_draw_rrect_outline_gpu(x, y, g.card_w, g.card_h, UIS_H(8), 1,
+                                        XMB_HAIRLINE, 255, XMB_PANEL, XMB_PANEL, 150);
+        }
+        const int rel = s_sel - s_top;
+        if (focus && rel >= 0 && rel < g.cols * g.rows && s_sel < s_n)
+            ui_card_gpu_selection(card_x(g, rel), card_y(g, rel), g.card_w, g.card_h);
+        return;
+    }
     if (!s_guide || !s_ch || s_n <= 0) return;
     const int rows = guide_rows_visible();
     const int radius = UIS_H(4);
@@ -1118,6 +1184,32 @@ void xmb_cpu_draw_livetv(void) {
     tick();
     if (!s_ch || s_n <= 0) return;
     const uint64_t now = jf_now_ticks();
+
+    if (classic_grid()) {
+        const LiveGrid g = live_grid();
+        const bool focus = xmb_classic_library_header_focus(g_active_tab) < 0;
+        for (int rel = 0; rel < g.cols * g.rows && s_top + rel < s_n; rel++) {
+            const int i = s_top + rel;
+            const int x = card_x(g, rel), y = card_y(g, rel);
+            if (!ui_card_gpu_ready())
+                drawRect((u32)x, (u32)y, (u32)g.card_w, (u32)g.card_h,
+                         (focus && i == s_sel) ? XMB_PANEL_HI : XMB_PANEL);
+            // The logo, square, in the middle of the card.
+            const int ls = g.card_h * 3 / 5;
+            draw_logo(&s_ch[i], x + (g.card_w - ls) / 2, y + (g.card_h - ls) / 2, ls, ls);
+            // The programme's progress along the card's foot.
+            NowNext nn;
+            now_next(&s_ch[i], now, &nn);
+            const int pm = livetv_progress_permille(now, nn.now_start, nn.now_end);
+            if (pm >= 0) {
+                const int bx = x + UIS_W(10), bw = g.card_w - UIS_W(20);
+                const int by = y + g.card_h - UIS_H(10);
+                drawRect((u32)bx, (u32)by, (u32)bw, UIS_H(4), XMB_HAIRLINE);
+                drawRect((u32)bx, (u32)by, (u32)(bw * pm / 1000), UIS_H(4), XMB_ACCENT);
+            }
+        }
+        return;
+    }
 
     if (!s_guide) {
         const int vis = rows_visible();
@@ -1179,10 +1271,39 @@ static void clip_draw(int x, int y, const char *text, float px, u32 colour, int 
     drawTTF_clipped((u32)x, (u32)y, text, px, colour, max_w, bold ? UI_FACE_BOLD : UI_FACE_REGULAR);
 }
 
+// Classic's heading, laid out as the library pages': the title, the category
+// (or search) under it, and the window's place in the list on the right.
+static void classic_heading(void) {
+    const int x = classic_grid() ? live_grid().x0 : XMB_ITEM_PAD;
+    const int y = XMB_OY + UIS_H(86);
+    drawTTF((u32)x, (u32)y, TR("Live TV"), UIS_TF(24), XMB_TEXT, true);
+    if (!classic_grid()) return;
+    const int sub_y = XMB_OY + UIS_H(122);
+    if (s_search_on) {
+        char line[200];
+        snprintf(line, sizeof line, TR("Search: %s  (%d found)  -  O to go back"), s_term, s_n);
+        drawTTF((u32)x, (u32)sub_y, line, UIS_TF(15), XMB_ACCENT_ALT);
+    } else if (paging()) {
+        char lab[96], line[160];
+        page_label(lab, sizeof lab);
+        snprintf(line, sizeof line, "L2  <   %s   >  R2      %d / %d", lab, s_page + 1, s_npages);
+        drawTTF((u32)x, (u32)sub_y, line, UIS_TF(15), XMB_TEXT_DIM);
+    }
+    if (s_ch && s_n > 0) {
+        const LiveGrid g = live_grid();
+        int last = s_top + g.cols * g.rows;
+        if (last > s_n) last = s_n;
+        char pos[48];
+        snprintf(pos, sizeof pos, "%d - %d / %d", s_top + 1, last, s_n);
+        const float px = UIS_TF(14);
+        drawTTF((u32)((int)display_width - g.x0 - ttf_text_width(pos, px)), (u32)(y + UIS_H(9)),
+                pos, px, XMB_TEXT_DIM);
+    }
+}
+
 void xmb_draw_livetv(void) {
     tick();
-    if (xmb_classic_livetv(g_active_tab))
-        drawTTF((u32)XMB_ITEM_PAD, (u32)(XMB_OY + UIS_H(86)), TR("Live TV"), UIS_TF(24), XMB_TEXT, true);
+    if (xmb_classic_livetv(g_active_tab)) classic_heading();
     const int cx = (int)display_width / 2;
     if (!s_ch || s_alloc_failed) {
         const char *m = TR("Live TV is unavailable");
@@ -1190,7 +1311,9 @@ void xmb_draw_livetv(void) {
                 UIS_TF(18), XMB_TEXT_DIM);
         return;
     }
-    if (s_search_on && !s_guide) {
+    if (classic_grid()) {
+        // classic_heading() has drawn the search / category line.
+    } else if (s_search_on && !s_guide) {
         char line[200];
         snprintf(line, sizeof line, TR("Search: %s  (%d found)  -  O to go back"), s_term, s_n);
         drawTTF((u32)list_x(), (u32)(band_top() - UIS_H(18)), line, UIS_TF(13), XMB_ACCENT_ALT);
@@ -1212,6 +1335,32 @@ void xmb_draw_livetv(void) {
         return;
     }
     const uint64_t now = jf_now_ticks();
+
+    if (classic_grid()) {
+        const LiveGrid g = live_grid();
+        const bool focus = xmb_classic_library_header_focus(g_active_tab) < 0;
+        for (int rel = 0; rel < g.cols * g.rows && s_top + rel < s_n; rel++) {
+            const int i = s_top + rel;
+            const JFChannel *c = &s_ch[i];
+            const int x = card_x(g, rel), y = card_y(g, rel);
+            const bool sel = focus && i == s_sel;
+            if (c->favourite)
+                drawIcon((u32)(x + UIS_W(10)), (u32)(y + UIS_H(10)), ICON_STAR, UIS_TF(16.0f), XMB_ACCENT_ALT);
+            // Under the card: the number and name, then the programme on now.
+            const int ty = y + g.card_h + UIS_H(8);
+            int nx = x;
+            if (c->number[0]) {
+                drawTTF((u32)x, (u32)ty, c->number, UIS_TF(16), XMB_TEXT_FAINT);
+                nx += ttf_text_width(c->number, UIS_TF(16)) + UIS_W(10);
+            }
+            clip_draw(nx, ty, c->name, UIS_TF(16), sel ? XMB_WHITE : XMB_TEXT, x + g.card_w - nx, sel);
+            NowNext nn;
+            now_next(c, now, &nn);
+            if (nn.now[0])
+                clip_draw(x, ty + UIS_H(22), nn.now, UIS_TF(13), XMB_TEXT_DIM, g.card_w, false);
+        }
+        return;
+    }
 
     if (!s_guide) {
         const int vis = rows_visible();
