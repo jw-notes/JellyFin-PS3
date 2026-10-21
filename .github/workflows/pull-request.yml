@@ -1,0 +1,56 @@
+name: Pull request checks
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  commits:
+    name: Commits are by people
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: No AI or bot authors or co-authors
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          bad=0
+          for c in $(git rev-list "$BASE..$HEAD"); do
+            who=$(git log -1 --format='%an <%ae>' "$c")
+            if echo "$who" | grep -qiE '\[bot\]|noreply@anthropic\.com|copilot|openai|cursor'; then
+              echo "::error::$(git log -1 --format=%h "$c") is authored by $who"
+              bad=1
+            fi
+            if git log -1 --format=%B "$c" | grep -iE '^co-authored-by:.*(anthropic|claude|copilot|openai|chatgpt|gemini|cursor|\[bot\])'; then
+              echo "::error::$(git log -1 --format=%h "$c") has an AI or bot Co-authored-by line"
+              bad=1
+            fi
+          done
+          if [ "$bad" = 1 ]; then
+            echo "Please rewrite these commits under your own name, without AI or bot co-author lines (see CONTRIBUTING.md)."
+            exit 1
+          fi
+          echo "All commits are authored by people."
+
+  translations:
+    name: Translations complete
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Catalogue and generated tables agree
+        run: |
+          python tools/i18n.py gen
+          python tools/i18n.py check
+          git diff --exit-code -- source/i18n/i18n_tables.c || {
+            echo "::error::source/i18n/i18n_tables.c is out of date: run 'python tools/i18n.py gen' and commit it."
+            exit 1
+          }
