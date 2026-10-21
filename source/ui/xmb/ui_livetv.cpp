@@ -1287,10 +1287,38 @@ static void classic_heading(void) {
         snprintf(line, sizeof line, TR("Search: %s  (%d found)  -  O to go back"), s_term, s_n);
         drawTTF((u32)x, (u32)sub_y, line, UIS_TF(15), XMB_ACCENT_ALT);
     } else if (paging()) {
-        char lab[96], line[160];
-        page_label(lab, sizeof lab);
-        snprintf(line, sizeof line, "L2  <   %s   >  R2      %d / %d", lab, s_page + 1, s_npages);
-        drawTTF((u32)x, (u32)sub_y, line, UIS_TF(15), XMB_TEXT_DIM);
+        // The categories as tabs, the Music page's style: every one in a row,
+        // the current one bold and underlined, L2 / R2 at the ends.  When
+        // they do not all fit, the row starts late enough to show the current.
+        const float px = UIS_TF(16.0f);
+        const int icon_h = UIS_H(22), cy = sub_y + UIS_H(10), gap = UIS_W(34);
+        const int lw = ps_btn_width('L', icon_h), rw = ps_btn_width('R', icon_h);
+        const int tabs_x = x + lw + UIS_W(18);
+        const int avail = (int)display_width - x - rw - UIS_W(18) - tabs_x;
+        static char lab[MAX_PAGES][64];
+        int w[MAX_PAGES];
+        const int n = s_npages < MAX_PAGES ? s_npages : MAX_PAGES;
+        for (int p = 0; p < n; p++) {
+            key_label(s_pages[p].key, s_pages[p].cat, lab[p], sizeof lab[p]);
+            w[p] = ttf_text_width(lab[p], px, p == s_page);
+        }
+        int first = 0;
+        for (;;) {
+            int span = 0;
+            for (int p = first; p <= s_page && p < n; p++) span += w[p] + (p > first ? gap : 0);
+            if (span <= avail || first >= s_page) break;
+            first++;
+        }
+        draw_ps_button_vcentered((u32)x, cy, 'L', icon_h, 255);
+        int tx = tabs_x;
+        for (int p = first; p < n; p++) {
+            if (tx + w[p] > tabs_x + avail) break;
+            const bool on = p == s_page;
+            drawTTF((u32)tx, (u32)sub_y, lab[p], px, on ? XMB_WHITE : XMB_TEXT_FAINT, on);
+            if (on) drawRect((u32)tx, (u32)(sub_y + UIS_H(24)), (u32)w[p], UIS_H(3), XMB_ACCENT);
+            tx += w[p] + gap;
+        }
+        draw_ps_button_vcentered((u32)(tx - gap + UIS_W(18)), cy, 'R', icon_h, 255);
     }
     if (s_ch && s_n > 0) {
         const LiveGrid g = live_grid();
