@@ -123,8 +123,40 @@ static void pages(void) {
     CHECK(lp_pick_page(k, 2, 0) == 0 && lp_pick_page(k, 0, 5) == 0);
 }
 
+// Genre pages follow the first category; they hide, persist and are picked
+// like any other page.
+static void genres(void) {
+    printf("- genres\n");
+    LtPrefs p; lp_init(&p);
+    const int G[] = { LP_GENRE(0), LP_GENRE(1), LP_GENRE(5) };
+    int out[16];
+    int n = lp_build_pages_ex(&p, BASES, 2, G, 3, out, 16);
+    CHECK(n == 6 && out[0] == LP_FAVS && out[1] == 1 && out[2] == LP_GENRE(0) &&
+          out[3] == LP_GENRE(1) && out[4] == LP_GENRE(5) && out[5] == 100);
+    lp_set_hidden(&p, LP_GENRE(1), true);
+    n = lp_build_pages_ex(&p, BASES, 2, G, 3, out, 16);
+    CHECK(n == 5 && out[3] == LP_GENRE(5));
+    // Hiding the first category keeps the genres after the categories' start.
+    lp_set_hidden(&p, 1, true);
+    n = lp_build_pages_ex(&p, BASES, 2, G, 3, out, 16);
+    CHECK(n == 4 && out[1] == LP_GENRE(0) && out[3] == 100);
+    CHECK(LP_IS_GENRE(LP_GENRE(0)) && LP_IS_GENRE(LP_GENRE(63)) && !LP_IS_GENRE(LP_FAVS) &&
+          !LP_IS_GENRE(LP_GENRE(64)) && LP_GENRE_OF(LP_GENRE(7)) == 7);
+    char text[512];
+    p.last = LP_GENRE(5);
+    CHECK(lp_format(&p, text, sizeof text) > 0);
+    LtPrefs q;
+    lp_parse(text, &q);
+    CHECK(lp_is_hidden(&q, LP_GENRE(1)) && q.last == LP_GENRE(5));
+    lp_parse("hide -99\nlast -164\n", &q);
+    CHECK(q.n_hidden == 0 && q.last == 0);
+    // Without genres the old builder is unchanged.
+    CHECK(lp_build_pages(&p, BASES, 2, out, 16) == lp_build_pages_ex(&p, BASES, 2, NULL, 0, out, 16));
+}
+
 int main() {
     hidden();
+    genres();
     recent();
     file();
     pages();

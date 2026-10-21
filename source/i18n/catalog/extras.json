@@ -19,5 +19,19 @@
   "Search channels": {"ja": "チャンネルを検索", "pt-BR": "Buscar canais", "de": "Sender suchen", "fr": "Rechercher une chaîne", "es": "Buscar canales"},
   "No channels found": {"ja": "該当するチャンネルがありません", "pt-BR": "Nenhum canal encontrado", "de": "Keine Sender gefunden", "fr": "Aucune chaîne trouvée", "es": "No se encontraron canales"},
   "Search: %s  (%d found)  -  O to go back": {"ja": "検索: %s（%d件）  -  Oで戻る", "pt-BR": "Busca: %s  (%d encontrados)  -  O para voltar", "de": "Suche: %s  (%d gefunden)  -  O: zurück", "fr": "Recherche : %s  (%d trouvées)  -  O : retour", "es": "Búsqueda: %s  (%d encontrados)  -  O para volver"},
-  "Category": {"ja": "カテゴリ", "pt-BR": "Categoria", "de": "Kategorie", "fr": "Catégorie", "es": "Categoría"}
+  "Category": {"ja": "カテゴリ", "pt-BR": "Categoria", "de": "Kategorie", "fr": "Catégorie", "es": "Categoría"},
+  "All Channels": {"ja": "すべてのチャンネル", "pt-BR": "Todos os canais", "de": "Alle Sender", "fr": "Toutes les chaînes", "es": "Todos los canales"},
+  "Crime & Mystery": {"ja": "犯罪・ミステリー", "pt-BR": "Crime e mistério", "de": "Krimi & Mystery", "fr": "Crime et mystère", "es": "Crimen y misterio"},
+  "Comedy": {"ja": "コメディ", "pt-BR": "Comédia", "de": "Comedy", "fr": "Comédie", "es": "Comedia"},
+  "Horror & Sci-Fi": {"ja": "ホラー・SF", "pt-BR": "Terror e ficção científica", "de": "Horror & Sci-Fi", "fr": "Horreur et SF", "es": "Terror y ciencia ficción"},
+  "Reality": {"ja": "リアリティ", "pt-BR": "Reality", "de": "Reality", "fr": "Téléréalité", "es": "Reality"},
+  "Food": {"ja": "料理", "pt-BR": "Culinária", "de": "Essen", "fr": "Cuisine", "es": "Cocina"},
+  "Home & Lifestyle": {"ja": "住まい・ライフスタイル", "pt-BR": "Casa e estilo de vida", "de": "Wohnen & Lifestyle", "fr": "Maison et art de vivre", "es": "Hogar y estilo de vida"},
+  "Nature & Animals": {"ja": "自然・動物", "pt-BR": "Natureza e animais", "de": "Natur & Tiere", "fr": "Nature et animaux", "es": "Naturaleza y animales"},
+  "History & Learning": {"ja": "歴史・教養", "pt-BR": "História e conhecimento", "de": "Geschichte & Wissen", "fr": "Histoire et savoir", "es": "Historia y aprendizaje"},
+  "Game Shows": {"ja": "ゲームショー", "pt-BR": "Game shows", "de": "Spielshows", "fr": "Jeux télévisés", "es": "Concursos"},
+  "Westerns": {"ja": "西部劇", "pt-BR": "Faroeste", "de": "Western", "fr": "Westerns", "es": "Wésterns"},
+  "Cars & Motors": {"ja": "クルマ・モーター", "pt-BR": "Carros e motores", "de": "Autos & Motoren", "fr": "Auto et moto", "es": "Coches y motor"},
+  "Faith": {"ja": "宗教", "pt-BR": "Fé", "de": "Glaube", "fr": "Foi", "es": "Fe"},
+  "Shopping": {"ja": "ショッピング", "pt-BR": "Compras", "de": "Shopping", "fr": "Shopping", "es": "Compras"}
 }

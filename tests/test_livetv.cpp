@@ -276,7 +276,28 @@ static void page_ranges(void) {
     CHECK(!livetv_number_value("", &v) && !livetv_number_value("abc", &v));
 }
 
+static bool in(const char *name, int g) { return (livetv_genre_mask(name) >> g) & 1u; }
+
+static void genres(void) {
+    printf("- genres\n");
+    CHECK(in("ABC News Live", LG_NEWS) && in("FOX LOCAL Atlanta", LG_NEWS));
+    CHECK(in("NBC Sports NOW", LG_SPORTS) && in("PGA TOUR", LG_SPORTS) && in("UFC", LG_SPORTS));
+    CHECK(in("Noticias Telemundo Ahora", LG_NEWS) && in("Noticias Telemundo Ahora", LG_LATINO));
+    CHECK(in("Cine Rom\xC3\xA1" "ntico", LG_MOVIES) && in("Cine Rom\xC3\xA1" "ntico", LG_LATINO));
+    CHECK(in("Barney and Friends", LG_KIDS) && in("Court TV", LG_CRIME) && in("Top Gear", LG_MOTORS));
+    CHECK(in("The Pet Collective", LG_NATURE) && in("Combat War Channel", LG_LEARNING));
+    // Whole words only where the keyword says so.
+    CHECK(!in("American Ninja Warrior", LG_LEARNING) && in("American Ninja Warrior", LG_GAMESHOWS));
+    CHECK(!in("Petrol Heads", LG_NATURE) && !in("Godzilla Universe", LG_FAITH));
+    CHECK(!in("Gearbox", LG_MOTORS) && in("Fifth Gear", LG_MOTORS));
+    CHECK(livetv_genre_mask("Words or Less") == (1u << LG_GAMESHOWS));
+    CHECK(livetv_genre_mask("ION") == 0 && livetv_genre_mask("") == 0 && livetv_genre_mask(NULL) == 0);
+    CHECK(!strcmp(livetv_genre_label(LG_FOOD), "Food") && !strcmp(livetv_genre_label(LG_COUNT), ""));
+    for (int g = 0; g < LG_COUNT; g++) CHECK(livetv_genre_label(g)[0]);
+}
+
 int main(void) {
+    genres();
     time_parsing();
     clock_format();
     channels();

@@ -311,3 +311,133 @@ int livetv_parse_programs(const char *json, int len, JFProgram *out, int max,
                           int *total, bool *truncated) {
     return parse_items(json, len, out, max, sizeof(JFProgram), program_fn, total, truncated);
 }
+
+// ---------------------------------------------------------------------------
+//  Genres from channel names
+// ---------------------------------------------------------------------------
+//
+// Keywords are lower case.  A leading '=' asks for a whole word ("=war" is
+// not "warrior", "=pet" is not "petrol"); anything else matches inside a word
+// ("news" finds "Newsmax").  The lists come from real FAST/IPTV line-ups:
+// network names that say what they are, and the shows whole channels are
+// built around.
+
+static const char *const G_NEWS[] = {
+    "news", "weather", "=cnn", "reuters", "bloomberg", "cheddar", "=oan", "=tyt",
+    "scripps", "livenow", "noticias", "today all day", "local now", "al d\xC3\xad" "a",
+    "=cbc", "=msnbc", "=bbc world", "=local", NULL };
+static const char *const G_SPORTS[] = {
+    "sport", "deportes", "=nfl", "=nba", "=nhl", "=mlb", "=wnba", "=ufc", "=mma", "=pfl",
+    "boxing", "wrestling", "kickboxing", "golf", "=pga", "tennis", "poker", "bowling",
+    "billiard", "pickleball", "nascar", "strongman", "real madrid", "willow", "fanduel",
+    "draftkings", "=acc", "big 12", "team usa", "bein", "lucha", "=glory", "=tna",
+    "=pbr", "football", "soccer", "cricket", "rugby", "hockey", "baseball", "basketball",
+    "racing", "=f1", "fight", "=espn", "fishing", NULL };
+static const char *const G_MOVIES[] = {
+    "movie", "cine", "film", "flix", "cinema", "=hallmark", "=lionsgate", "action", "thriller", NULL };
+static const char *const G_KIDS[] = {
+    "kids", "kidz", "baby", "babies", "toon", "cartoon", "barney", "teletubbies",
+    "sensical", "shaun the sheep", "rainbow rangers", "=jr", "junior", "nick jr",
+    "pbs kids", "=disney", "jimjam", "juvenil", NULL };
+static const char *const G_MUSIC[] = {
+    "music", "radio", "=mtv", "vevo", "concert", "karaoke", "circle country", "=hits",
+    "=cmt", "=fm", NULL };
+static const char *const G_CRIME[] = {
+    "crime", "myster", "murder", "court", "=law", "law&", "lawless", "police", "=fbi",
+    "f.b.i", "forensic", "detective", "first 48", "live pd", "unsolved", "=cops",
+    "trials", "dateline", "20/20", "investigation", "midsomer", "she wrote", "judge", NULL };
+static const char *const G_COMEDY[] = {
+    "comedy", "laugh", "laff", "=lol", "sitcom", "=snl", "funny", "gags", "rifftrax",
+    "mst3k", "failarmy", "conners", "portlandia", "carol burnett", "witz",
+    "johnny carson", NULL };
+static const char *const G_SCIFI[] = {
+    "horror", "scares", "haunt", "ghost", "paranormal", "alien", "sci-fi", "scifi",
+    "monster", "dark matter", "outersphere", "cosmic", "asylum", "shudder",
+    "doctor who", "walking dead", "dungeons", NULL };
+static const char *const G_REALITY[] = {
+    "reality", "housewives", "bachelor", "love island", "wedding", "storage wars",
+    "dance moms", "say yes", "bad girls", "=bravo", "keeping up", "=we tv", "osbournes",
+    "lockup", "bounty hunter", "ice road", "highway thru hell", "extreme jobs",
+    "=rig tv", "hell's kitchen", "cheaters", "untold stories", NULL };
+static const char *const G_FOOD[] = {
+    "food", "kitchen", "cook", "=chef", "tastemade", "gusto", "hungry", "dine",
+    "emeril", "jamie oliver", "sweet escapes", "fork &", NULL };
+static const char *const G_HOME[] = {
+    "home", "house", "design", "=diy", "garden", "property", "=reno", "craft",
+    "martha stewart", "places & spaces", "listing", "handyman", "travel", "escapes",
+    "antique", "lifestyle", NULL };
+static const char *const G_NATURE[] = {
+    "nature", "wildearth", "wildlife", "=earth", "earthx", "planet", "animal", "=pet",
+    "=dog", "=bark", "=vet", "jack hanna", "lucky dog", "dog whisperer", NULL };
+static const char *const G_LEARNING[] = {
+    "history", "documentary", "learning", "science", "curiosity", "marvels",
+    "declassified", "mythbusters", "how to", "ancient", "=war", "originals",
+    "=pbs", NULL };
+static const char *const G_GAMESHOWS[] = {
+    "game show", "feud", "price is right", "deal or no deal", "buzzr",
+    "supermarket sweep", "fear factor", "name game", "words or less", "ninja warrior",
+    "got talent", "jeopardy", "wheel of fortune", NULL };
+static const char *const G_WESTERNS[] = {
+    "western", "cowboy", "rifleman", "virginian", "lone ranger", "wild west",
+    "=grit", NULL };
+static const char *const G_MOTORS[] = {
+    "motor", "=gear", "turbo", "=cars", "nascar", "racer", "speedvision",
+    "powernation", "automotive", "car auction", NULL };
+static const char *const G_FAITH[] = {
+    "faith", "gospel", "=god", "church", "jesus", "christian", "=tbn", "trinity",
+    "osteen", "pure flix", "=dove", "in touch", "heaven", "stellar", "=jltv", NULL };
+static const char *const G_LATINO[] = {
+    "latino", "espa\xC3\xb1" "ol", "espanol", "telemundo", "estrella", "canela",
+    "filmex", "noticias", "americat", "caso cerrado", "novela", "lucha", "=cine ",
+    "rom\xC3\xa1ntico", "deportes", NULL };
+static const char *const G_SHOPPING[] = {
+    "=qvc", "qvc2", "=hsn", "shop", "jewelry", "=jtv", NULL };
+
+static const char *const *const G_WORDS[LG_COUNT] = {
+    G_NEWS, G_SPORTS, G_MOVIES, G_KIDS, G_MUSIC, G_CRIME, G_COMEDY, G_SCIFI,
+    G_REALITY, G_FOOD, G_HOME, G_NATURE, G_LEARNING, G_GAMESHOWS, G_WESTERNS,
+    G_MOTORS, G_FAITH, G_LATINO, G_SHOPPING };
+
+static const char *const G_LABELS[LG_COUNT] = {
+    "News", "Sports", "Movies", "Kids", "Music", "Crime & Mystery", "Comedy",
+    "Horror & Sci-Fi", "Reality", "Food", "Home & Lifestyle", "Nature & Animals",
+    "History & Learning", "Game Shows", "Westerns", "Cars & Motors", "Faith",
+    "Latino", "Shopping" };
+
+static bool g_word_char(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (unsigned char)c >= 0x80;
+}
+
+static bool g_has(const char *low, const char *kw) {
+    const bool whole = kw[0] == '=';
+    if (whole) kw++;
+    const size_t n = strlen(kw);
+    if (!n) return false;
+    for (const char *p = strstr(low, kw); p; p = strstr(p + 1, kw)) {
+        if (!whole) return true;
+        const bool before = p == low || !g_word_char(p[-1]);
+        const bool after  = !g_word_char(p[n]);
+        if (before && after) return true;
+    }
+    return false;
+}
+
+unsigned livetv_genre_mask(const char *name) {
+    if (!name) return 0;
+    char low[128];
+    size_t i = 0;
+    for (; name[i] && i < sizeof low - 1; i++) {
+        const char c = name[i];
+        low[i] = (c >= 'A' && c <= 'Z') ? (char)(c - 'A' + 'a') : c;
+    }
+    low[i] = '\0';
+    unsigned m = 0;
+    for (int g = 0; g < LG_COUNT; g++)
+        for (const char *const *w = G_WORDS[g]; *w; w++)
+            if (g_has(low, *w)) { m |= 1u << g; break; }
+    return m;
+}
+
+const char *livetv_genre_label(int g) {
+    return (g >= 0 && g < LG_COUNT) ? G_LABELS[g] : "";
+}

@@ -44,6 +44,7 @@
 #include "api_livetv.h"
 #include "api_userdata.h"
 #include "livetv_prefs.h"
+#include "livetv.h"
 #include "jf_paths.h"
 #include "jellyfin_api.h"
 #include "thumbnail_cache.h"
@@ -63,8 +64,9 @@ const uint64_t T_3H   = 180 * T_MIN;
 
 const int      MAX_CH      = LIVETV_MAX_CHANNELS;
 const int      MAX_INDEX   = 6000;                  // channel numbers kept (24 KB)
-const int      PAGE_MIN    = 200;                   // at most this many: one list, no pages
-const int      MAX_PAGES   = 24;
+const int      PAGE_MIN    = 200;                   // at most this many: one numbered category
+const int      GENRE_MIN   = 3;                     // a genre with fewer channels gets no page
+const int      MAX_PAGES   = 48;                    // categories, genres and the viewer's two
 const int      MAX_PG      = 400;                   // programmes kept: ~130 KB
 const int      GUIDE_ROWS  = 16;                    // channels asked for at once
 const uint64_t REFRESH_US  = 60ULL * 1000000ULL;
@@ -100,7 +102,7 @@ bool       s_in_details = false;
 // the viewer rather than as a sport.  Names in capitals are not translated.
 struct CatDef { int base; const char *label; bool translate; };
 const CatDef CATS[] = {
-    {    1, TRN("My Channels"),     true  }, {  101, "NFL",                  false },
+    {    1, TRN("All Channels"),    true  }, {  101, "NFL",                  false },
     {  151, "NBA",                  false }, {  201, "NHL",                  false },
     {  251, "MLB",                  false }, {  331, TRN("Motorsport"),      true  },
     {  351, TRN("Combat"),          true  }, {  371, TRN("Regional teams"),  true  },
@@ -113,6 +115,16 @@ const CatDef CATS[] = {
     { 9000, TRN("Local (US)"),      true  }, {19000, TRN("Other"),           true  },
 };
 const int N_CATS = (int)(sizeof CATS / sizeof CATS[0]);
+
+// The genre pages (livetv.h LG_*), named for the screen.
+const char *const GENRE_LABEL[LG_COUNT] = {
+    TRN("News"), TRN("Sports"), TRN("Movies"), TRN("Kids"), TRN("Music"),
+    TRN("Crime & Mystery"), TRN("Comedy"), TRN("Horror & Sci-Fi"), TRN("Reality"),
+    TRN("Food"), TRN("Home & Lifestyle"), TRN("Nature & Animals"),
+    TRN("History & Learning"), TRN("Game Shows"), TRN("Westerns"),
+    TRN("Cars & Motors"), TRN("Faith"), TRN("Latino"), TRN("Shopping"),
+};
+int        s_gcount[LG_COUNT];  // channels the server has in each genre
 const int SPORTS_BELOW = 1000;
 
 struct Page { int first, count, cat, key; };    // key: livetv_prefs.h (a category's base, or LP_FAVS / LP_RECENT)
@@ -127,7 +139,7 @@ int        s_page = 0;                              // the one shown
 float     *s_nums = NULL;       int s_nnums = 0;    // every channel's number, list order
 bool       s_index_ok = false;                      // s_nums / s_pages describe the server
 bool       s_index_tried = false;                   // asked since the tab opened (or the list changed)
-bool paging(void) { return s_index_ok && s_nnums > PAGE_MIN && s_npages > 1; }
+bool paging(void) { return s_index_ok && s_npages > 1; }
 
 // ---- search ----
 bool s_search_on = false;
@@ -141,7 +153,8 @@ enum { JOB_CHANNELS = 1, JOB_GUIDE = 2, JOB_INDEX = 4 };
 struct Job {
     int      kind;
     int      cfirst, ccount, gen;                   // the channel window asked for, and which list (s_gen)
-    int      mode;                                  // 0 a range, 1 Favourites, 2 Recently watched
+    int      mode;                                  // 0 a range, 1 Favourites, 2 Recently watched, 3 a genre
+    int      genre;                                 // mode 3: LG_*
     int      n_recent;
     char     recent[LP_MAX_RECENT][LP_ID_MAX];
     char     term[48];                              // a search, or "" for the page
@@ -156,6 +169,7 @@ Job              s_job;
 JFChannel       *w_ch = NULL;    int w_n = 0;       bool w_ch_ok = false;
 int              w_ctotal = 0;                      // the server's channel count, with that reply
 float           *w_nums = NULL;  int w_nnums = 0;   bool w_idx_ok = false;
+int              w_gcount[LG_COUNT];                // with the numbers: channels per genre
 JFProgram       *w_pg = NULL;    int w_pn = 0;
 sys_ppu_thread_t s_tid;
 bool             s_have_tid = false;
@@ -173,11 +187,28 @@ void worker_main(void *) {
         if (j.kind & JOB_INDEX) {
             w_nnums = jf_fetch_channel_numbers(w_nums, MAX_INDEX, NULL);
             w_idx_ok = w_nnums >= 0;
+            // The genre pages need every name once: the server keeps no
+            // categories for an M3U list, so they are guessed from the names.
+            memset(w_gcount, 0, sizeof w_gcount);
+            if (w_idx_ok) {
+                int total = 0;
+                const int n = jf_fetch_channels_range(w_ch, MAX_CH, 0, MAX_CH, &total, NULL);
+                for (int i = 0; i < n; i++) {
+                    const unsigned m = livetv_genre_mask(w_ch[i].name);
+                    for (int g = 0; g < LG_COUNT; g++) if (m >> g & 1u) w_gcount[g]++;
+                }
+            }
         }
         if (j.kind & JOB_CHANNELS) {
             int total = 0, n;
             if (j.mode == 1) {
                 n = jf_fetch_channels_range(w_ch, MAX_CH, 0, MAX_CH, &total, NULL, "&isFavorite=true");
+            } else if (j.mode == 3) {
+                n = jf_fetch_channels_range(w_ch, MAX_CH, 0, MAX_CH, &total, NULL);
+                int k = 0;
+                for (int i = 0; i < n; i++)
+                    if (livetv_genre_mask(w_ch[i].name) >> j.genre & 1u) w_ch[k++] = w_ch[i];
+                if (n >= 0) n = k;
             } else if (j.mode == 2) {
                 if (j.n_recent <= 0) { n = 0; }
                 else {
@@ -399,6 +430,11 @@ void submit(int kind) {
         snprintf(s_job.term, sizeof s_job.term, "%s", s_term);
         s_job.cfirst = 0;
         s_job.ccount = MAX_CH;
+    } else if (paging() && LP_IS_GENRE(s_pages[s_page].key)) {
+        s_job.mode = 3;
+        s_job.genre = LP_GENRE_OF(s_pages[s_page].key);
+        s_job.cfirst = 0;
+        s_job.ccount = MAX_CH;
     } else if (paging() && s_pages[s_page].key < 0) {
         s_job.mode = s_pages[s_page].key == LP_FAVS ? 1 : 2;
         s_job.cfirst = 0;
@@ -463,9 +499,10 @@ int cur_key(void) {
 // Favourites / Recently watched.  `want` is the page to stay on (0 = the one
 // the viewer left on last time).
 void build_pages(int want) {
-    int bases[MAX_PAGES], keys[MAX_PAGES];
+    int bases[MAX_PAGES], keys[MAX_PAGES], genres[LG_COUNT], ng = 0;
     for (int i = 0; i < s_raw_n; i++) bases[i] = CATS[s_raw_cat[i]].base;
-    const int n = lp_build_pages(&s_prefs, bases, s_raw_n, keys, MAX_PAGES);
+    for (int g = 0; g < LG_COUNT; g++) if (s_gcount[g] >= GENRE_MIN) genres[ng++] = LP_GENRE(g);
+    const int n = lp_build_pages_ex(&s_prefs, bases, s_raw_n, genres, ng, keys, MAX_PAGES);
     s_npages = 0;
     for (int k = 0; k < n; k++) {
         Page &pg = s_pages[s_npages++];
@@ -503,6 +540,12 @@ void collect(void) {
             for (int i = 0; i < N_CATS; i++) bases[i] = CATS[i].base;
             s_raw_n = livetv_page_ranges(s_nums, s_nnums, bases, N_CATS,
                                          s_raw_first, s_raw_count, s_raw_cat, MAX_PAGES);
+            // A short list is one numbered page: All Channels.
+            if (s_nnums <= PAGE_MIN) {
+                s_raw_n = s_nnums > 0 ? 1 : 0;
+                s_raw_first[0] = 0; s_raw_count[0] = s_nnums; s_raw_cat[0] = 0;
+            }
+            memcpy(s_gcount, w_gcount, sizeof s_gcount);
             prefs_load();
             build_pages(key_was);
             s_index_ok = true;
@@ -652,7 +695,9 @@ void cat_label(int cat, char *out, int cap) {
 }
 
 void key_label(int key, int cat, char *out, int cap) {
-    if (key == LP_FAVS)        snprintf(out, (size_t)cap, "%s", TR("Favourites"));
+    if (LP_IS_GENRE(key) && LP_GENRE_OF(key) < LG_COUNT)
+        snprintf(out, (size_t)cap, "%s", tr(GENRE_LABEL[LP_GENRE_OF(key)]));
+    else if (key == LP_FAVS)        snprintf(out, (size_t)cap, "%s", TR("Favourites"));
     else if (key == LP_RECENT) snprintf(out, (size_t)cap, "%s", TR("Recently watched"));
     else                       cat_label(cat, out, cap);
 }
@@ -689,13 +734,16 @@ void keep_visible(void) {
 void customise(void) {
     if (!s_index_ok) return;
     struct Row { int key, cat, count; };
-    Row rows[MAX_PAGES + 2];
+    Row rows[MAX_PAGES + 2 + LG_COUNT];
     int nr = 0, bases[MAX_PAGES];
     rows[nr++] = { LP_FAVS, -1, 0 };
     rows[nr++] = { LP_RECENT, -1, 0 };
-    for (int i = 0; i < s_raw_n && nr < MAX_PAGES + 2; i++) {
+    for (int i = 0; i < s_raw_n && i < MAX_PAGES; i++) {
         bases[i] = CATS[s_raw_cat[i]].base;
         rows[nr++] = { bases[i], s_raw_cat[i], s_raw_count[i] };
+        if (i == 0)
+            for (int g = 0; g < LG_COUNT; g++)
+                if (s_gcount[g] >= GENRE_MIN) rows[nr++] = { LP_GENRE(g), -1, s_gcount[g] };
     }
     const int was_key = s_page < s_npages ? s_pages[s_page].key : 0;
     bool changed = false;
@@ -762,7 +810,7 @@ void customise(void) {
             key_label(rows[i].key, rows[i].cat, lab, sizeof lab);
             drawTTF((u32)(bx + bs + UIS_W(16)), (u32)(y + (h - UIS_H(18)) / 2 - UIS_H(1)), lab, UIS_TF(18),
                     shown ? (is_sel ? XMB_WHITE : XMB_TEXT) : XMB_TEXT_FAINT);
-            if (rows[i].key > 0) {
+            if (rows[i].key > 0 || LP_IS_GENRE(rows[i].key)) {
                 char cnt[16];
                 snprintf(cnt, sizeof cnt, "%d", rows[i].count);
                 const int cw = ttf_text_width(cnt, UIS_TF(15));

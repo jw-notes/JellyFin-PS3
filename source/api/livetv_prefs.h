@@ -9,8 +9,8 @@
 //   LP_FAVS    "Favourites": every starred channel, from all categories
 //   LP_RECENT  "Recently watched": the last channels played, newest first
 //
-// A page is named by a key: a category's lowest channel number (> 0), or one of
-// the two above (< 0).  The file is jellyfin_livetv.txt, one fact per line:
+// A page is named by a key: a category's lowest channel number (> 0), one of
+// the two above, or a genre page (LP_GENRE, guessed from channel names).  The file is jellyfin_livetv.txt, one fact per line:
 //     hide <key>      a page the viewer turned off
 //     recent <id>     a channel watched (newest first)
 //     last <key>      the page shown last
@@ -19,6 +19,10 @@
 
 #define LP_FAVS         (-1)
 #define LP_RECENT       (-2)
+// A genre page (livetv.h LG_*): -100 - genre.  Up to 64 genres.
+#define LP_GENRE(g)     (-100 - (g))
+#define LP_IS_GENRE(k)  ((k) <= -100 && (k) > -164)
+#define LP_GENRE_OF(k)  (-100 - (k))
 #define LP_MAX_HIDDEN   32
 #define LP_MAX_RECENT   12
 #define LP_ID_MAX       40
@@ -52,6 +56,10 @@ int  lp_recent_rank(const LtPrefs *p, const char *id);
 // unless hidden.  Never fewer than one category: when every one is hidden they
 // all show.  Returns the count (at most `max`).
 int  lp_build_pages(const LtPrefs *p, const int *bases, int n_bases, int *out, int max);
+// The same with genre pages (`genres`, LP_GENRE keys, in order) after the
+// first category, each unless hidden.
+int  lp_build_pages_ex(const LtPrefs *p, const int *bases, int n_bases,
+                       const int *genres, int n_genres, int *out, int max);
 // How many categories lp_build_pages would offer.
 int  lp_visible_categories(const LtPrefs *p, const int *bases, int n_bases);
 // Which of `keys` to open on: `want` if offered, else the first category (a

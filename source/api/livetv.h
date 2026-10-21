@@ -88,3 +88,17 @@ int livetv_programme_at(const JFProgram *progs, int n, uint64_t t);
 // Debounce for channel changes: presses within `quiet_us` of the previous one
 // collapse to the last.  Returns true when a pending change should open now.
 bool livetv_debounce_ready(uint64_t last_press_us, uint64_t now_us, uint64_t quiet_us);
+
+// Genres worked out from a channel's name, for lists the server gives no
+// categories for (Jellyfin keeps no M3U group-title and no channel genres).
+// A keyword guess: a channel can be in several, or none.
+enum {
+    LG_NEWS, LG_SPORTS, LG_MOVIES, LG_KIDS, LG_MUSIC, LG_CRIME, LG_COMEDY,
+    LG_SCIFI, LG_REALITY, LG_FOOD, LG_HOME, LG_NATURE, LG_LEARNING,
+    LG_GAMESHOWS, LG_WESTERNS, LG_MOTORS, LG_FAITH, LG_LATINO, LG_SHOPPING,
+    LG_COUNT
+};
+// Bit g set for each genre LG_<g> the name suggests.
+unsigned livetv_genre_mask(const char *name);
+// The genre's display name, English (translate with tr()).
+const char *livetv_genre_label(int g);

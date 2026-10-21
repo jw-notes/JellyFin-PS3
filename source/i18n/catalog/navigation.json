@@ -123,7 +123,6 @@
   "No server answered at %s.": {"ja": "%s のサーバーから応答がありません。", "pt-BR": "Nenhum servidor respondeu em %s.", "de": "Unter %s hat kein Server geantwortet.", "fr": "Aucun serveur n'a répondu à %s.", "es": "Ningún servidor respondió en %s."},
   "Keep trying": {"ja": "再試行を続ける", "pt-BR": "Continuar tentando", "de": "Weiter versuchen", "fr": "Continuer d'essayer", "es": "Seguir intentando"},
   "Enter the server address": {"ja": "サーバーのアドレスを入力", "pt-BR": "Digitar o endereço do servidor", "de": "Serveradresse eingeben", "fr": "Saisir l'adresse du serveur", "es": "Introducir la dirección del servidor"},
-  "My Channels": {"ja": "マイチャンネル", "pt-BR": "Meus canais", "de": "Meine Sender", "fr": "Mes chaînes", "es": "Mis canales"},
   "Recently watched": {"ja": "最近視聴", "pt-BR": "Assistidos recentemente", "de": "Zuletzt gesehen", "fr": "Vues récemment", "es": "Vistos recientemente"},
   "Nothing watched yet": {"ja": "まだ視聴したチャンネルはありません", "pt-BR": "Nada assistido ainda", "de": "Noch nichts gesehen", "fr": "Rien de regardé pour l'instant", "es": "Aún no has visto nada"},
   "No favourites yet. Press the Favourite button on a channel.": {"ja": "お気に入りはまだありません。チャンネルで「お気に入り」ボタンを押してください。", "pt-BR": "Nenhum favorito ainda. Pressione o botão Favorito em um canal.", "de": "Noch keine Favoriten. Drücke bei einem Sender die Favoriten-Taste.", "fr": "Pas encore de favoris. Appuyez sur le bouton Favori sur une chaîne.", "es": "Aún no hay favoritos. Pulsa el botón Favorito en un canal."},

@@ -70,12 +70,12 @@ int lp_parse(const char *text, LtPrefs *p) {
         char *end = NULL;
         if (!strcmp(word, "hide")) {
             const long k = strtol(arg, &end, 10);
-            if (*end || k == 0 || k > 100000 || k < -2) continue;
+            if (*end || k == 0 || k > 100000 || (k < -2 && !LP_IS_GENRE(k))) continue;
             lp_set_hidden(p, (int)k, true);
             used++;
         } else if (!strcmp(word, "last")) {
             const long k = strtol(arg, &end, 10);
-            if (*end || k == 0 || k > 100000 || k < -2) continue;
+            if (*end || k == 0 || k > 100000 || (k < -2 && !LP_IS_GENRE(k))) continue;
             p->last = (int)k;
             used++;
         } else if (!strcmp(word, "recent")) {
@@ -111,14 +111,26 @@ int lp_visible_categories(const LtPrefs *p, const int *bases, int n_bases) {
     return n;
 }
 
-int lp_build_pages(const LtPrefs *p, const int *bases, int n_bases, int *out, int max) {
+int lp_build_pages_ex(const LtPrefs *p, const int *bases, int n_bases,
+                      const int *genres, int n_genres, int *out, int max) {
     int n = 0;
     if (!lp_is_hidden(p, LP_FAVS) && n < max) out[n++] = LP_FAVS;
     if (!lp_is_hidden(p, LP_RECENT) && p->n_recent > 0 && n < max) out[n++] = LP_RECENT;
     const bool all = lp_visible_categories(p, bases, n_bases) == 0;
-    for (int i = 0; i < n_bases && n < max; i++)
+    bool genres_done = false;
+    for (int i = 0; i < n_bases && n < max; i++) {
         if (all || !lp_is_hidden(p, bases[i])) out[n++] = bases[i];
+        if (!genres_done) {
+            genres_done = true;
+            for (int g = 0; g < n_genres && n < max; g++)
+                if (!lp_is_hidden(p, genres[g])) out[n++] = genres[g];
+        }
+    }
     return n;
+}
+
+int lp_build_pages(const LtPrefs *p, const int *bases, int n_bases, int *out, int max) {
+    return lp_build_pages_ex(p, bases, n_bases, NULL, 0, out, max);
 }
 
 int lp_pick_page(const int *keys, int n, int want) {
