@@ -264,8 +264,15 @@ void decode_thread_fn(void *arg) {
                             (unsigned long long)((now - lc_zero_since_us) / 1000ULL));
                     lc_zero_next_us += 1000000ULL;
                 }
+                // Back to the outer loop, which feeds the decoder from the
+                // ring.  `continue` stayed in this batch: with data trickling
+                // in (slow Wi-Fi, a low bitrate) the poll kept seeing a part
+                // packet and the read kept timing out on it, up to 128 times,
+                // so the decoder went hungry with the ring full (2026-10-21:
+                // 16k packets queued, 1-3 pictures decoded, half the frames
+                // dropped to catch up).
                 usleep(1000);
-                continue;
+                break;
             }
             lc_zero_since_us = 0;
             live_pcr_feed(&s_pcr, ts_pkt);
