@@ -1,9 +1,13 @@
 # Changelog
 
-What changed in each release of JellyFin [PS3], newest first. Releases from
-3.3 on are by jw-notes; 3.2.3 and earlier are
-[vortigauntlet's](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio),
-kept below as he wrote them.
+What changed in each release of JellyFin [PS3], newest first.
+
+Releases from 3.3 on are by jw-notes. They start from
+[vortigauntlet's](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio)
+3.2.3, which jw-notes fixed before making this version public: it froze on the
+Home screen on real hardware, ran out of memory at 1080p, and had sign-in and
+update-check bugs (see 3.3.0 below). vortigauntlet's own release notes for 3.2.3
+and earlier are kept at the end, as he wrote them.
 
 ## 3.3.9
 
@@ -150,9 +154,11 @@ kept below as he wrote them.
 
 ## 3.3.0 to 3.3.3
 
-The first releases of this continuation, based on vortigauntlet's 3.2.3.
+The first public releases. Before publishing, jw-notes took vortigauntlet's
+3.2.3, which did not run reliably on a real console, and fixed it; the new
+features followed on top.
 
-### Fixed
+### Fixed in vortigauntlet's 3.2.3
 
 **Freeze on the Home screen (the main one).**
 Builds made with the current ps3dev SDK hung the GPU about a second after Home appeared.
@@ -187,7 +193,7 @@ Classic's plain browsing background carried into Now Playing and hid JellyWave
 and JellyDrop. Music playback now enables the selected visualizer and restores
 Classic's plain background when you leave. The saved choice and Off option are kept.
 
-### Changed
+### New and changed
 
 - **Classic layout** (Settings > Display > Layout): a web-style Home with My Media,
   Continue Watching, Next Up, Downloaded and latest-library rows. Home, Search and
@@ -263,6 +269,9 @@ Classic's plain background when you leave. The saved choice and Off option are k
 ---
 
 # Earlier releases (vortigauntlet)
+
+vortigauntlet's release notes, unchanged. The problems fixed in 3.3.0 above
+were present in these versions.
 
 ## 3.2.3
 
