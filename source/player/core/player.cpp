@@ -1212,6 +1212,11 @@ void show_player_run(const JFItem *item, u32 resume_secs,
         // and this is where it does the most good.  Bounded by
         // RING_BYTES_MAX and halved down on allocation failure.
         if (meminfo_get(&total, &avail)) want = (avail / 4u) * 3u;
+        // A live reserve is seconds, not minutes: 10 MB holds the longest
+        // one at the highest live rate.  With full-size live slots the
+        // three-quarter rule took 15 MB and left 4.6 MB, and a channel
+        // change froze reopening the decoder in that (2026-10-21).
+        if (live && want > LIVE_RING_BYTES_MAX) want = LIVE_RING_BYTES_MAX;
         decode_ring_alloc(want);
     }
 

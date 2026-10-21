@@ -10,6 +10,9 @@ static inline unsigned live_buffer_seconds(int step) {
     return k_seconds[step];
 }
 
+// The read-ahead ring a live channel may take.
+#define LIVE_RING_BYTES_MAX (10u * 1024u * 1024u)
+
 // How long the wait may run past the reserve itself before playing anyway.
 #define LIVE_BUFFER_GRACE_US 12000000ULL
 
