@@ -291,10 +291,14 @@ bool poll_buttons(void) {
             if (cur->len >= 8) {
                 s_stick[i] = (u8)stick_dir(s_stick[i], (int)cur->ANA_L_H - 128,
                                            (int)cur->ANA_L_V - 128);
-                merged.up    |= s_stick[i] == STK_UP;
-                merged.down  |= s_stick[i] == STK_DOWN;
-                merged.left  |= s_stick[i] == STK_LEFT;
-                merged.right |= s_stick[i] == STK_RIGHT;
+                merged.stk_up    |= s_stick[i] == STK_UP;
+                merged.stk_down  |= s_stick[i] == STK_DOWN;
+                merged.stk_left  |= s_stick[i] == STK_LEFT;
+                merged.stk_right |= s_stick[i] == STK_RIGHT;
+                merged.up    |= merged.stk_up;
+                merged.down  |= merged.stk_down;
+                merged.left  |= merged.stk_left;
+                merged.right |= merged.stk_right;
             }
             any = true;
         }

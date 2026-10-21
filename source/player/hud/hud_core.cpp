@@ -134,6 +134,11 @@ void hud_open_menu(const char *title, const char *const *items,
 
 int hud_menu_choice(void) { return g_hud.menu_choice; }
 
+// When the live d-pad last stepped the volume (0: the slider was not opened
+// that way).
+static u64 s_vol_pad_us = 0;
+static const u64 VOL_PAD_SHOW_US = 2000000ULL;
+
 static bool s_skip_offered = false;
 void hud_set_skip_offered(bool offered) { s_skip_offered = offered; }
 
@@ -163,15 +168,34 @@ HudAction hud_handle_input(bool l2_pressed, bool r2_pressed, bool paused) {
         hud_show();
         return HUD_ACTION_CHAPTERS;
     }
-    // A live channel has nothing to seek in.  Up/Down change channel with
-    // the bar hidden or shown (nothing else uses them unless the volume
-    // slider or a menu is open); the remote's NEXT/PREV change it too.
+    // A live channel has nothing to seek in, so the d-pad works like a TV
+    // remote: Left/Right change channel, Up/Down change the volume, bar
+    // hidden or shown.  The left stick moves around the bar instead (it is
+    // ORed into up..right, which the code below reads).  An open menu keeps
+    // the d-pad for its list.  The remote's NEXT/PREV change channel too.
     if (g_hud.live) {
         if (BTN_PRESSED(next)) return HUD_ACTION_CHANNEL_NEXT;
         if (BTN_PRESSED(prev)) return HUD_ACTION_CHANNEL_PREV;
-        if (!g_hud.vol_active && !g_hud.menu_visible) {
-            if (BTN_PRESSED(up))   return HUD_ACTION_CHANNEL_NEXT;
-            if (BTN_PRESSED(down)) return HUD_ACTION_CHANNEL_PREV;
+        if (!g_hud.menu_visible) {
+            const bool pad_up    = btn_cur.up    && !btn_cur.stk_up;
+            const bool pad_down  = btn_cur.down  && !btn_cur.stk_down;
+            const bool pad_left  = btn_cur.left  && !btn_cur.stk_left;
+            const bool pad_right = btn_cur.right && !btn_cur.stk_right;
+            if (pad_right && !btn_prev.right) return HUD_ACTION_CHANNEL_NEXT;
+            if (pad_left  && !btn_prev.left)  return HUD_ACTION_CHANNEL_PREV;
+            const bool vol_up   = btn_nav_repeat(pad_up,   NAV_up);
+            const bool vol_down = btn_nav_repeat(pad_down, NAV_down);
+            if (vol_up || vol_down) {
+                if (!audio_passthrough_active())
+                    audio_set_volume(audio_get_volume() + (vol_up ? VOL_STEP : -VOL_STEP));
+                hud_show();
+                g_hud.focus      = FOCUS_VOLUME;
+                g_hud.vol_active = true;
+                s_vol_pad_us     = timing_get_us();
+                return HUD_ACTION_NONE;
+            }
+            // A held d-pad direction must not also steer the bar below.
+            if (pad_up || pad_down || pad_left || pad_right) return HUD_ACTION_NONE;
         }
     } else {
         const bool scan = btn_nav_repeat(btn_cur.ffwd || btn_cur.rew, NAV_media);
@@ -246,6 +270,22 @@ HudAction hud_handle_input(bool l2_pressed, bool r2_pressed, bool paused) {
     // it (d-pad left/right are swallowed so focus stays on the speaker).
     // With Dolby Digital output nothing is mixed here (the receiver decodes
     // and owns the volume), so up/down change nothing; the drawn panel says so.
+    // The slider the live d-pad opened is a readout, not a mode: it closes
+    // two seconds after the last step, or on any other input, which then
+    // goes on to do its own job.
+    if (g_hud.vol_active && s_vol_pad_us) {
+        const bool other = btn_cur.stk_up || btn_cur.stk_down || btn_cur.stk_left ||
+                           btn_cur.stk_right || BTN_PRESSED(cross) || BTN_PRESSED(circle) ||
+                           BTN_PRESSED(square) || BTN_PRESSED(triangle) ||
+                           BTN_PRESSED(l1) || BTN_PRESSED(r1) || l2_pressed || r2_pressed;
+        if (other || timing_get_us() - s_vol_pad_us > VOL_PAD_SHOW_US) {
+            g_hud.vol_active = false;
+            s_vol_pad_us     = 0;
+            if (!other) return HUD_ACTION_NONE;
+        } else {
+            return HUD_ACTION_NONE;
+        }
+    }
     if (g_hud.vol_active) {
         const bool receiver_owns = audio_passthrough_active();
         if (BTN_REPEAT(up)   && !receiver_owns) audio_set_volume(audio_get_volume() + VOL_STEP);
@@ -322,7 +362,7 @@ HudAction hud_handle_input(bool l2_pressed, bool r2_pressed, bool paused) {
         case FOCUS_FF:     if (g_hud.live) return HUD_ACTION_NONE;
                            g_hud.seek_delta = +s_incr_vals[g_hud.incr_idx]; return HUD_ACTION_SEEK;
         case FOCUS_AUDIO:  return HUD_ACTION_AUDIO_TRACK;
-        case FOCUS_VOLUME: g_hud.vol_active = true; return HUD_ACTION_NONE;
+        case FOCUS_VOLUME: g_hud.vol_active = true; s_vol_pad_us = 0; return HUD_ACTION_NONE;
         case FOCUS_CC:     return HUD_ACTION_SUBTITLE;
         case FOCUS_ASPECT: return HUD_ACTION_ASPECT;
         case FOCUS_PP:

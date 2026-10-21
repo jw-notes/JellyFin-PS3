@@ -14,6 +14,10 @@ typedef struct {
     u8 start, select;
     u8 l1, r1, l2, r2;
     u8 l3, r3;              // stick clicks (pad only)
+    // The left stick's direction alone.  It is also ORed into up..right for
+    // every screen that does not care; Live TV gives the d-pad and the stick
+    // different jobs.
+    u8 stk_up, stk_down, stk_left, stk_right;
     // Media keys, from the Blu-ray remote and keyboards (see ui_input.cpp).
     // No pad sets these, and they never borrow a pad button: START already
     // means stop in the player.
