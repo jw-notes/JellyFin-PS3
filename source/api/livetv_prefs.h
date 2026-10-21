@@ -6,7 +6,7 @@
 // it opens on, and the channels watched last.  Two pages belong to the viewer
 // rather than to the server's numbering:
 //
-//   LP_FAVS    "My Channels": every starred channel, from all categories
+//   LP_FAVS    "Favourites": every starred channel, from all categories
 //   LP_RECENT  "Recently watched": the last channels played, newest first
 //
 // A page is named by a key: a category's lowest channel number (> 0), or one of
@@ -47,7 +47,7 @@ void lp_note_recent(LtPrefs *p, const char *id);
 // Position of `id` in the recent list (0 = newest), or LP_MAX_RECENT when absent.
 int  lp_recent_rank(const LtPrefs *p, const char *id);
 
-// The pages to offer, in order, as keys: My Channels, Recently watched (only
+// The pages to offer, in order, as keys: Favourites, Recently watched (only
 // when something was watched), then the categories (`bases`, ascending), each
 // unless hidden.  Never fewer than one category: when every one is hidden they
 // all show.  Returns the count (at most `max`).
@@ -55,7 +55,7 @@ int  lp_build_pages(const LtPrefs *p, const int *bases, int n_bases, int *out, i
 // How many categories lp_build_pages would offer.
 int  lp_visible_categories(const LtPrefs *p, const int *bases, int n_bases);
 // Which of `keys` to open on: `want` if offered, else the first category (a
-// viewer with no stars should not land on an empty My Channels), else 0.
+// viewer with no stars should not land on an empty Favourites), else 0.
 int  lp_pick_page(const int *keys, int n, int want);
 
 #ifdef __cplusplus

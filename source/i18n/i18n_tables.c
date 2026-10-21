@@ -9,9 +9,9 @@ extern const int i18n_n;
 extern const char *const i18n_keys[];
 extern const char *const *const i18n_text[LANG__COUNT];
 
-const int i18n_n = 596;
+const int i18n_n = 595;
 
-const char *const i18n_keys[596] = {
+const char *const i18n_keys[595] = {
     "  %s  %s free",
     "  (can't be decoded yet)",
     "%.1f MB",
@@ -274,7 +274,6 @@ const char *const i18n_keys[596] = {
     "Nav",
     "Needs about %s, %s available (%s is always kept free).",
     "Network initialisation failed.",
-    "Networks",
     "New version available",
     "News",
     "Next Up",
@@ -610,7 +609,7 @@ const char *const i18n_keys[596] = {
     "\342\200\271 back %ds",
 };
 
-static const char *const i18n_text_ja[596] = {
+static const char *const i18n_text_ja[595] = {
     "  %s  %s \347\251\272\343\201\215",
     "  \357\274\210\343\201\276\343\201\240\343\203\207\343\202\263\343\203\274\343\203\211\343\201\247\343\201\215\343\201\276\343\201\233\343\202\223\357\274\211",
     "%.1f MB",
@@ -873,7 +872,6 @@ static const char *const i18n_text_ja[596] = {
     "\347\247\273\345\213\225",
     "\347\264\204 %s \345\277\205\350\246\201\343\200\201\347\251\272\343\201\215 %s\357\274\210\345\270\270\343\201\253 %s \343\202\222\347\251\272\343\201\221\343\201\246\343\201\212\343\201\215\343\201\276\343\201\231\357\274\211\343\200\202",
     "\343\203\215\343\203\203\343\203\210\343\203\257\343\203\274\343\202\257\343\201\256\345\210\235\346\234\237\345\214\226\343\201\253\345\244\261\346\225\227\343\201\227\343\201\276\343\201\227\343\201\237\343\200\202",
-    "\343\203\215\343\203\203\343\203\210\343\203\257\343\203\274\343\202\257",
     "\346\226\260\343\201\227\343\201\204\343\203\220\343\203\274\343\202\270\343\203\247\343\203\263\343\201\214\343\201\202\343\202\212\343\201\276\343\201\231",
     "\343\203\213\343\203\245\343\203\274\343\202\271",
     "\346\254\241\343\201\253\350\246\213\343\202\213",
@@ -1209,7 +1207,7 @@ static const char *const i18n_text_ja[596] = {
     "\342\200\271 %d\347\247\222\346\210\273\343\202\213",
 };
 
-static const char *const i18n_text_pt_BR[596] = {
+static const char *const i18n_text_pt_BR[595] = {
     "  %s  %s livres",
     "  (ainda n\303\243o pode ser decodificado)",
     "%.1f MB",
@@ -1472,7 +1470,6 @@ static const char *const i18n_text_pt_BR[596] = {
     "Navegar",
     "Precisa de cerca de %s, %s dispon\303\255veis (%s ficam sempre livres).",
     "Falha ao iniciar a rede.",
-    "Canais",
     "Nova vers\303\243o dispon\303\255vel",
     "Not\303\255cias",
     "A seguir",
@@ -1808,7 +1805,7 @@ static const char *const i18n_text_pt_BR[596] = {
     "\342\200\271 voltar %ds",
 };
 
-static const char *const i18n_text_de[596] = {
+static const char *const i18n_text_de[595] = {
     "  %s  %s frei",
     "  (kann noch nicht decodiert werden)",
     "%.1f MB",
@@ -2071,7 +2068,6 @@ static const char *const i18n_text_de[596] = {
     "Navigieren",
     "Ben\303\266tigt ca. %s, %s verf\303\274gbar (%s bleiben immer frei).",
     "Netzwerkinitialisierung fehlgeschlagen.",
-    "Sender",
     "Neue Version verf\303\274gbar",
     "Nachrichten",
     "Als N\303\244chstes",
@@ -2407,7 +2403,7 @@ static const char *const i18n_text_de[596] = {
     "\342\200\271 %ds zur\303\274ck",
 };
 
-static const char *const i18n_text_fr[596] = {
+static const char *const i18n_text_fr[595] = {
     "  %s  %s libres",
     "  (ne peut pas encore \303\252tre d\303\251cod\303\251)",
     "%.1f Mo",
@@ -2670,7 +2666,6 @@ static const char *const i18n_text_fr[596] = {
     "Naviguer",
     "Environ %s n\303\251cessaires, %s disponibles (%s restent toujours libres).",
     "\303\211chec de l'initialisation du r\303\251seau.",
-    "Cha\303\256nes",
     "Nouvelle version disponible",
     "Actualit\303\251s",
     "\303\200 suivre",
@@ -3006,7 +3001,7 @@ static const char *const i18n_text_fr[596] = {
     "\342\200\271 reculer de %ds",
 };
 
-static const char *const i18n_text_es[596] = {
+static const char *const i18n_text_es[595] = {
     "  %s  %s libres",
     "  (a\303\272n no se puede decodificar)",
     "%.1f MB",
@@ -3269,7 +3264,6 @@ static const char *const i18n_text_es[596] = {
     "Navegar",
     "Se necesitan unos %s, hay %s disponibles (siempre se reservan %s).",
     "Fall\303\263 la inicializaci\303\263n de la red.",
-    "Canales",
     "Nueva versi\303\263n disponible",
     "Noticias",
     "A continuaci\303\263n",

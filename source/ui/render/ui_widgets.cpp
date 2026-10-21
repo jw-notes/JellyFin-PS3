@@ -478,6 +478,8 @@ static const struct { char glyph; int row, col; } PS_TILES[] = {
     { 'E',  9, 3 },   // D-pad, plain white (Jump)
     { 'L',  6, 7 },   // L2
     { 'R',  5, 3 },   // R2
+    { 'l',  6, 3 },   // L1, the same solid style as L2
+    { 'r',  6, 11 },  // R1
 };
 #define PS_NTILES ((int)(sizeof PS_TILES / sizeof PS_TILES[0]))
 
@@ -726,55 +728,6 @@ void xmb_draw_mark(int x, int y, int bell_px) {
 // Controller-hints bar — sprite buttons + labels, bottom-right
 // -------------------------------------------------------
 
-// Shoulder-button badge — handoff section 3.1: "26x22 rounded rects (radius 6,
-// 1.5px text_dim border, mono 10.5 label)".
-//
-// Outline only, drawn as four OPAQUE rects.  A real radius-6 corner needs
-// coverage blending, and blended CPU rects read video memory at ~700ns/pixel
-// (see UI-BRIEF.md) -- one hint bar of them would cost more than the entire
-// frame budget.  Instead each edge is inset by the corner radius so the four
-// strokes stop short of meeting, which reads as a rounded box at TV distance
-// and costs nothing but writes.  bpx stays 0.
-#define HINT_BADGE_W    26
-#define HINT_BADGE_H    22
-#define HINT_BADGE_R     3   // corner inset, px at 720p (visual radius ~6)
-
-// The whole bar scales with UIS_T rather than UIS_W/UIS_H: it is a text-led
-// cluster, and at 1080p the pass-through forms left the badges and their labels
-// at two-thirds the handoff's intended size.  Scaling only the type would leave
-// 19px labels inside a 26px box, so icons, badges, gaps and text all move
-// together and the bar keeps the proportions section 3.1 draws.
-static int hint_badge_w(void) { return UIS_H(HINT_BADGE_W); }
-
-static void draw_hint_badge(int x, int cy, const char *label) {
-    const int w = UIS_H(HINT_BADGE_W);
-    const int h = UIS_H(HINT_BADGE_H);
-    const int t = UIS_H(2) < 1 ? 1 : UIS_H(2);   // 1.5px spec, on the pixel grid
-    const int r = UIS_H(HINT_BADGE_R);
-    const int y = cy - h / 2;
-
-    if (x < 0 || y < 0 || (u32)(x + w) > display_width ||
-        (u32)(y + h) > display_height) return;
-
-    const u32 c = XMB_TEXT_DIM;
-    drawRect((u32)(x + r),         (u32)y,               (u32)(w - 2 * r), (u32)t, c);
-    drawRect((u32)(x + r),         (u32)(y + h - t),     (u32)(w - 2 * r), (u32)t, c);
-    drawRect((u32)x,               (u32)(y + r),         (u32)t, (u32)(h - 2 * r), c);
-    drawRect((u32)(x + w - t),     (u32)(y + r),         (u32)t, (u32)(h - 2 * r), c);
-
-    // Centred label.  The design asks for a mono face; this build has none
-    // (UI_FACE_REGULAR/BOLD/NOTO/ROBOCOND), so regular stands in at the spec
-    // size -- "L1"/"R1" are two glyphs and do not need the alignment a mono
-    // face buys for the date and the tech strip.
-    const float px = UIS_TF(10.5f);      // section 3.1: mono 10.5 badge label
-    const int   tw = ttf_text_width(label, px);
-    drawTTF((u32)(x + (w - tw) / 2), (u32)(cy - (int)(px * 0.55f)), label, px, c);
-}
-
-// A hint is a shoulder badge when its glyph is lowercase 'l'/'r' (L1/R1).
-// Uppercase 'L'/'R' stay the L2/R2 sprites the sheet already carries.
-static bool hint_is_shoulder(char g) { return g == 'l' || g == 'r'; }
-
 void draw_hints_bar(const Hint *hints, int n) {
     if (n <= 0) return;
     ps_sprites_load();
@@ -793,9 +746,7 @@ void draw_hints_bar(const Hint *hints, int n) {
 
     int total_w = 0;
     for (int i = 0; i < n; i++) {
-        total_w += hint_is_shoulder(hints[i].glyph)
-                     ? hint_badge_w()
-                     : ps_btn_width(hints[i].glyph, icon_h);
+        total_w += ps_btn_width(hints[i].glyph, icon_h);
         if (hints[i].label && hints[i].label[0]) {
             total_w += gap_it + ttf_text_width(tr(hints[i].label), text_px, heavy);
             if (i < n - 1) total_w += gap_sep;
@@ -814,13 +765,8 @@ void draw_hints_bar(const Hint *hints, int n) {
     if (cy < 0 || (u32)cy >= display_height) return;
 
     for (int i = 0; i < n; i++) {
-        if (hint_is_shoulder(hints[i].glyph)) {
-            draw_hint_badge(x, cy, hints[i].glyph == 'l' ? "L1" : "R1");
-            x += hint_badge_w();
-        } else {
-            draw_ps_button_vcentered((u32)x, cy, hints[i].glyph, icon_h, 255);
-            x += ps_btn_width(hints[i].glyph, icon_h);
-        }
+        draw_ps_button_vcentered((u32)x, cy, hints[i].glyph, icon_h, 255);
+        x += ps_btn_width(hints[i].glyph, icon_h);
         if (hints[i].label && hints[i].label[0]) {
             x += gap_it;
             drawTTF((u32)x, (u32)(cy - (int)(text_px * 0.55f)), tr(hints[i].label),

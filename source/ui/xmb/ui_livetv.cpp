@@ -95,10 +95,12 @@ bool       s_in_details = false;
 
 // ---- categories ----
 // The lowest channel number of each, ascending.  Labels from 1000 up are
-// generic; the ones below it are sports.  Names in capitals are not translated.
+// generic and 101-999 are sports.  1-100 is the catch-all, where a list with
+// no such numbering (or none at all) puts every channel, so it is named for
+// the viewer rather than as a sport.  Names in capitals are not translated.
 struct CatDef { int base; const char *label; bool translate; };
 const CatDef CATS[] = {
-    {    1, TRN("Networks"),        true  }, {  101, "NFL",                  false },
+    {    1, TRN("My Channels"),     true  }, {  101, "NFL",                  false },
     {  151, "NBA",                  false }, {  201, "NHL",                  false },
     {  251, "MLB",                  false }, {  331, TRN("Motorsport"),      true  },
     {  351, TRN("Combat"),          true  }, {  371, TRN("Regional teams"),  true  },
@@ -139,7 +141,7 @@ enum { JOB_CHANNELS = 1, JOB_GUIDE = 2, JOB_INDEX = 4 };
 struct Job {
     int      kind;
     int      cfirst, ccount, gen;                   // the channel window asked for, and which list (s_gen)
-    int      mode;                                  // 0 a range, 1 My Channels, 2 Recently watched
+    int      mode;                                  // 0 a range, 1 Favourites, 2 Recently watched
     int      n_recent;
     char     recent[LP_MAX_RECENT][LP_ID_MAX];
     char     term[48];                              // a search, or "" for the page
@@ -458,7 +460,7 @@ int cur_key(void) {
 }
 
 // The pages on offer: what the server has, less what the viewer hid, behind
-// My Channels / Recently watched.  `want` is the page to stay on (0 = the one
+// Favourites / Recently watched.  `want` is the page to stay on (0 = the one
 // the viewer left on last time).
 void build_pages(int want) {
     int bases[MAX_PAGES], keys[MAX_PAGES];
@@ -645,12 +647,12 @@ void search_ask(void) {
 void cat_label(int cat, char *out, int cap) {
     const CatDef &c = CATS[cat];
     const char *name = c.translate ? tr(c.label) : c.label;
-    if (c.base < SPORTS_BELOW) snprintf(out, (size_t)cap, "%s | %s", TR("Sports"), name);
+    if (c.base > 1 && c.base < SPORTS_BELOW) snprintf(out, (size_t)cap, "%s | %s", TR("Sports"), name);
     else                       snprintf(out, (size_t)cap, "%s", name);
 }
 
 void key_label(int key, int cat, char *out, int cap) {
-    if (key == LP_FAVS)        snprintf(out, (size_t)cap, "%s", TR("My Channels"));
+    if (key == LP_FAVS)        snprintf(out, (size_t)cap, "%s", TR("Favourites"));
     else if (key == LP_RECENT) snprintf(out, (size_t)cap, "%s", TR("Recently watched"));
     else                       cat_label(cat, out, cap);
 }
@@ -1046,7 +1048,7 @@ bool xmb_input_livetv(void) {
             snprintf(id, sizeof id, "%s", s_ch[s_sel].id);
             if (jf_set_favourite(id, want)) {
                 if (!want && cur_key() == LP_FAVS) {
-                    // Un-starred on My Channels: it leaves the page.
+                    // Un-starred on Favourites: it leaves the page.
                     memmove(&s_ch[s_sel], &s_ch[s_sel + 1], sizeof(JFChannel) * (size_t)(s_n - s_sel - 1));
                     s_n--;
                     if (s_sel >= s_n) s_sel = s_n > 0 ? s_n - 1 : 0;
