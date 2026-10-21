@@ -21,14 +21,14 @@ Tested on a retail PS3 with CFW at 1080p.
 - **Circle cancels "Connecting to server..."** while the server opens a
   channel (up to a minute), and quitting from the PS menu works there too.
   Before, the only way out was switching off.
-- **Live requests ask for High profile** at every size. A VA-API (AMD VCE)
-  Baseline encode froze the console; High plays at 30 fps.
-- **No more freezes from oversized pictures.** With VA-API the server sends a
-  live channel at its source 1920x1080 whatever MaxWidth/MaxHeight say (its
-  probe reads the smallest HLS variant). Live slots now always hold 1080p,
-  and any picture larger than the slots ends playback as a decoder error
-  instead of overrunning them. The live read-ahead ring is capped at 10 MB so
-  the larger slots leave memory for a channel change.
+- **Fewer Live TV freezes with hardware-encoding servers.** Live channels are
+  asked for in High profile at every quality, which every server encoder can
+  produce and the PS3 always decodes.
+- **No more freezes when a server sends a bigger picture than asked for.**
+  Some servers send live channels at full 1080p whatever quality you pick.
+  Live TV now always has room for a 1080p picture, and any picture too big
+  for the player stops playback with an error instead of freezing the
+  console.
 - **No server crash on channel changes.** Start/progress reports leave the
   LiveStreamId out: with it, Jellyfin 10.11's transcode kill timer looks the
   stream up with a null PlaySessionId and takes the whole server down
