@@ -97,7 +97,7 @@ adec_aac.o:    CXXFLAGS += -I$(PORTLIBS)/include
 # app calls into libsysfs; its file I/O is lv2 syscalls.
 # -lfaad: AAC in files from a drive (source/audio/adec_aac.cpp), from the portlibs.
 LIBS        := -L$(PORTLIBS)/lib -lfaad -lvdec -laudio -lrsx -lgcm_sys -lio -lsysutil -lrt -llv2 -lm \
-               -lnet -lsysmodule -lssl -lhttp -lhttputil -lsysfs
+               -lnet -lnetctl -lsysmodule -lssl -lhttp -lhttputil -lsysfs
 
 LIBDIRS     :=
 

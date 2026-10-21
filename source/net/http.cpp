@@ -11,6 +11,7 @@
 #include <net/net.h>
 #include <net/socket.h>
 #include <net/poll.h>
+#include <net/netctl.h>
 #include <netinet/in.h>
 #include <sys/time.h>
 #include <sysmodule/sysmodule.h>
@@ -88,6 +89,9 @@ static void raw_release(char *b) {
 // A Live TV PlaybackInfo opens and probes the channel before it answers, which
 // can take longer than 24 s.  Callers raise the budget around that one request.
 static volatile int s_first_byte_tries = HTTP_FIRST_BYTE_TRIES;
+
+static bool s_wireless = false;
+bool http_net_wireless(void) { return s_wireless; }
 
 void http_set_first_byte_secs(int secs) {
     int tries = secs > 0 ? (secs + HTTP_IO_TIMEOUT_SEC - 1) / HTTP_IO_TIMEOUT_SEC : 0;
@@ -561,6 +565,15 @@ int http_init(void) {
                            : "net: http mutex create FAILED");
     }
     https_rt_init();
+    // Wired or Wi-Fi decides the stream's receive window (stream.cpp).
+    if (sysModuleLoad(SYSMODULE_NETCTL) == 0 && netCtlInit() == 0) {
+        union net_ctl_info info;
+        if (netCtlGetInfo(NET_CTL_INFO_DEVICE, &info) == 0)
+            s_wireless = info.device == NET_CTL_DEVICE_WIRELESS;
+        plog(s_wireless ? "net: connected over Wi-Fi" : "net: connected by cable");
+    } else {
+        plog("net: connection type unknown");
+    }
     return HTTP_SUCCESS;
 }
 

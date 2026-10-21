@@ -38,6 +38,10 @@ int  http_request(int method, const char *url, const char *body,
 // default 24 s.  Never lowers it below the default.
 void http_set_first_byte_secs(int secs);
 
+// The console is on Wi-Fi (asked once, at http_init).  False when wired or
+// when the system could not say.
+bool http_net_wireless(void);
+
 // A request another thread may give up on.  The thread making it calls
 // http_cancel_arm() first and http_cancel_disarm() after; http_cancel_fire()
 // from any thread shuts its socket, and the request returns -1 at once.

@@ -217,7 +217,12 @@ static void gap_note(u64 t0, u64 t1, int n) {
 
 bool stream_window_reopen_pending(void) { return s_win_reopen != 0; }
 void stream_window_new_title(bool live) {
-    const int kb = live ? WIN_KB_SAFE : 0;
+    // Live TV, and anything over Wi-Fi, starts small: a PS3 on Wi-Fi cannot
+    // carry what the large window is for, and on a laggy link it let in more
+    // than the console's network memory holds -- every receive failing "no
+    // buffer space" and the whole console's networking with it, for a film
+    // 13 s in at 9.5 Mbps (2026-10-21).
+    const int kb = (live || http_net_wireless()) ? WIN_KB_SAFE : 0;
     if (s_win_fallback_kb != kb)
         lc_logf("stream: new title -- a %d KB window", kb ? kb : WIN_KB_FAST);
     s_win_fallback_kb = kb;
