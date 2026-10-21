@@ -871,17 +871,30 @@ void show_player_run(const JFItem *item, u32 resume_secs,
         const bool threaded = buffering_active() &&
             sysThreadCreate(&tid, [](void *a) {
                 auto *p = (decltype(pi) *)a;
+                http_cancel_arm();
                 p->ok = jellyfin_get_playback_info(p->item->id, p->msid, p->ps->session_id,
                                                    sizeof(p->ps->session_id), &p->ps->total_secs,
                                                    NULL, &p->ps->source, true);
+                http_cancel_disarm();
                 __sync_synchronize();
                 p->done = true;
                 sysThreadExit(0);
             }, &pi, 1100, 64 * 1024, THREAD_JOINABLE, tname) == 0;
+        bool gave_up = false;
         if (threaded) {
+            // A live channel can take up to a minute to open on the server;
+            // Circle gives up on it rather than leaving no way out.
             const u64 t0 = timing_get_us();
+            init_btns();
+            buffering_step(TR("Connecting to server..."), false, TR("Cancel"));
             while (!pi.done) {
                 sysUtilCheckCallback();
+                poll_buttons();
+                if (!gave_up && BTN_PRESSED(circle)) {
+                    plog("show_player: PlaybackInfo cancelled");
+                    gave_up = true;
+                    http_cancel_fire();
+                }
                 buffering_frame_paced(16000);
                 usleep(2000);
             }
@@ -896,6 +909,14 @@ void show_player_run(const JFItem *item, u32 resume_secs,
                                                NULL, &ps.source, true);
         }
         if (live) http_set_first_byte_secs(0);
+        if (gave_up) {
+            // The server may have opened the channel after all; close it.
+            if (pi.ok && ps.source.live_stream_id[0]) jf_livestream_close(ps.source.live_stream_id);
+            init_btns();
+            player_startup_abort();
+            ui_restore_rsx_state();
+            return;
+        }
         if (!pi.ok) {
             plog("show_player: PlaybackInfo failed, streaming without PlaySessionId");
             ps.session_id[0] = '\0';

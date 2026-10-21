@@ -15,6 +15,7 @@
 #include <sys/time.h>
 #include <sysmodule/sysmodule.h>
 #include <sys/mutex.h>
+#include <sys/thread.h>
 
 #include "http.h"
 #include "https_client.h"
@@ -91,6 +92,58 @@ static volatile int s_first_byte_tries = HTTP_FIRST_BYTE_TRIES;
 void http_set_first_byte_secs(int secs) {
     int tries = secs > 0 ? (secs + HTTP_IO_TIMEOUT_SEC - 1) / HTTP_IO_TIMEOUT_SEC : 0;
     s_first_byte_tries = tries > HTTP_FIRST_BYTE_TRIES ? tries : HTTP_FIRST_BYTE_TRIES;
+}
+
+// One cancellable request at a time (see http.h).  s_cx_lock keeps fire's
+// shutdown from landing on a socket number that was closed and reused.
+static volatile int       s_cx_lock  = 0;
+static volatile bool      s_cx_armed = false, s_cx_fired = false;
+static volatile int       s_cx_sock  = -1;
+static sys_ppu_thread_t   s_cx_tid;
+
+static void cx_lock(void)   { while (__sync_lock_test_and_set(&s_cx_lock, 1)) usleep(100); }
+static void cx_unlock(void) { __sync_lock_release(&s_cx_lock); }
+
+static bool cx_mine(void) {
+    if (!s_cx_armed) return false;
+    sys_ppu_thread_t me;
+    return sysThreadGetId(&me) == 0 && me == s_cx_tid;
+}
+
+void http_cancel_arm(void) {
+    cx_lock();
+    sysThreadGetId((sys_ppu_thread_t *)&s_cx_tid);
+    s_cx_fired = false;
+    s_cx_sock  = -1;
+    s_cx_armed = true;
+    cx_unlock();
+}
+
+void http_cancel_disarm(void) {
+    cx_lock();
+    s_cx_armed = false;
+    s_cx_sock  = -1;
+    cx_unlock();
+}
+
+void http_cancel_fire(void) {
+    cx_lock();
+    if (s_cx_armed) {
+        s_cx_fired = true;
+        if (s_cx_sock >= 0) netShutdown(s_cx_sock, SHUT_RDWR);
+    }
+    cx_unlock();
+}
+
+// Register (sock >= 0) or forget (-1) the armed thread's socket.  False when
+// the request was already given up on.
+static bool cx_track(int sock) {
+    if (!cx_mine()) return true;
+    cx_lock();
+    s_cx_sock = sock;
+    const bool fired = s_cx_fired;
+    cx_unlock();
+    return !fired;
 }
 
 static void url_parse(const char *url, char *host, int hsz,
@@ -298,7 +351,7 @@ static int read_response(int sock, char *buf, int cap,
             // Close, error, or timeout.  While NOTHING has arrived yet this is
             // a time-to-first-byte timeout rather than an idle one, so spend
             // the larger budget before giving up -- see HTTP_FIRST_BYTE_TRIES.
-            if (total == 0 && ++first_byte_tries < s_first_byte_tries)
+            if (total == 0 && !s_cx_fired && ++first_byte_tries < s_first_byte_tries)
                 continue;
             break;
         }
@@ -536,11 +589,14 @@ static int http_request_once(int method, const char *url, const char *body,
     char host[256]; int port; char path[512];
     url_parse(url, host, sizeof(host), &port, path, sizeof(path));
 
+    if (cx_mine() && s_cx_fired) return -1;
     int sock = http_connect_locked(host, port);
     if (sock < 0) return -1;
+    if (!cx_track(sock)) { cx_track(-1); netClose(sock); return -1; }
     char *raw = raw_claim();
     if (!raw) {
         plog("http: no memory for a second response buffer");
+        cx_track(-1);
         netClose(sock);
         return -1;
     }
@@ -576,6 +632,7 @@ static int http_request_once(int method, const char *url, const char *body,
         snprintf(b, sizeof(b), "http: send failed (%d hdr + %d body) %.60s",
                  rlen, blen, path);
         plog(b);
+        cx_track(-1);
         netClose(sock);
         raw_release(raw);
         return -2;
@@ -585,7 +642,13 @@ static int http_request_once(int method, const char *url, const char *body,
     RespDiag dg; memset(&dg, 0, sizeof(dg));
     int status = read_response(sock, raw, RAW_CAP,
                                &body_off, &body_len, &dg);
+    cx_track(-1);
     netClose(sock);
+    if (cx_mine() && s_cx_fired) {
+        if (out_size > 0) out[0] = '\0';
+        raw_release(raw);
+        return -1;
+    }
 
     // A 200 with nothing in it is not a thing a server does, so when it
     // happens the interesting facts are on THIS side of the socket and they

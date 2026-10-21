@@ -64,9 +64,11 @@ typedef struct {
     bool                 live;        // a Live TV channel: item_id is the channel
 } StreamSelection;
 
-// A live channel has no source to copy from and no length: the video is
-// always transcoded, and "Original" quality means this ceiling.
+// A live channel has no length.  With no quality step it gets this ceiling.
 #define STREAM_LIVE_VIDEO_BPS 10000000u
+// Live TV Quality = Auto: the most a channel may be to be passed through as
+// it is.  Most channels are well under it, so they are copied, not re-encoded.
+#define STREAM_LIVE_AUTO_BPS  8000000u
 
 typedef struct {
     // video

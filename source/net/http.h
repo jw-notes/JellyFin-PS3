@@ -38,6 +38,13 @@ int  http_request(int method, const char *url, const char *body,
 // default 24 s.  Never lowers it below the default.
 void http_set_first_byte_secs(int secs);
 
+// A request another thread may give up on.  The thread making it calls
+// http_cancel_arm() first and http_cancel_disarm() after; http_cancel_fire()
+// from any thread shuts its socket, and the request returns -1 at once.
+void http_cancel_arm(void);
+void http_cancel_disarm(void);
+void http_cancel_fire(void);
+
 // POST a NUL-terminated text/plain body (client log upload).  Same return
 // contract as http_request().
 int  http_post_text(const char *url, const char *body, const char *token,

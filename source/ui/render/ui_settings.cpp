@@ -84,7 +84,7 @@ static void v_dlloc(char *b, int c, bool *l) {
     else if (note[0]) val_text(b, c, l, TR("USB (not ready)"), false);
     else              val_text(b, c, l, TR("USB drive"), true);
 }
-static void v_livetv(char *b, int c, bool *l) { val_text(b, c, l, livetv_quality_label(), true); }
+static void v_livetv(char *b, int c, bool *l) { val_text(b, c, l, tr(livetv_quality_label()), true); }
 static void v_livebuf(char *b, int c, bool *l) { val_text(b, c, l, livetv_buffer_label(), true); }
 static void v_direct(char *b, int c, bool *l)   { val_text(b, c, l, directstream_enabled() ? TR("Auto") : TR("Off"), directstream_enabled()); }
 static void v_24hz(char *b, int c, bool *l)     { val_text(b, c, l, d24_enabled() ? TR("Auto") : TR("Off"), d24_enabled()); }

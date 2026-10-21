@@ -11,6 +11,17 @@ Tested on a retail PS3 with CFW at 1080p.
   it now waits about 8 s, less when the server sends a burst. The byte target
   stays as the memory ceiling and for streams without a PCR.
 - **Live TV Buffer** (Settings > Playback): 4, 8 (default) or 15 seconds.
+- **Live channels are passed through when the PS3 can play them.** Buffering
+  went on after the start because the server re-encoded each channel in
+  software at about 0.85x real time, so the buffer always ran dry. A stream
+  copy of the same channel ran at exactly 1.0x. Live requests now let the
+  server copy H.264 channels under the quality ceiling (High listed first,
+  level 4.1); anything else is still re-encoded. Direct Stream = Off restores
+  the old always-re-encode request.
+- **Live TV Quality: Auto** (new default): the 720p frame (1080p with the
+  1080p toggle) and an 8 Mbps ceiling, so most channels are copied untouched.
+- **Circle cancels "Connecting to server..."** while the server opens a
+  channel (up to a minute). Before, the only way out was switching off.
 - Server tip: with *Read input at native frame rate* on the M3U tuner, the
   server sends live channels at exactly real time, so the reserve fills no
   faster than it plays. Turning it off lets the server send what the source
