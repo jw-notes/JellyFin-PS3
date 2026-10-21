@@ -588,6 +588,17 @@ bool vdec_pull_frame(void) {
                      h->width, h->height, jbuf_fw(), jbuf_fh(),
                      (unsigned)pic->picture_size);
             plog(buf);
+            // A picture larger than the slots must never be written into
+            // them: the server ignored MaxWidth/MaxHeight once (VA-API live,
+            // 1920x1088 into 1280x720 slots) and the overrun froze the
+            // console.  End playback as a decoder error instead.
+            if (vid_frame_bytes(h->width, h->height) > jbuf_slot_bytes()) {
+                snprintf(buf, sizeof(buf), "vdec: picture %ux%u larger than the %u KB slots",
+                         h->width, h->height, jbuf_slot_bytes() / 1024);
+                plog(buf);
+                s_vdec_error = true;
+                return false;
+            }
             jbuf_set_dims(h->width, h->height);
         }
     }

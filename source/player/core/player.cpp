@@ -1164,7 +1164,13 @@ void show_player_run(const JFItem *item, u32 resume_secs,
 
     // The upload thread stages the second slot too, but only for the blend.
     jbuf_set_front_locked(vblend_enabled() ? 2 : 1);
-    if (!jbuf_alloc(ps.req_w, ps.req_h)) {
+    // A live channel's slots hold a full 1080p picture whatever was asked
+    // for: with VA-API the server sizes the output from its probe of the
+    // smallest HLS variant and sends the source's 1920x1080 regardless of
+    // MaxWidth/MaxHeight (2026-10-21).
+    u32 alloc_w = ps.req_w, alloc_h = ps.req_h;
+    if (live && alloc_w * alloc_h < 1920u * 1080u) { alloc_w = 1920; alloc_h = 1080; }
+    if (!jbuf_alloc(alloc_w, alloc_h)) {
         plog("show_player: jbuf_alloc FAILED");
         live_abort();
         player_startup_abort();
@@ -1181,8 +1187,8 @@ void show_player_run(const JFItem *item, u32 resume_secs,
     {
         char buf[72];
         snprintf(buf, sizeof(buf), "jbuf: %d slots %ux%u ~%u KB each",
-                 jbuf_cap(), ps.req_w, ps.req_h,
-                 vid_frame_bytes(ps.req_w, ps.req_h) / 1024);
+                 jbuf_cap(), alloc_w, alloc_h,
+                 vid_frame_bytes(alloc_w, alloc_h) / 1024);
         plog(buf);
     }
     for (int i = 0; i < jbuf_cap(); i++) {

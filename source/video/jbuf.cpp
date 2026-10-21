@@ -185,6 +185,7 @@ u8  *jbuf_write_ptr(void) { return s_jbuf_data[s_jb_wr]; }
 int  jbuf_write_idx(void) { return s_jb_wr; }
 
 void jbuf_set_dims(u32 fw, u32 fh) { s_jbuf_fw = fw; s_jbuf_fh = fh; }
+u32  jbuf_slot_bytes(void) { return s_jbuf_slot_bytes; }
 
 static int s_front_locked = 2;   // front slots the consumers may be reading
 static u32 s_reordered = 0;   // pictures moved back into timestamp order

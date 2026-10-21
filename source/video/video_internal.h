@@ -15,5 +15,6 @@ bool jbuf_full(void);                    // no free slot (locks s_jbuf_mtx)
 u8  *jbuf_write_ptr(void);               // frame buffer of the next write slot
 int  jbuf_write_idx(void);               // index of the next write slot (diagnostics)
 void jbuf_set_dims(u32 fw, u32 fh);      // adopt actual stream dimensions
+u32  jbuf_slot_bytes(void);              // what each slot can hold
 void jbuf_push(u64 pts_us, s64 dur_us);  // stamp + publish the write slot, in PTS order
 void jbuf_order_stats(u32 *reordered, u32 *too_late);
