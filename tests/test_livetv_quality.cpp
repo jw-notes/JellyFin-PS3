@@ -10,15 +10,15 @@ const char *jf_data_path(const char *) { return "/dev/null"; }
 
 int main() {
     vquality_set(VQ_1080P_25);
-    assert(livetv_quality_get() == VQ_AUTO);
+    assert(livetv_quality_get() == VQ_720P);
     assert(livetv_quality_bps() == 4000000u);
     assert(strcmp(livetv_quality_label(), "Auto") == 0);
-    // Auto takes the 720p frame, or 1080p with the 1080p toggle on.
+    // Auto is 720p / 4 Mbps with the films' 1080p toggle on or off.
     u32 w, h; unsigned rate;
     vquality_params(livetv_quality_get(), false, 1920, 1080, &w, &h, NULL, NULL, &rate);
-    assert(w == 1280 && h == 720);
+    assert(w == 1280 && h == 720 && rate == 4000000u);
     vquality_params(livetv_quality_get(), true, 1920, 1080, &w, &h, NULL, NULL, &rate);
-    assert(w == 1920 && h == 1080);
+    assert(w == 1280 && h == 720 && rate == 4000000u);
 
     livetv_quality_step(1);
     const unsigned rates[] = { 1500000u, 4000000u, 10000000u };
@@ -32,7 +32,7 @@ int main() {
         assert(vquality_get() == VQ_1080P_25);
         livetv_quality_step(1);
     }
-    assert(livetv_quality_get() == VQ_AUTO);
+    assert(strcmp(livetv_quality_label(), "Auto") == 0);
     livetv_quality_step(-1);
     assert(livetv_quality_get() == VQ_1080P);
     livetv_quality_step(1);

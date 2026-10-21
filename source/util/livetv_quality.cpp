@@ -3,9 +3,12 @@
 #include <stdio.h>
 
 // Saved as the index here; Auto came last so older saved choices keep their
-// meaning.  The rows step Auto, 480p, 720p, 1080p.
+// meaning.  The rows step Auto, 480p, 720p, 1080p.  Auto is 720p / 4 Mbps,
+// whatever 1080p Playback (a films setting) says: a hardware-encoding server
+// sends a channel's own 1080p frame anyway, and 4 Mbps is what holds up on
+// the console's Wi-Fi.
 static int s_quality = -1;
-static const vquality_t k_quality[] = { VQ_480P, VQ_720P, VQ_1080P, VQ_AUTO };
+static const vquality_t k_quality[] = { VQ_480P, VQ_720P, VQ_1080P, VQ_720P };
 static const unsigned k_bps[] = { 1500000u, 4000000u, 10000000u, 4000000u };
 static const char *const k_label[] = { "480p / 1.5 Mbps", "720p / 4 Mbps", "1080p / 10 Mbps", "Auto" };
 static const int k_order[] = { 3, 0, 1, 2 };
@@ -13,7 +16,7 @@ static const int k_order[] = { 3, 0, 1, 2 };
 
 static int selected(void) {
     if (s_quality < 0) {
-        s_quality = 3; // Auto: 720p, or 1080p with 1080p Playback on
+        s_quality = 3; // Auto
         FILE *f = fopen(jf_data_path("jellyfin_livetv_quality.txt"), "r");
         if (f) {
             int value = -1;

@@ -16,12 +16,6 @@ static const setting_row k_rows[] = {
     { SET_HD1080,    SEC_PLAYBACK, TRN("1080p Playback (Alpha)"),
       TRN("Ask the server for full 1920x1080 video instead of 720p.\n"
       "Sharper, but needs more bandwidth. Still experimental.")},
-    { SET_LIVETV_QUALITY, SEC_PLAYBACK, TRN("Live TV Quality"),
-      TRN("Auto is 720p, or 1080p with 1080p Playback on. A lower quality\n"
-      "eases a slow server and slow Wi-Fi; movies keep their own.")},
-    { SET_LIVETV_BUFFER, SEC_PLAYBACK, TRN("Live TV Buffer"),
-      TRN("How much of a channel is saved before it plays.\n"
-      "Shorter starts channels sooner; longer rides out Wi-Fi gaps.")},
     { SET_24HZ,      SEC_PLAYBACK, TRN("24Hz Output"),
       TRN("Auto: 24fps films switch the TV to 24Hz for smooth motion.\n"
       "Each TV is checked once first. Off keeps everything at 60Hz.")},
@@ -31,6 +25,13 @@ static const setting_row k_rows[] = {
     { SET_AUTOSKIP,  SEC_PLAYBACK, TRN("Auto Skip"),
       TRN("Skip intros and recaps automatically, without pressing X.\n"
       "Credits start the next episode's 25 second countdown instead.")},
+    // ---- Live TV
+    { SET_LIVETV_QUALITY, SEC_LIVETV, TRN("Live TV Quality"),
+      TRN("Auto is 720p at 4 Mbps, the best fit for most Wi-Fi.\n"
+      "Drop to 480p if channels stutter; films keep their own quality.")},
+    { SET_LIVETV_BUFFER, SEC_LIVETV, TRN("Live TV Buffer"),
+      TRN("How much of a channel is saved before it plays.\n"
+      "Shorter starts channels sooner; longer rides out Wi-Fi gaps.")},
     // ---- Audio
     { SET_AUDIO_OUT, SEC_AUDIO, TRN("Audio Output"),
       TRN("Stereo, 5.1 or 7.1 over HDMI. Dolby Digital sends the film's Dolby\n"
@@ -118,7 +119,7 @@ static const setting_row k_rows[] = {
 #define N_ROWS ((int)(sizeof(k_rows) / sizeof(k_rows[0])))
 
 static const char *const k_section_labels[SEC__COUNT] = {
-    TRN("Playback"), TRN("Audio"), TRN("Subtitles"), TRN("Downloads"), TRN("Display"), TRN("System"),
+    TRN("Playback"), TRN("Live TV"), TRN("Audio"), TRN("Subtitles"), TRN("Downloads"), TRN("Display"), TRN("System"),
 };
 
 int settings_count(void) { return N_ROWS; }

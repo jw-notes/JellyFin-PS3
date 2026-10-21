@@ -329,6 +329,7 @@ void settings_step(int row, int dir) {
 static int cat_icon(setting_section s) {
     switch (s) {
     case SEC_PLAYBACK:  return ICON_PLAY;
+    case SEC_LIVETV:    return ICON_ANTENNA;
     case SEC_AUDIO:     return ICON_VOLUME;
     case SEC_SUBTITLES: return ICON_CAPTIONS;
     case SEC_DOWNLOADS: return ICON_DOWNLOAD;
