@@ -152,8 +152,8 @@ int main() {
     assert(s_log.find("192") == std::string::npos);      // never logs the text
 
     strcpy(out, "http://");
-    assert(type("192.168.1.141:8097", out, sizeof out, false, true) == 1);
-    assert(strcmp(out, "http://192.168.1.141:8097") == 0);
+    assert(type("192.168.1.10:8096", out, sizeof out, false, true) == 1);
+    assert(strcmp(out, "http://192.168.1.10:8096") == 0);
 
     out[0] = 'x';
     assert(type("https://Media.Example-Host.net/jf_1?a=b&c=~", out, sizeof out, false, false) == 1);
