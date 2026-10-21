@@ -17,8 +17,8 @@ static const setting_row k_rows[] = {
       TRN("Ask the server for full 1920x1080 video instead of 720p.\n"
       "Sharper, but needs more bandwidth. Still experimental.")},
     { SET_LIVETV_QUALITY, SEC_PLAYBACK, TRN("Live TV Quality"),
-      TRN("Auto plays a channel as it is when the PS3 can, and re-encodes\n"
-      "only when it must. A lower fixed quality helps on slow Wi-Fi.")},
+      TRN("Auto is 720p, or 1080p with 1080p Playback on. A lower quality\n"
+      "eases a slow server and slow Wi-Fi; movies keep their own.")},
     { SET_LIVETV_BUFFER, SEC_PLAYBACK, TRN("Live TV Buffer"),
       TRN("How much of a channel is saved before it plays.\n"
       "Shorter starts channels sooner; longer rides out Wi-Fi gaps.")},

@@ -11,15 +11,17 @@ Tested on a retail PS3 with CFW at 1080p.
   it now waits about 8 s, less when the server sends a burst. The byte target
   stays as the memory ceiling and for streams without a PCR.
 - **Live TV Buffer** (Settings > Playback): 4, 8 (default) or 15 seconds.
-- **Live channels are passed through when the PS3 can play them.** Buffering
-  went on after the start because the server re-encoded each channel in
-  software at about 0.85x real time, so the buffer always ran dry. A stream
-  copy of the same channel ran at exactly 1.0x. Live requests now let the
-  server copy H.264 channels under the quality ceiling (High listed first,
-  level 4.1); anything else is still re-encoded. Direct Stream = Off restores
-  the old always-re-encode request.
-- **Live TV Quality: Auto** (new default): the 720p frame (1080p with the
-  1080p toggle) and an 8 Mbps ceiling, so most channels are copied untouched.
+- **Live channels stay re-encoded.** A stream copy was tried: on a 2-core
+  server the software re-encode ran below real time (0.85x) while a copy of
+  the same channel ran at 1.0x. But Jellyfin 10.11.10 answers a live copy
+  with HTTP 500 (a NullReferenceException in GetStreamingState), and the
+  reopen around it was part of a channel-change teardown that crashed the
+  server (CloseLiveStreamIfNeededAsync with a null id). Both are server bugs,
+  so live requests never ask for a copy.
+- **Live TV Quality: Auto** (new default): 720p, or 1080p with 1080p
+  Playback on.
+- If the server answers a channel with HTTP 500, the reopen asks for a
+  re-encode for the rest of that viewing.
 - **Circle cancels "Connecting to server..."** while the server opens a
   channel (up to a minute). Before, the only way out was switching off.
 - Server tip: with *Read input at native frame rate* on the M3U tuner, the

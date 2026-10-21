@@ -11,7 +11,7 @@ const char *jf_data_path(const char *) { return "/dev/null"; }
 int main() {
     vquality_set(VQ_1080P_25);
     assert(livetv_quality_get() == VQ_AUTO);
-    assert(livetv_quality_bps() == 8000000u);
+    assert(livetv_quality_bps() == 4000000u);
     assert(strcmp(livetv_quality_label(), "Auto") == 0);
     // Auto takes the 720p frame, or 1080p with the 1080p toggle on.
     u32 w, h; unsigned rate;

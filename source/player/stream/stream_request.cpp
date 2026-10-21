@@ -30,23 +30,14 @@ void stream_request_resolve(const StreamPrefs *prefs,
                     &rq->max_w, &rq->max_h,
                     &rq->profile, &rq->level, &rq->vbitrate);
 
-    // A live channel always carries a ceiling.  Under it, an H.264 channel the
-    // console can decode is passed through as it is (measured 2026-10-21: a
-    // software transcode on this server ran at 0.85x real time and starved
-    // every buffer; the copy of the same channel ran at exactly 1.0x).  The
-    // server's copy check compares the source to the FIRST profile listed, so
-    // High goes first; a channel that still needs re-encoding is encoded as
-    // High, which the decoder takes at every size.  Level 4.1 admits the
-    // common 720p/1080p30 broadcasts.
+    // A live channel is always re-encoded, under a ceiling.  A copy was tried
+    // (2026-10-21) and Jellyfin 10.11.10 cannot serve it for an M3U channel:
+    // GetStreamingState throws (HTTP 500), and the reopen that followed was
+    // part of the channel-change teardown that crashed the server outright
+    // (CloseLiveStreamIfNeededAsync with a null id).
     rq->live = sel->live;
-    rq->no_video_copy = prefs->no_video_copy;
+    rq->no_video_copy = prefs->no_video_copy || rq->live;
     if (rq->live && rq->vbitrate == 0) rq->vbitrate = STREAM_LIVE_VIDEO_BPS;
-    if (rq->live && prefs->quality == VQ_AUTO && rq->vbitrate < STREAM_LIVE_AUTO_BPS)
-        rq->vbitrate = STREAM_LIVE_AUTO_BPS;
-    if (rq->live && !rq->no_video_copy) {
-        rq->profile = "high,main,baseline";
-        if (strcmp(rq->level, "42") != 0) rq->level = "41";
-    }
 
     const JFTracks *t = sel->tracks;
     const bool have_audio = t && sel->cur_audio >= 0 && sel->cur_audio < t->n_audio;

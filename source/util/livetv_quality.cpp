@@ -6,14 +6,14 @@
 // meaning.  The rows step Auto, 480p, 720p, 1080p.
 static int s_quality = -1;
 static const vquality_t k_quality[] = { VQ_480P, VQ_720P, VQ_1080P, VQ_AUTO };
-static const unsigned k_bps[] = { 1500000u, 4000000u, 10000000u, 8000000u };
+static const unsigned k_bps[] = { 1500000u, 4000000u, 10000000u, 4000000u };
 static const char *const k_label[] = { "480p / 1.5 Mbps", "720p / 4 Mbps", "1080p / 10 Mbps", "Auto" };
 static const int k_order[] = { 3, 0, 1, 2 };
 #define N_QUALITY 4
 
 static int selected(void) {
     if (s_quality < 0) {
-        s_quality = 3; // Auto: channels pass through when the console can play them
+        s_quality = 3; // Auto: 720p, or 1080p with 1080p Playback on
         FILE *f = fopen(jf_data_path("jellyfin_livetv_quality.txt"), "r");
         if (f) {
             int value = -1;
