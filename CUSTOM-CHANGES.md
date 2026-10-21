@@ -11,13 +11,9 @@ Tested on a retail PS3 with CFW at 1080p.
   it now waits about 8 s, less when the server sends a burst. The byte target
   stays as the memory ceiling and for streams without a PCR.
 - **Live TV Buffer** (Settings > Playback): 4, 8 (default) or 15 seconds.
-- **Live channels stay re-encoded.** A stream copy was tried: on a 2-core
-  server the software re-encode ran below real time (0.85x) while a copy of
-  the same channel ran at 1.0x. But Jellyfin 10.11.10 answers a live copy
-  with HTTP 500 (a NullReferenceException in GetStreamingState), and the
-  reopen around it was part of a channel-change teardown that crashed the
-  server (CloseLiveStreamIfNeededAsync with a null id). Both are server bugs,
-  so live requests never ask for a copy.
+- **Live channels stay re-encoded.** Jellyfin 10.11 answers a live stream
+  copy with HTTP 500 (a NullReferenceException in GetStreamingState), so live
+  requests never ask for one.
 - **Live TV Quality: Auto** (new default): 720p, or 1080p with 1080p
   Playback on.
 - If the server answers a channel with HTTP 500, the reopen asks for a
@@ -41,12 +37,10 @@ Tested on a retail PS3 with CFW at 1080p.
   source answering 403) is marked for this run and the change carries on to
   the next one in the same direction, up to three; later presses step over
   it. Channel changes retry once instead of three times.
-- Server notes for this setup (AMD GX-217GA, 2 cores): live TV needs VA-API.
-  The Kabini GPU must use amdgpu (kernel `radeon.cik_support=0
-  amdgpu.cik_support=1`); under radeon the kernel rejects the encoder's work.
-  Turn *Read input at native frame rate* off on the M3U tuner: at an ad-break
-  discontinuity ffmpeg's -re pacing waits on the jumped timestamps and the
-  channel stops (seen at 21.78 s with no further frames).
+- Server tip: if channels stop at ad breaks, turn *Read input at native frame
+  rate* off on the M3U tuner. At an HLS discontinuity ffmpeg's -re pacing
+  waits on the jumped timestamps; the player reconnects after 15 s without a
+  picture either way.
 
 ## New in 3.3.5
 
