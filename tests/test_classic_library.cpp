@@ -5,6 +5,7 @@
 #include "ui_internal.h"
 #include "ui_spine.h"
 #include "ui_sfx.h"
+#include "ui_depth.h"
 
 u32 display_width = 1280, display_height = 720;
 int g_uis_pct = 0;
@@ -23,6 +24,16 @@ bool g_music_header;
 static bool media_top = true;
 bool xmb_media_at_top() { return media_top; }
 
+static int focus_notes, focus_x, focus_y, focus_w, focus_h;
+static ThumbImg focus_img;
+static char focus_id[64];
+void depth_note_focus_rect(int x, int y, int w, int h) {
+    ++focus_notes; focus_x = x; focus_y = y; focus_w = w; focus_h = h;
+}
+void depth_note_focus_card(const char *id, int w, int h, ThumbImg img) {
+    assert(w == focus_w && h == focus_h);
+    snprintf(focus_id, sizeof focus_id, "%s", id); focus_img = img;
+}
 static int layout = UI_LAYOUT_CLASSIC, delegated, switched = -1, level;
 bool xmb_input_media() { ++delegated; return false; }
 int ui_layout() { return layout; }
@@ -143,5 +154,28 @@ int main() {
     assert(delegated == 1);
     reset(); btn_cur.circle = 1; xmb_classic_library_input(g_active_tab);
     assert(switched == XMB_TAB_HOME);
+    // Preview must use the selected card, not a stale XMB/Home artwork key.
+    g_tabs[XMB_TAB_LIB0].kind = TABKIND_MOVIES;
+    reset(); GridGeom focus_grid; xmb_grid_geom(g_active_tab, &focus_grid);
+    XMBItem focus_items[32]; memset(focus_items, 0, sizeof focus_items);
+    const int chosen = focus_grid.cols + 1;
+    strcpy(focus_items[chosen].id, "selected-film");
+    strcpy(focus_items[chosen].type, "Movie");
+    xmb_classic_grid_focus(&focus_grid, focus_items, 32, chosen, 0, 156);
+    assert(focus_notes == 1 && strcmp(focus_id, "selected-film") == 0);
+    assert(focus_x == focus_grid.x0 + focus_grid.card_w + XMB_CARD_GAP_X);
+    assert(focus_y == 156 + focus_grid.stride && focus_img == THUMB_IMG_PRIMARY);
+    xmb_classic_grid_focus(&focus_grid, focus_items, 32, -1, 0, 156);
+    xmb_classic_grid_focus(&focus_grid, focus_items, 32, 32, 0, 156);
+    xmb_classic_grid_focus(&focus_grid, focus_items, 32, 0, focus_grid.cols, 156);
+    xmb_classic_grid_focus(&focus_grid, focus_items, 32, focus_grid.vis, 0, 156);
+    assert(focus_notes == 1); // Header, invalid and off-screen selections never replace it.
+    focus_grid.portrait = false; focus_items[chosen].has_thumb = true;
+    strcpy(focus_items[chosen].type, "Episode");
+    xmb_classic_grid_focus(&focus_grid, focus_items, 32, chosen, focus_grid.cols, 180);
+    assert(focus_notes == 2 && focus_y == 180 && focus_img == THUMB_IMG_THUMB);
+    strcpy(focus_items[chosen].type, "MusicAlbum");
+    xmb_classic_grid_focus(&focus_grid, focus_items, 32, chosen, focus_grid.cols, 180);
+    assert(focus_notes == 3 && focus_img == THUMB_IMG_PRIMARY);
     puts("Classic library: layout bounds, art shapes, header navigation and Back/paging routing passed");
 }

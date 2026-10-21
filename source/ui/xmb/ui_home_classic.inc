@@ -230,7 +230,14 @@ static void classic_tick(void) {
             const int x = C_X0 + c * step - (int)s_ch[cslot(r->src)].value;
             if (x > (int)display_width + step || x < -2 * step) continue;
             const char *id = ""; ThumbImg img; int sw, sh;
-            if (ccard(r, c, &id, &img, &sw, &sh)) thumb_request(id, sw, sh, img);
+            if (ccard(r, c, &id, &img, &sw, &sh)) {
+                thumb_request(id, sw, sh, img);
+                if (i == s_cfocus && c == *col && r->src != CR_LIB) {
+                    int cw, ch; cshape(r->shape, &cw, &ch);
+                    depth_note_focus_rect(x, y + C_TITLE_H, cw, ch);
+                    depth_note_focus_card(id, sw, sh, img);
+                }
+            }
         }
     }
 }

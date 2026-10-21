@@ -56,5 +56,7 @@
   "no program in the first megabytes": {"ja": "先頭の数MBに番組情報が見つかりません", "pt-BR": "nenhum programa nos primeiros megabytes", "de": "kein Programm in den ersten Megabytes", "fr": "aucun programme dans les premiers mégaoctets", "es": "ningún programa en los primeros megabytes"},
   "cannot read the file": {"ja": "ファイルを読み取れません", "pt-BR": "não é possível ler o arquivo", "de": "Datei nicht lesbar", "fr": "impossible de lire le fichier", "es": "no se puede leer el archivo"},
   "the file is empty": {"ja": "ファイルが空です", "pt-BR": "o arquivo está vazio", "de": "die Datei ist leer", "fr": "le fichier est vide", "es": "el archivo está vacío"},
-  "not a video file this player reads": {"ja": "このプレーヤーが読める動画ファイルではありません", "pt-BR": "não é um arquivo de vídeo que este player lê", "de": "keine Videodatei, die dieser Player lesen kann", "fr": "n'est pas un fichier vidéo que ce lecteur sait lire", "es": "no es un archivo de vídeo que este reproductor lea"}
+  "not a video file this player reads": {"ja": "このプレーヤーが読める動画ファイルではありません", "pt-BR": "não é um arquivo de vídeo que este player lê", "de": "keine Videodatei, die dieser Player lesen kann", "fr": "n'est pas un fichier vidéo que ce lecteur sait lire", "es": "no es un archivo de vídeo que este reproductor lea"},
+  "Critics %s": {"ja": "批評 %s", "pt-BR": "Crítica %s", "de": "Kritiker %s", "fr": "Critiques %s", "es": "Crítica %s"},
+  "Ends at %s": {"ja": "終了予定 %s", "pt-BR": "Termina às %s", "de": "Endet um %s", "fr": "Fin à %s", "es": "Termina a las %s"}
 }

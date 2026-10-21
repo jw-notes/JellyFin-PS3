@@ -1,7 +1,35 @@
-# JellyFin [PS3] 3.3.3: changes
+# JellyFin [PS3] 3.3.4: changes
 
 By jw-notes, based on [vortigauntlet/JellyFin-PS3-LosslessAudio](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio) `v3.2.3`.
 Tested on a retail PS3 with CFW at 1080p.
+
+## New in 3.3.4
+
+- **Classic film details.** The page before Play keeps the Classic header instead
+  of drawing the XMB spine and category divider. Its poster and details sit below
+  the compact header, with the existing Play/Resume, version, quality and other
+  actions retained.
+- **Triangle preview artwork in Classic.** Home and library grids record the
+  selected card's artwork key, image type, cached size and screen position, so
+  the preview can show its cover and animate from the selected card.
+- **Ratings and finish time on details.** Available server metadata shows the
+  community score out of 10, critic percentage and age certification. A separate
+  row keeps scores visible alongside an Ends at estimate. The estimate uses the
+  selected version's runtime when known, accounts for Resume versus starting
+  over, and follows the PS3's time zone, summer-time and 12/24-hour settings.
+  Missing scores and unknown finish times are omitted.
+- **Ratings and finish time on Triangle previews.** The quick-peek card shows
+  available community and critic scores above its synopsis, alongside the age
+  certification already present. An Ends at line uses the item's runtime and
+  Resume position in the console's local time. Series and unknown runtimes do
+  not get a guessed finish time. Scores load with the existing background facts
+  request; missing, null and out-of-range values are omitted.
+- Host regression checks cover selected artwork and position, paged grids,
+  episode thumbnails, music artwork and invalid/off-screen selections.
+  Finish-time checks cover runtime fallbacks, Resume/restart, invalid saved
+  positions, local time formats and midnight rollover (22 checks passed).
+  Translation catalog and font coverage checks also pass. Console verification
+  remains pending for the new details and preview changes.
 
 ## Fixes
 

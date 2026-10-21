@@ -34,6 +34,7 @@
 #include "depth.h"           // depth_mix_q
 #include "peek.h"
 #include "api_facts.h"
+#include "detail_meta.h"
 #include "thumbnail_cache.h"
 #include "timing.h"
 #include "plog.h"
@@ -367,6 +368,41 @@ void peek_draw_over(void) {
                 drawTTF((u32)tx, (u32)ty, fit, UIS_TF(13.0f), depth_mix_q(bg, XMB_TEXT_DIM, t));
             }
             ty += UIS_H(30);
+        }
+        if (have && (fx.community_rating[0] || fx.critic_rating[0])) {
+            const float rpx = UIS_TF(13.0f);
+            const u32 score_colour = depth_mix_q(bg, XMB_ACCENT_ALT, t);
+            int rx = tx;
+            if (fx.community_rating[0]) {
+                drawIcon((u32)rx, (u32)ty, ICON_STAR, rpx, score_colour);
+                rx += UIS_W(22);
+                char score[24];
+                snprintf(score, sizeof score, "%s/10", fx.community_rating);
+                drawTTF((u32)rx, (u32)ty, score, rpx, score_colour);
+                rx += ttf_text_width(score, rpx) + UIS_W(22);
+            }
+            if (fx.critic_rating[0] && rx < tx + tw) {
+                char score[80], fit[80];
+                snprintf(score, sizeof score, TR("Critics %s"), fx.critic_rating);
+                depth_fit_text(fit, sizeof fit, score, rpx, UI_FACE_REGULAR, tx + tw - rx);
+                drawTTF((u32)rx, (u32)ty, fit, rpx, depth_mix_q(bg, XMB_TEXT, t));
+            }
+            ty += UIS_H(26);
+        }
+        // A preview has no edition/start-over selector: use the item's runtime
+        // and its current Resume position. Series have no single finish time.
+        if (have && facts_wanted(s_item.type)) {
+            const unsigned remaining = detail_remaining_seconds(fx.runtime_secs,
+                xmb_resume_for(s_item.id, s_item.resume_secs), 0);
+            if (remaining) {
+                char clock[16], ends[64], fit[64];
+                xmb_clock_after(remaining, clock, sizeof clock);
+                snprintf(ends, sizeof ends, TR("Ends at %s"), clock);
+                const float epx = UIS_TF(12.5f);
+                depth_fit_text(fit, sizeof fit, ends, epx, UI_FACE_REGULAR, tw);
+                drawTTF((u32)tx, (u32)ty, fit, epx, depth_mix_q(bg, XMB_TEXT_DIM, t));
+                ty += UIS_H(26);
+            }
         }
         if (have && fx.audio[0]) {
             char tech[96];

@@ -200,6 +200,7 @@ static int info_choose_version(const char *title,
 #include "ui_depth.h"      // the L2 -> L3 arrival
 #include "ui_text_gpu.h"
 #include "line_break.h"
+#include "detail_meta.h"
 #include "http.h"
 #include <unistd.h>          // usleep: the version search worker
 #include <sys/thread.h>
@@ -207,7 +208,10 @@ static int info_choose_version(const char *title,
 #include "vremember.h"       // jellyfin_warm_playback()
 
 static int IX(int x) { return XMB_OX + UIS_W(x); }
-static int IY(int y) { return XMB_OY + UIS_H(y); }
+static int IY(int y) {
+    // Classic has a compact header instead of the XMB category band.
+    return XMB_OY + UIS_H(y - (ui_layout() == UI_LAYOUT_CLASSIC ? 70 : 0));
+}
 
 // Colour mixed toward another; used for the canvas's opacity steps on text
 // (a run's colour is cached, so these are fixed values, not animations).
@@ -376,6 +380,7 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
     init_btns();
     // Hand back whatever level this was opened from: X on the base layer
     // opens detail too, and closing it should land there, not inside the tab.
+    const bool classic = ui_layout() == UI_LAYOUT_CLASSIC;
     const int back_level = spine_target_level();
 
     // THE ARRIVAL.  Detail is the next depth, not a screen swap: its poster
@@ -388,6 +393,7 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
     const bool  have_org = depth_last_focus_rect(&org_x, &org_y, &org_w, &org_h);
     const float d_from   = spine_depth();
     bool arrived = false;
+    u64 arrival_us = 0;
 
     XMBItem cur_item = *root;
     XMBItemDetail detail;
@@ -508,8 +514,11 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
             slog_state("INFO3_OPEN item_id=%s name=%.40s", it->id, it->name);
             if (!arrived) {
                 arrived = true;
-                spine_clock_reset();          // step from here, not from the fetch
-                spine_set_level(SPINE_L3);
+                arrival_us = timing_get_us();
+                if (!classic) {
+                    spine_clock_reset();          // step from here, not from the fetch
+                    spine_set_level(SPINE_L3);
+                }
             }
         }
         if (versions_searching && s_vs_done) {
@@ -697,7 +706,9 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
         // ---- GPU phase ---------------------------------------------------
         const int W = (int)display_width, H = (int)display_height;
         // How far the arrival has got: 0 where it was opened, 1 at L3.
-        const float arr = d_from < 1.999f
+        const float arr = classic
+            ? spine_ease(spine_clampf((float)(timing_get_us() - arrival_us) / 240000.0f, 0.0f, 1.0f))
+            : d_from < 1.999f
             ? spine_ease(spine_clampf((spine_depth() - d_from) / (2.0f - d_from), 0.0f, 1.0f))
             : 1.0f;
         int PXa = PX, PYa = PY, PWa = PW, PHa = PH;
@@ -719,8 +730,9 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
             static const u8    va[2] = { 0, 242 };
             wave_draw_ramp_gpu(0, IY(519), W, H - IY(519), 0x00030408, true, 2, vp, va);
         }
-        spine_draw_gpu();
-        {
+        if (classic) xmb_classic_header_gpu(g_active_tab);
+        else {
+            spine_draw_gpu();
             const spine_level L = spine_eval(spine_depth());
             const u8 da = (u8)(72.0f * L.divider_a);
             if (da) wave_draw_divider_gpu(IY((int)L.divider_y), 0x8A, 0x93, 0xC8, da);
@@ -779,7 +791,7 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
             if (qbr == 0) snprintf(pchip, sizeof pchip, "direct play");
             else          snprintf(pchip, sizeof pchip, "transcode %u Mbps", qbr / 1000000u);
         }
-        const int CY = IY(262), CH = UIS_H(29), CG = UIS_W(8);
+        const int CY = IY(278), CH = UIS_H(29), CG = UIS_W(8);
         const float apx = UIS_TF(10.0f), cpx = UIS_TF(11.0f);
         int cx = TX;
         // 2026-09-27: the audio chip in the regular face and the video chip in
@@ -919,6 +931,7 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
         ui_text_gpu_begin();
 
         // ---- CPU phase ---------------------------------------------------
+        if (classic) xmb_classic_header_cpu(g_active_tab);
         if (!poster_gpu) {
             if (poster_cpu.pixels) info_blit(&poster_cpu, PX, PY);
             else xmb_cpu_blit_thumb_scaled(it->id, PX, PY, PW, PH);
@@ -968,8 +981,8 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
         }
 
         // ---- text --------------------------------------------------------
-        xmb_draw_topbar();
-        spine_draw();
+        if (classic) xmb_classic_header_text(g_active_tab);
+        else { xmb_draw_topbar(); spine_draw(); }
 
         // Title: 25px/700 display face, -0.01em.
         {
@@ -982,31 +995,60 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
             drawTTF_tracked((u32)TX, (u32)PY, tbuf, tpx, XMB_TEXT, UI_FACE_DISPLAY, trk);
         }
 
-        // Meta row: 13.5 text_dim, separators at 50%, rating in accent_alt.
+        // Metadata gets two bounded rows: identity/certification, then scores
+        // and local finish time. A long genre list cannot push ratings off-screen.
         {
+            unsigned selected_runtime = 0;
+            if (version_sel >= 0 && version_sel < versions.n_sources)
+                selected_runtime = versions.source[version_sel].runtime_secs;
+            const unsigned runtime = detail_runtime_seconds(detail.identity.runtime_secs,
+                hfx ? fx.runtime_secs : 0, selected_runtime);
+            char duration[32];
+            if (runtime >= 3600)
+                snprintf(duration, sizeof duration, "%uh %um", runtime / 3600, runtime / 60 % 60);
+            else if (runtime)
+                snprintf(duration, sizeof duration, "%um", (runtime + 59) / 60);
+            else snprintf(duration, sizeof duration, "%s", it->duration_str);
             const float mpx = UIS_TF(13.5f);
             const u32 sep_c = info_mix(XMB_TEXT_DIM, XMB_BG, 0.5f);
-            const char *parts[4] = { it->year_str, it->duration_str,
-                                     detail.official_rating, detail.genres };
+            const char *parts[4] = { it->year_str, duration, detail.official_rating, detail.genres };
             int mx = TX;
-            bool first = true;
-            for (int i = 0; i < 4; i++) {
-                if (!parts[i] || !parts[i][0]) continue;
-                if (!first) {
+            for (int i = 0; i < 4 && mx < TX + TW; i++) {
+                if (!parts[i][0]) continue;
+                if (mx != TX) {
                     drawTTF((u32)(mx + UIS_W(6)), (u32)IY(228), "\xC2\xB7", mpx, sep_c);
                     mx += UIS_W(18);
                 }
-                drawTTF((u32)mx, (u32)IY(228), parts[i], mpx, XMB_TEXT_DIM);
+                if (mx >= TX + TW) break;
+                info_clip_text(mx, IY(228), parts[i], mpx, XMB_TEXT_DIM, TX + TW - mx, false);
                 mx += ttf_text_width(parts[i], mpx);
-                first = false;
             }
-            if (detail.community_rating[0]) {
-                if (!first) {
-                    drawTTF((u32)(mx + UIS_W(6)), (u32)IY(228), "\xC2\xB7", mpx, sep_c);
-                    mx += UIS_W(18);
-                }
-                drawTTF((u32)mx, (u32)IY(228), detail.community_rating, mpx, XMB_ACCENT_ALT);
+            const unsigned remaining = detail_remaining_seconds(runtime,
+                xmb_resume_for(it->id, it->resume_secs), focus == F3_START);
+            char end_time[16] = "", ends[64] = "";
+            if (remaining) {
+                xmb_clock_after(remaining, end_time, sizeof end_time);
+                snprintf(ends, sizeof ends, TR("Ends at %s"), end_time);
             }
+            // Reserve the finish estimate at the right; ratings use the rest.
+            const int end_w = ends[0] ? ttf_text_width(ends, mpx) : 0;
+            const int ratings_right = TX + TW - (end_w ? end_w + UIS_W(20) : 0);
+            mx = TX;
+            if (detail.community_rating[0] && mx + UIS_W(24) < ratings_right) {
+                drawIcon((u32)mx, (u32)IY(252), ICON_STAR, mpx, XMB_ACCENT_ALT);
+                mx += UIS_W(22);
+                char score[24];
+                snprintf(score, sizeof score, "%s/10", detail.community_rating);
+                info_clip_text(mx, IY(252), score, mpx, XMB_ACCENT_ALT, ratings_right - mx, false);
+                mx += ttf_text_width(score, mpx) + UIS_W(24);
+            }
+            if (detail.critic_rating[0] && mx < ratings_right) {
+                char score[80];
+                snprintf(score, sizeof score, TR("Critics %s"), detail.critic_rating);
+                info_clip_text(mx, IY(252), score, mpx, XMB_TEXT, ratings_right - mx, false);
+            }
+            if (ends[0])
+                info_clip_text(TX + TW - end_w, IY(252), ends, mpx, XMB_TEXT_DIM, end_w, false);
         }
 
         // Chip labels, vertically centred in the 29 px pills.
@@ -1024,10 +1066,10 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
             (void)x;                    // (the transcode chip is gone)
         }
 
-        // Overview: 14 px text_dim, 620 wide, four lines at 1.55.
+        // Overview: three lines below the scores and codec chips.
         if (detail.overview[0])
-            info_wrap(TX, IY(304), detail.overview, UIS_TF(14.0f), XMB_TEXT_DIM,
-                      UIS_W(620), UIS_H(22), 4);
+            info_wrap(TX, IY(318), detail.overview, UIS_TF(14.0f), XMB_TEXT_DIM,
+                      UIS_W(620), UIS_H(22), 3);
 
         // Button labels.
         for (int i = 0; i < n0; i++) {
@@ -1134,7 +1176,7 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
     ui_gpu_tex_clear(GPU_TEX_POSTER);
     ui_gpu_tex_clear(GPU_TEX_BACKDROP);
     wave_set_art_tint(0u, 0.0f);          // back to the plain palette
-    spine_set_level(back_level);
+    if (!classic) spine_set_level(back_level);
     slog_state("INFO3_CLOSE");
     g_info_cooldown_until = timing_get_us() + 500000;
     init_btns();

@@ -43,6 +43,30 @@ static long long get_ll(const char *o, int n, const char *key, long long def) {
     return def;
 }
 
+// Scores are optional JSON numbers, never strings or a fabricated zero.
+static void get_rating(const char *o, int n, const char *key, double maximum,
+                       char *out, size_t cap, bool percent) {
+    char pat[48];
+    const int pl = snprintf(pat, sizeof pat, "\"%s\"", key);
+    const char *limit = o + n;
+    out[0] = 0;
+    for (const char *p = o; p + pl < limit; ++p) {
+        if (memcmp(p, pat, (size_t)pl)) continue;
+        p += pl;
+        while (p < limit && isspace((unsigned char)*p)) ++p;
+        if (p >= limit || *p++ != ':') return;
+        while (p < limit && isspace((unsigned char)*p)) ++p;
+        if (p >= limit || (*p != '-' && !isdigit((unsigned char)*p))) return;
+        char *end;
+        const double value = strtod(p, &end);
+        while (end < limit && isspace((unsigned char)*end)) ++end;
+        if (end >= limit || (*end != ',' && *end != '}' && *end != ']')) return;
+        if (value >= 0.0 && value <= maximum)
+            snprintf(out, cap, percent ? "%.0f%%" : "%.1f", value);
+        return;
+    }
+}
+
 static bool get_true(const char *o, int n, const char *key) {
     char pat[48];
     int  pl = snprintf(pat, sizeof pat, "\"%s\":true", key);
@@ -208,6 +232,8 @@ static void about_parse(const char *json, int jl, ItemFacts *out) {
         }
     }
     get_str(json, jl, "OfficialRating", out->rating, sizeof out->rating);
+    get_rating(json, jl, "CommunityRating", 10.0, out->community_rating, sizeof out->community_rating, false);
+    get_rating(json, jl, "CriticRating", 100.0, out->critic_rating, sizeof out->critic_rating, true);
 
     const char *arr = strstr(json, "\"People\":[");
     if (!arr) return;

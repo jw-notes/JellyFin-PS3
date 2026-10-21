@@ -29,6 +29,8 @@ typedef struct {
     // streams, so only these fields fill).
     char overview[520];    // synopsis, decoded, cut at a word boundary
     char rating[12];       // OfficialRating, "PG-13"
+    char community_rating[8]; // CommunityRating, "8.1"; empty when unavailable
+    char critic_rating[8];    // CriticRating, "92%"; empty when unavailable
     char cast[4][40];      // the first four actors, billing order
     char cast_id[4][40];   // their person ids (portrait thumbnails)
     int  n_cast;

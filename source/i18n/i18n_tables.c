@@ -9,9 +9,9 @@ extern const int i18n_n;
 extern const char *const i18n_keys[];
 extern const char *const *const i18n_text[LANG__COUNT];
 
-const int i18n_n = 591;
+const int i18n_n = 593;
 
-const char *const i18n_keys[591] = {
+const char *const i18n_keys[593] = {
     "  %s  %s free",
     "  (can't be decoded yet)",
     "%.1f MB",
@@ -136,6 +136,7 @@ const char *const i18n_keys[591] = {
     "Couldn't load the channel list",
     "Couldn't sign in",
     "Couldn't update favourites",
+    "Critics %s",
     "Cross  Save        Circle  Cancel",
     "Customise",
     "Customise Live TV",
@@ -178,6 +179,7 @@ const char *const i18n_keys[591] = {
     "Downloads pause while you stream -- they resume afterwards",
     "Downloads unavailable",
     "Empty",
+    "Ends at %s",
     "Enter",
     "Enter a code on another device",
     "Enter the server address",
@@ -605,7 +607,7 @@ const char *const i18n_keys[591] = {
     "\342\200\271 back %ds",
 };
 
-static const char *const i18n_text_ja[591] = {
+static const char *const i18n_text_ja[593] = {
     "  %s  %s \347\251\272\343\201\215",
     "  \357\274\210\343\201\276\343\201\240\343\203\207\343\202\263\343\203\274\343\203\211\343\201\247\343\201\215\343\201\276\343\201\233\343\202\223\357\274\211",
     "%.1f MB",
@@ -730,6 +732,7 @@ static const char *const i18n_text_ja[591] = {
     "\343\203\201\343\203\243\343\203\263\343\203\215\343\203\253\344\270\200\350\246\247\343\202\222\350\252\255\343\201\277\350\276\274\343\202\201\343\201\276\343\201\233\343\202\223\343\201\247\343\201\227\343\201\237",
     "\343\202\265\343\202\244\343\203\263\343\202\244\343\203\263\343\201\247\343\201\215\343\201\276\343\201\233\343\202\223\343\201\247\343\201\227\343\201\237",
     "\343\201\212\346\260\227\343\201\253\345\205\245\343\202\212\343\202\222\346\233\264\346\226\260\343\201\247\343\201\215\343\201\276\343\201\233\343\202\223\343\201\247\343\201\227\343\201\237",
+    "\346\211\271\350\251\225 %s",
     "\303\227 \344\277\235\345\255\230        \342\227\213 \343\202\255\343\203\243\343\203\263\343\202\273\343\203\253",
     "\343\202\253\343\202\271\343\202\277\343\203\236\343\202\244\343\202\272",
     "\343\203\251\343\202\244\343\203\226TV\343\202\222\343\202\253\343\202\271\343\202\277\343\203\236\343\202\244\343\202\272",
@@ -772,6 +775,7 @@ static const char *const i18n_text_ja[591] = {
     "\345\206\215\347\224\237\344\270\255\343\201\257\343\203\200\343\202\246\343\203\263\343\203\255\343\203\274\343\203\211\343\202\222\344\270\200\346\231\202\345\201\234\346\255\242\343\201\227\343\200\201\347\265\202\343\202\217\343\202\213\343\201\250\345\206\215\351\226\213\343\201\227\343\201\276\343\201\231",
     "\343\203\200\343\202\246\343\203\263\343\203\255\343\203\274\343\203\211\343\201\257\345\210\251\347\224\250\343\201\247\343\201\215\343\201\276\343\201\233\343\202\223",
     "\347\251\272",
+    "\347\265\202\344\272\206\344\272\210\345\256\232 %s",
     "\346\261\272\345\256\232",
     "\345\210\245\343\201\256\347\253\257\346\234\253\343\201\247\343\202\263\343\203\274\343\203\211\343\202\222\345\205\245\345\212\233",
     "\343\202\265\343\203\274\343\203\220\343\203\274\343\201\256\343\202\242\343\203\211\343\203\254\343\202\271\343\202\222\345\205\245\345\212\233",
@@ -1199,7 +1203,7 @@ static const char *const i18n_text_ja[591] = {
     "\342\200\271 %d\347\247\222\346\210\273\343\202\213",
 };
 
-static const char *const i18n_text_pt_BR[591] = {
+static const char *const i18n_text_pt_BR[593] = {
     "  %s  %s livres",
     "  (ainda n\303\243o pode ser decodificado)",
     "%.1f MB",
@@ -1324,6 +1328,7 @@ static const char *const i18n_text_pt_BR[591] = {
     "N\303\243o foi poss\303\255vel carregar a lista de canais",
     "N\303\243o foi poss\303\255vel entrar",
     "N\303\243o foi poss\303\255vel atualizar os favoritos",
+    "Cr\303\255tica %s",
     "X  Salvar        C\303\255rculo  Cancelar",
     "Personalizar",
     "Personalizar TV ao vivo",
@@ -1366,6 +1371,7 @@ static const char *const i18n_text_pt_BR[591] = {
     "Os downloads pausam enquanto voc\303\252 assiste e retomam depois",
     "Downloads indispon\303\255veis",
     "Vazia",
+    "Termina \303\240s %s",
     "Enter",
     "Digite um c\303\263digo em outro aparelho",
     "Digitar o endere\303\247o do servidor",
@@ -1793,7 +1799,7 @@ static const char *const i18n_text_pt_BR[591] = {
     "\342\200\271 voltar %ds",
 };
 
-static const char *const i18n_text_de[591] = {
+static const char *const i18n_text_de[593] = {
     "  %s  %s frei",
     "  (kann noch nicht decodiert werden)",
     "%.1f MB",
@@ -1918,6 +1924,7 @@ static const char *const i18n_text_de[591] = {
     "Die Kanalliste konnte nicht geladen werden",
     "Anmeldung fehlgeschlagen",
     "Favoriten konnten nicht aktualisiert werden",
+    "Kritiker %s",
     "Kreuz  Speichern        Kreis  Abbrechen",
     "Anpassen",
     "Live-TV anpassen",
@@ -1960,6 +1967,7 @@ static const char *const i18n_text_de[591] = {
     "Downloads pausieren w\303\244hrend der Wiedergabe und laufen danach weiter",
     "Downloads nicht verf\303\274gbar",
     "Leer",
+    "Endet um %s",
     "Eingabe",
     "Code auf einem anderen Ger\303\244t eingeben",
     "Serveradresse eingeben",
@@ -2387,7 +2395,7 @@ static const char *const i18n_text_de[591] = {
     "\342\200\271 %ds zur\303\274ck",
 };
 
-static const char *const i18n_text_fr[591] = {
+static const char *const i18n_text_fr[593] = {
     "  %s  %s libres",
     "  (ne peut pas encore \303\252tre d\303\251cod\303\251)",
     "%.1f Mo",
@@ -2512,6 +2520,7 @@ static const char *const i18n_text_fr[591] = {
     "Impossible de charger la liste des cha\303\256nes",
     "Connexion impossible",
     "Impossible de mettre \303\240 jour les favoris",
+    "Critiques %s",
     "Croix  Enregistrer        Rond  Annuler",
     "Personnaliser",
     "Personnaliser la TV en direct",
@@ -2554,6 +2563,7 @@ static const char *const i18n_text_fr[591] = {
     "Les t\303\251l\303\251chargements se mettent en pause pendant la lecture, puis reprennent",
     "T\303\251l\303\251chargements indisponibles",
     "Vide",
+    "Fin \303\240 %s",
     "Entr\303\251e",
     "Saisir un code sur un autre appareil",
     "Saisir l'adresse du serveur",
@@ -2981,7 +2991,7 @@ static const char *const i18n_text_fr[591] = {
     "\342\200\271 reculer de %ds",
 };
 
-static const char *const i18n_text_es[591] = {
+static const char *const i18n_text_es[593] = {
     "  %s  %s libres",
     "  (a\303\272n no se puede decodificar)",
     "%.1f MB",
@@ -3106,6 +3116,7 @@ static const char *const i18n_text_es[591] = {
     "No se pudo cargar la lista de canales",
     "No se pudo iniciar sesi\303\263n",
     "No se pudieron actualizar los favoritos",
+    "Cr\303\255tica %s",
     "Cruz  Guardar        C\303\255rculo  Cancelar",
     "Personalizar",
     "Personalizar TV en vivo",
@@ -3148,6 +3159,7 @@ static const char *const i18n_text_es[591] = {
     "Las descargas se pausan mientras ves contenido y se reanudan despu\303\251s",
     "Descargas no disponibles",
     "Vac\303\255a",
+    "Termina a las %s",
     "Intro",
     "Introduce un c\303\263digo en otro dispositivo",
     "Introducir la direcci\303\263n del servidor",

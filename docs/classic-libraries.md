@@ -50,3 +50,24 @@ Classic keeps a plain browsing background, but Now Playing temporarily enables
 its selected visualizer. JellyWave and JellyDrop render during music playback;
 returning to browsing restores the Classic background. The saved visualizer
 selection and the Off option are preserved.
+
+Changes in 3.3.4: film details use the compact Classic header and
+omit the XMB spine/divider. Triangle previews use the selected card's exact
+artwork reference and position in Home and library grids. Verify on console:
+open a film from each page, check its Triangle cover, open full details, Play or
+Resume and return; also check an episode thumbnail and the existing XMB layout.
+
+Details also show available server-provided community (/10), critic (%) and
+age ratings. Ends at is an estimate for starting now: it uses the selected
+version's runtime, falling back to the item's runtime, and subtracts a valid
+resume position unless Play from start is selected. It refreshes with the
+console clock, using the same local time and 12/24-hour settings as the header.
+No end time is guessed when runtime is unknown. Scores and finish time have
+their own row, so a long genre list does not push them out of view.
+
+Triangle previews also show available community/critic scores and a local
+Ends at line above the synopsis. Preview estimates use the item's runtime and
+Resume position; edition/start-over choices remain on full details. Series
+have no single finish estimate. Scores come from the existing background facts
+request, and invalid/missing scores are hidden. Verify a rated film, a resumed
+film and an item without ratings/runtime in both Classic and XMB layouts.

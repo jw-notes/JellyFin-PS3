@@ -6,6 +6,7 @@
 #include "ui_spine.h"
 #include "ui_sfx.h"
 #include "classic_grid.h"
+#include "ui_depth.h"
 
 static int s_header = -1; // -1 grid, otherwise Home / Search / Settings
 
@@ -64,6 +65,21 @@ bool xmb_classic_grid_geom(int tab, GridGeom *gg) {
     gg->card_w = g.card_w; gg->card_h = g.card_h;
     gg->stride = g.stride; gg->grid_w = g.grid_w; gg->x0 = g.x0;
     return true;
+}
+
+// The peek uses the exact artwork/cache key and rectangle that the grid drew.
+// The Classic ring does not record these as the XMB stage does.
+void xmb_classic_grid_focus(const GridGeom *gg, const XMBItem *items,
+                            int count, int sel, int scroll, int y0) {
+    const int rel = sel - scroll;
+    if (sel < 0 || sel >= count || rel < 0 || rel >= gg->vis) return;
+    const XMBItem *it = &items[sel];
+    const bool music = strcmp(it->type, "MusicAlbum") == 0 || strcmp(it->type, "Audio") == 0 ||
+                       strcmp(it->type, "MusicArtist") == 0 || strcmp(it->type, "Playlist") == 0;
+    const ThumbImg img = !gg->portrait && !music && it->has_thumb ? THUMB_IMG_THUMB : THUMB_IMG_PRIMARY;
+    depth_note_focus_rect(gg->x0 + (rel % gg->cols) * (gg->card_w + XMB_CARD_GAP_X),
+                          y0 + (rel / gg->cols) * gg->stride, gg->card_w, gg->card_h);
+    depth_note_focus_card(it->id, gg->card_w, gg->card_h, img);
 }
 
 void xmb_classic_library_heading(int tab) {

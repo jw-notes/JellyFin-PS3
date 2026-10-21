@@ -690,7 +690,7 @@ test_theme: test_theme.cpp ../source/ui/theme.cpp ../themes/xmb-wave.ini
 LAYOUT_INC = -Ihoststub -I../source/ui -I../source/ui/render -I../source/ui/fonts -I../source/gfx -I../source/util -I../source
 # Classic library pages: real geometry/input, with platform and browse I/O stubbed.
 test_classic_library: test_classic_library.cpp ../source/ui/xmb/ui_library_classic.cpp ../source/ui/render/classic_grid.h
-	$(CXX) $(CXXFLAGS) $(LAYOUT_INC) -I../source/audio -ffunction-sections -fdata-sections -Wl,--gc-sections -o $@ test_classic_library.cpp ../source/ui/xmb/ui_library_classic.cpp
+	$(CXX) $(CXXFLAGS) $(LAYOUT_INC) -I../source/audio -I../source/cache -ffunction-sections -fdata-sections -Wl,--gc-sections -o $@ test_classic_library.cpp ../source/ui/xmb/ui_library_classic.cpp
 
 test_layout: test_layout.cpp ../source/ui/ui_visuals.h ../source/ui/theme.h \
              ../source/ui/render/spine.h ../source/ui/render/depth.h
@@ -988,7 +988,7 @@ test_line_break: test_line_break.c ../source/ui/render/line_break.h
 	$(CC) $(CFLAGS) -Wextra -I../source/ui/render -o $@ test_line_break.c
 
 # The corner clock and date, as the XMB writes them.
-test_clock_fmt: test_clock_fmt.c ../source/ui/render/clock_fmt.h
+test_clock_fmt: test_clock_fmt.c ../source/ui/render/clock_fmt.h ../source/ui/render/detail_meta.h
 	$(CC) $(CFLAGS) -Wextra -I../source/ui/render -o $@ test_clock_fmt.c
 
 # The NTFS write path end to end (third_party/mohasi_fs/README.md, Tests): not part of check -- it needs

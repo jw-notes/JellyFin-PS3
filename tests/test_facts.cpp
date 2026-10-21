@@ -151,6 +151,37 @@ int main(void) {
                                strstr(ov, f.overview) == NULL);
     }
 
+    // 8. Preview scores come from the same metadata response, without streams.
+    {
+        ItemFacts f;
+        facts_parse("{\"Items\":[{\"OfficialRating\":\"PG-13\",\"CommunityRating\":8.14,\"CriticRating\":92.4,\"RunTimeTicks\":72000000000}]}", &f);
+        eq("8 certification", f.rating, "PG-13");
+        eq("8 community", f.community_rating, "8.1");
+        eq("8 critics", f.critic_rating, "92%");
+        yes("8 runtime", f.runtime_secs == 7200);
+        facts_parse("{\"CommunityRating\" : 0, \"CriticRating\" : 0}", &f);
+        eq("8 real zero community", f.community_rating, "0.0");
+        eq("8 real zero critics", f.critic_rating, "0%");
+        facts_parse("{\"CommunityRating\":10,\"CriticRating\":100}", &f);
+        eq("8 maximum community", f.community_rating, "10.0");
+        eq("8 maximum critics", f.critic_rating, "100%");
+        const char *invalid[] = {
+            "{}", "{\"CommunityRating\":null,\"CriticRating\":null}",
+            "{\"CommunityRating\":-1,\"CriticRating\":-1}",
+            "{\"CommunityRating\":10.1,\"CriticRating\":101}",
+            "{\"CommunityRating\":\"8.1\",\"CriticRating\":\"92\"}",
+            "{\"CommunityRating\":true,\"CriticRating\":false}",
+            "{\"CommunityRating\":1e999,\"CriticRating\":1e999}",
+            "{\"CommunityRating\":8x,\"CriticRating\":92x}",
+            "{\"CommunityRating\":8", "{\"CriticRating\":92"
+        };
+        for (unsigned i = 0; i < sizeof invalid / sizeof invalid[0]; ++i) {
+            facts_parse(invalid[i], &f);
+            eq("8 absent/invalid community", f.community_rating, "");
+            eq("8 absent/invalid critics", f.critic_rating, "");
+        }
+    }
+
     if (s_fail) { printf("test_facts: %d FAILED\n", s_fail); return 1; }
     printf("test_facts: all passed\n");
     return 0;

@@ -129,6 +129,30 @@ static u32 lk_fade(u32 c, float a) {
     return out;
 }
 
+// Shared by the corner clock and the details page's finish estimate.
+static void clock_strings(unsigned after_secs, char *t_str, size_t t_cap, char *d_str, size_t d_cap) {
+    static int s_off = 0, s_dfmt = CLK_DATE_MDY, s_tfmt = CLK_TIME_12H;
+    static u64 s_read_at = 0;
+    u64 sec = 0, nsec = 0;
+    sysGetCurrentTime(&sec, &nsec);
+    if (s_read_at == 0 || sec != s_read_at) {
+        s_read_at = sec;
+        s32 tz = 0, summer = 0, df = CLK_DATE_MDY, tf = CLK_TIME_12H;
+        if (sysUtilGetSystemParamInt(SYSUTIL_SYSTEMPARAM_ID_TIMEZONE, &tz) != 0) tz = 0;
+        if (sysUtilGetSystemParamInt(SYSUTIL_SYSTEMPARAM_ID_SUMMERTIME, &summer) != 0) summer = 0;
+        if (sysUtilGetSystemParamInt(SYSUTIL_SYSTEMPARAM_ID_DATE_FORMAT, &df) != 0) df = CLK_DATE_MDY;
+        if (sysUtilGetSystemParamInt(SYSUTIL_SYSTEMPARAM_ID_TIME_FORMAT, &tf) != 0) tf = CLK_TIME_12H;
+        s_off = (int)tz * 60 + (summer ? 3600 : 0);
+        s_dfmt = df; s_tfmt = tf;
+    }
+    clock_format((long long)sec + after_secs, s_off, s_dfmt, s_tfmt, t_str, t_cap, d_str, d_cap);
+}
+
+void xmb_clock_after(unsigned seconds, char *out, size_t cap) {
+    char date[16];
+    clock_strings(seconds, out, cap, date, sizeof date);
+}
+
 void xmb_draw_topbar(void) {
     const int oy    = XMB_OY;
     const float la  = (float)(int)(g_topbar_logo_a * 16.0f + 0.5f) / 16.0f;
@@ -206,22 +230,8 @@ void xmb_draw_topbar(void) {
     // Clock, right-aligned, with the date dimmer beside it.
     // The console's own zone, summer time, 12/24 h and date order, read once a
     // second (clock_fmt.h): what the XMB shows, not the C library's UTC guess.
-    static int s_off = 0, s_dfmt = CLK_DATE_MDY, s_tfmt = CLK_TIME_12H;
-    static u64 s_read_at = 0;
-    u64 sec = 0, nsec = 0;
-    sysGetCurrentTime(&sec, &nsec);
-    if (s_read_at == 0 || sec != s_read_at) {
-        s_read_at = sec;
-        s32 tz = 0, summer = 0, df = CLK_DATE_MDY, tf = CLK_TIME_12H;
-        if (sysUtilGetSystemParamInt(SYSUTIL_SYSTEMPARAM_ID_TIMEZONE, &tz) != 0) tz = 0;
-        if (sysUtilGetSystemParamInt(SYSUTIL_SYSTEMPARAM_ID_SUMMERTIME, &summer) != 0) summer = 0;
-        if (sysUtilGetSystemParamInt(SYSUTIL_SYSTEMPARAM_ID_DATE_FORMAT, &df) != 0) df = CLK_DATE_MDY;
-        if (sysUtilGetSystemParamInt(SYSUTIL_SYSTEMPARAM_ID_TIME_FORMAT, &tf) != 0) tf = CLK_TIME_12H;
-        s_off = (int)tz * 60 + (summer ? 3600 : 0);
-        s_dfmt = df; s_tfmt = tf;
-    }
     char t_str[16], d_str[16];
-    clock_format((long long)sec, s_off, s_dfmt, s_tfmt, t_str, sizeof t_str, d_str, sizeof d_str);
+    clock_strings(0, t_str, sizeof t_str, d_str, sizeof d_str);
     // v1.0 moved BOTH of these onto --font-tab (Satoshi).  The clock used to be
     // one of two things the display face was allowed; it is not any more, which
     // matters now that the display face is a subset with no colon -- a clock on

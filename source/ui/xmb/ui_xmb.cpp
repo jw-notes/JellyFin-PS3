@@ -107,6 +107,7 @@ bool xmb_grid_view(int tab, GridGeom *gg, const XMBItem **items,
         *y0 = xmb_classic_library_y0(tab);
         if (xmb_classic_library_header_focus(tab) >= 0 ||
             (xmb_kind(tab) == TABKIND_MUSIC && g_music_depth == 0 && g_music_header)) *sel = -1;
+        xmb_classic_grid_focus(gg, *items, *count, *sel, *scroll, *y0);
     }
     return true;
 }
