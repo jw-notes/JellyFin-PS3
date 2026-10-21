@@ -15,9 +15,11 @@
 #include "jellyfin_api.h"
 #include "plog.h"
 
+// `live` marks a channel (no position, no seeking); `live_stream_id`, when
+// given, is also written into the report.
 static void post_playstate(const char *endpoint, const char *item_id,
                            const char *session_id, u64 pos_ticks, bool paused,
-                           const char *live_stream_id) {
+                           bool live, const char *live_stream_id) {
     if (!g_server[0] || !g_token[0] || !item_id || !item_id[0]) return;
 
     char url[512];
@@ -25,9 +27,8 @@ static void post_playstate(const char *endpoint, const char *item_id,
 
     // A live channel has no position to resume and nothing to seek in; the
     // server ties its report to the opened stream by LiveStreamId.
-    const bool live = live_stream_id && live_stream_id[0];
     char live_field[128] = "";
-    if (live)
+    if (live_stream_id && live_stream_id[0])
         snprintf(live_field, sizeof live_field, ",\"LiveStreamId\":\"%.100s\"", live_stream_id);
 
     char body[640];
@@ -64,25 +65,36 @@ static void post_playstate(const char *endpoint, const char *item_id,
     }
 }
 
+// Start and progress reports never carry the LiveStreamId.  With it, Jellyfin
+// 10.11 records the stream in SessionManager's live-session table, and its
+// transcode kill timer later looks the stream up there with a null
+// PlaySessionId and crashes the whole server (jellyfin/jellyfin#18035; it
+// went down on every channel change, 2026-10-21).  Left out, the lookup finds
+// nothing.  The player closes the stream itself (jf_livestream_close), so the
+// table was never what closed it.
+static bool is_live(const char *live_stream_id) {
+    return live_stream_id && live_stream_id[0];
+}
+
 void jellyfin_report_playing(const char *item_id, const char *session_id,
                              unsigned long long pos_ticks,
                              const char *live_stream_id) {
     post_playstate("/Sessions/Playing", item_id, session_id, pos_ticks, false,
-                   live_stream_id);
+                   is_live(live_stream_id), NULL);
 }
 
 void jellyfin_report_progress(const char *item_id, const char *session_id,
                               unsigned long long pos_ticks, bool paused,
                               const char *live_stream_id) {
     post_playstate("/Sessions/Playing/Progress", item_id, session_id,
-                   pos_ticks, paused, live_stream_id);
+                   pos_ticks, paused, is_live(live_stream_id), NULL);
 }
 
 void jellyfin_report_stopped(const char *item_id, const char *session_id,
                              unsigned long long pos_ticks,
                              const char *live_stream_id) {
     post_playstate("/Sessions/Playing/Stopped", item_id, session_id,
-                   pos_ticks, false, live_stream_id);
+                   pos_ticks, false, is_live(live_stream_id), live_stream_id);
 }
 
 // ---------------------------------------------------------------------------
@@ -143,7 +155,7 @@ static void report_thread(void *arg) {
         sysMutexUnlock(s_rep_mtx);
 
         if (have)
-            post_playstate("/Sessions/Playing/Progress", item, sess, ticks, paused, NULL);
+            post_playstate("/Sessions/Playing/Progress", item, sess, ticks, paused, false, NULL);
         else
             usleep(50000);          // 50 ms; nothing is waiting on this
     }
@@ -188,7 +200,7 @@ void jellyfin_report_progress_async(const char *item_id, const char *session_id,
 
     if (s_rep_started != 1) {
         post_playstate("/Sessions/Playing/Progress", item_id, session_id,
-                       pos_ticks, paused, NULL);
+                       pos_ticks, paused, false, NULL);
         return;
     }
 
