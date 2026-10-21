@@ -5,9 +5,8 @@ What changed in each release of JellyFin [PS3], newest first.
 Releases from 3.3 on are by jw-notes. They start from
 [vortigauntlet's](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio)
 3.2.3, which jw-notes fixed (much of it by hand) before making this version
-public: it froze on the
-Home screen on real hardware, ran out of memory at 1080p, and had sign-in and
-update-check bugs (see 3.3.0 below). vortigauntlet's own release notes for 3.2.3
+public: it froze on the Home screen on real hardware, ran out of memory at
+1080p, and had sign-in and update-check bugs (see 3.3.0 below). vortigauntlet's own release notes for 3.2.3
 and earlier are kept at the end, as he wrote them.
 
 ## 3.3.9
