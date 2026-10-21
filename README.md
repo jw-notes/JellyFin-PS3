@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/brand/jellyfin-ps3-lockup.png" alt="JellyFin [PS3]" width="480">
+  <img src="docs/brand/jellyfin-ps3-mark.png" alt="JellyFin [PS3]" width="150" Height="150" >
 
   A Jellyfin client for the PlayStation 3.
 
