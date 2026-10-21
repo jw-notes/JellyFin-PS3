@@ -25,7 +25,9 @@ static int  s_layout = -1;                     // UI_LAYOUT_*, -1 = not read yet
 
 int ui_layout(void) {
     if (s_layout < 0) {
-        s_layout = UI_LAYOUT_XMB;
+        // Classic unless the viewer picked a layout: the file is only
+        // written when the setting is changed.
+        s_layout = UI_LAYOUT_CLASSIC;
         FILE *f = fopen(jf_data_path(CLASSIC_FILE), "r");
         if (f) {
             int v = 0;

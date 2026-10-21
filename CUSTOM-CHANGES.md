@@ -1,7 +1,13 @@
-# JellyFin [PS3] 3.3.6: changes
+# JellyFin [PS3] 3.3.7: changes
 
 By jw-notes, based on [vortigauntlet/JellyFin-PS3-LosslessAudio](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio) `v3.2.3`.
 Tested on a retail PS3 with CFW at 1080p.
+
+## New in 3.3.7
+
+- **Classic is the default layout.** It now opens on the web-style Home with
+  rows of posters under a header. A layout picked in Settings > Display >
+  Layout is kept, and XMB is still one press away there.
 
 ## New in 3.3.6
 
