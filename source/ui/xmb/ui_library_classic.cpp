@@ -23,9 +23,14 @@ bool xmb_classic_media(int tab) {
            tab < XMB_TAB_COUNT && xmb_kind(tab) == TABKIND_LOCAL;
 }
 
+bool xmb_classic_livetv(int tab) {
+    return ui_layout() == UI_LAYOUT_CLASSIC && tab >= XMB_TAB_LIB0 &&
+           tab < XMB_TAB_COUNT && xmb_kind(tab) == TABKIND_LIVETV;
+}
+
 void xmb_classic_library_enter(int tab) {
     s_header = -1;
-    if (xmb_classic_media(tab)) { spine_set_level(SPINE_L2); return; }
+    if (xmb_classic_media(tab) || xmb_classic_livetv(tab)) { spine_set_level(SPINE_L2); return; }
     if (tab < XMB_TAB_LIB0 || tab >= XMB_TAB_COUNT) return;
     const XMBTabKind kind = xmb_kind(tab);
     if (kind != TABKIND_MOVIES && kind != TABKIND_TV &&
@@ -46,7 +51,7 @@ void xmb_classic_library_enter(int tab) {
 }
 
 int xmb_classic_library_header_focus(int tab) {
-    return (xmb_classic_library(tab) || xmb_classic_media(tab)) ? s_header : -1;
+    return (xmb_classic_library(tab) || xmb_classic_media(tab) || xmb_classic_livetv(tab)) ? s_header : -1;
 }
 
 int xmb_classic_library_y0(int tab) {
@@ -120,6 +125,8 @@ void xmb_classic_library_hints(void) {
     if (s_header >= 0) {
         static const Hint h[] = {{'E', TRN("Nav")}, {'X', TRN("Select")}, {'C', TRN("Back")}};
         draw_hints_bar(h, 3);
+    } else if (xmb_classic_livetv(g_active_tab)) {
+        xmb_livetv_hints();
     } else {
         static const Hint h[] = {{'E', TRN("Nav")}, {'X', TRN("Open")},
                                  {'T', TRN("Details")}, {'C', TRN("Back")}};
@@ -139,6 +146,15 @@ bool xmb_classic_library_input(int tab) {
             init_btns();
         }
         return false;
+    }
+    if (xmb_classic_livetv(tab)) {
+        // Guide/search keep their own Back and directional actions.
+        if (xmb_livetv_modal()) return xmb_input_livetv();
+        if (BTN_PRESSED(circle)) { xmb_switch_tab(XMB_TAB_HOME); init_btns(); return false; }
+        if (BTN_PRESSED(up) && xmb_livetv_at_top()) {
+            s_header = 0; ui_sfx_play(SFX_CURSOR); return false;
+        }
+        return xmb_input_livetv();
     }
     if (!g_jumpbar_active) {
         const bool sub = g_tv_depth > 0 || g_col_depth > 0 || g_music_depth > 0;

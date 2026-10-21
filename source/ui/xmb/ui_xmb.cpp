@@ -467,7 +467,7 @@ static void draw_hints_vis(const Hint *h, int n) {
 // Contextual hints bar for the current tab / mode.
 static void xmb_draw_hints(int tab) {
     if (xmb_classic_active(tab)) { xmb_classic_hints(); return; }
-    if ((xmb_classic_library(tab) || xmb_classic_media(tab)) && !g_jumpbar_active) { xmb_classic_library_hints(); return; }
+    if ((xmb_classic_library(tab) || xmb_classic_media(tab) || xmb_classic_livetv(tab)) && !g_jumpbar_active) { xmb_classic_library_hints(); return; }
     bool in_tv_sub  = (g_tv_depth > 0);
     bool in_col_sub = (g_col_depth > 0);
 
@@ -698,7 +698,7 @@ void ui_run_xmb(void) {
             ;                           // Classic: L1 / R1 between Home, Search, Settings
         else if (xmb_classic_active(tab))
             should_exit = xmb_classic_input();  // Classic: its own Home
-        else if (xmb_classic_library(tab) || xmb_classic_media(tab))
+        else if (xmb_classic_library(tab) || xmb_classic_media(tab) || xmb_classic_livetv(tab))
             should_exit = xmb_classic_library_input(tab);
         else if (BTN_PRESSED(square) && tab != XMB_TAB_SEARCH) {
             // Square: the visualiser, JellyWave -> JellyDrop -> Off (ui_wave.h).

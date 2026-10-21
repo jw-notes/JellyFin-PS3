@@ -16,6 +16,9 @@ static const setting_row k_rows[] = {
     { SET_HD1080,    SEC_PLAYBACK, TRN("1080p Playback (Alpha)"),
       TRN("Ask the server for full 1920x1080 video instead of 720p.\n"
       "Sharper, but needs more bandwidth. Still experimental.")},
+    { SET_LIVETV_QUALITY, SEC_PLAYBACK, TRN("Live TV Quality"),
+      TRN("Lower quality reduces bandwidth and helps on Wi-Fi.\n"
+      "Applies only to live channels; movies keep their own quality.")},
     { SET_24HZ,      SEC_PLAYBACK, TRN("24Hz Output"),
       TRN("Auto: 24fps films switch the TV to 24Hz for smooth motion.\n"
       "Each TV is checked once first. Off keeps everything at 60Hz.")},

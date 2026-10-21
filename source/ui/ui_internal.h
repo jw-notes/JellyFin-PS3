@@ -201,6 +201,7 @@ void        xmb_classic_library_enter(int tab);
 int         xmb_classic_library_header_focus(int tab);
 int         xmb_classic_library_y0(int tab);
 bool        xmb_classic_media(int tab);
+bool        xmb_classic_livetv(int tab);
 bool        xmb_classic_grid_geom(int tab, GridGeom *gg);
 void        xmb_classic_grid_focus(const GridGeom *gg, const XMBItem *items,
                                    int count, int sel, int scroll, int y0);

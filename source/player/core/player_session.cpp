@@ -13,6 +13,7 @@
 #include "plog.h"
 #include "hd1080.h"
 #include "vquality.h"
+#include "livetv_quality.h"
 #include "surround.h"
 #include "audio_bitstream.h"
 #include "track_codec.h"
@@ -120,6 +121,7 @@ void build_stream_url(char *url, int url_sz, const PlayerState *ps,
                       u64 start_ticks) {
     StreamPrefs prefs;
     stream_prefs_current(&prefs);
+    if (ps->live) { prefs.quality = livetv_quality_get(); prefs.budget = true; }
     StreamSelection sel = { ps->item->id, player_current_source(ps),
                             &ps->tracks, ps->cur_audio, ps->cur_sub,
                             ps->sub_is_text || ps->sub_is_pgs, ps->live };

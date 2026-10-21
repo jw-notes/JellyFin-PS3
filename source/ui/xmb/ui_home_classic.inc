@@ -56,7 +56,7 @@ static int classic_page(int tab) {
     if (tab == XMB_TAB_HOME) return 0;
     if (tab == XMB_TAB_SEARCH) return 1;
     if (tab == XMB_TAB_SETTINGS) return 2;
-    if (xmb_classic_library(tab) || xmb_classic_media(tab)) return 0;
+    if (xmb_classic_library(tab) || xmb_classic_media(tab) || xmb_classic_livetv(tab)) return 0;
     return -1;
 }
 
@@ -115,7 +115,7 @@ static void cadd(int src, int shape, const char *title) {
 static void crows_build(void) {
     s_nlib = 0;
     for (int t = 0; t < XMB_TAB_COUNT; t++)
-        if (g_tabs[t].enabled && ((g_tabs[t].library_id[0] && lib_kind(g_tabs[t].kind)) || g_tabs[t].kind == TABKIND_LOCAL))
+        if (g_tabs[t].enabled && ((g_tabs[t].library_id[0] && lib_kind(g_tabs[t].kind)) || g_tabs[t].kind == TABKIND_LOCAL || g_tabs[t].kind == TABKIND_LIVETV))
             s_lib_tab[s_nlib++] = t;
     s_ncr = 0;
     if (s_nlib) cadd(CR_LIB, CS_LIB, TR("My Media"));
@@ -399,9 +399,10 @@ void xmb_classic_text(void) {
         for (int c = 0; c < r->n; c++) {
             const int cx = C_X0 + c * step - (int)(off + 0.5f);
             if (cx > (int)display_width || cx + cw < 0) continue;
-            if (r->src == CR_LIB && g_tabs[s_lib_tab[c]].kind == TABKIND_LOCAL)
+            if (r->src == CR_LIB && (g_tabs[s_lib_tab[c]].kind == TABKIND_LOCAL || g_tabs[s_lib_tab[c]].kind == TABKIND_LIVETV))
                 drawIcon((u32)(cx + (cw - UIS_W(40)) / 2), (u32)(y0 + C_TITLE_H + (ch - UIS_H(40)) / 2),
-                         ICON_COLLECTIONS, UIS_TF(40), XMB_TEXT_DIM);
+                         g_tabs[s_lib_tab[c]].kind == TABKIND_LIVETV ? ICON_ANTENNA : ICON_COLLECTIONS,
+                         UIS_TF(40), XMB_TEXT_DIM);
             char a[160], b[160], fit[160];
             clabel(r, c, a, sizeof a, b, sizeof b);
             const bool on = i == s_cfocus && c == col;
@@ -445,7 +446,7 @@ bool xmb_classic_switch_input(int tab) {
     if (!xmb_classic_chrome(tab)) return false;
     const bool l = BTN_PRESSED(l1), r = BTN_PRESSED(r1);
     if (!l && !r) return false;
-    if ((xmb_classic_library(tab) || xmb_classic_media(tab)) && l) {
+    if ((xmb_classic_library(tab) || xmb_classic_media(tab) || xmb_classic_livetv(tab)) && l) {
         xmb_switch_tab(XMB_TAB_HOME);
         init_btns();
         return true;

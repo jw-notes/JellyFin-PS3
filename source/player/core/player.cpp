@@ -22,6 +22,7 @@
 #include "subtitles.h"
 #include "hd1080.h"
 #include "vquality.h"
+#include "livetv_quality.h"
 #include "surround.h"
 #include "stream.h"
 #include "audio.h"
@@ -58,6 +59,7 @@
 #include "dl_manager.h"   // offline downloads yield to playback
 #include "api_livetv.h"   // Live TV: the clock, closing a stream
 #include "livetv_list.h"  // Live TV: the channel list, for channel up/down
+#include "live_buffer.h"
 #include "live_watch.h"   // Live TV: when to ask for a fresh stream
 #include "http.h"         // a channel PlaybackInfo may take longer than 24 s
 
@@ -599,11 +601,6 @@ static int chain_find_audio(const JFTracks *t) {
 static const u64 LIVE_CHANNEL_QUIET_US = 600000ULL;    // presses closer than this collapse
 static const u64 LIVE_BANNER_US        = 3000000ULL;
 static const int LIVE_REOPEN_TRIES     = 3;            // after the first failure, 1 / 2 / 4 s apart
-// About five seconds of a 10 Mbps stream: a live stream arrives at the rate it
-// plays, so the read-ahead ring cannot be filled the way a film's is.
-static const int LIVE_PREROLL_PACKETS  = 33000;
-static const u64 LIVE_PREROLL_MAX_US   = 20000000ULL;
-
 static char s_live_last_id[40] = "";
 const char *player_live_last_channel(void) { return s_live_last_id; }
 
@@ -651,6 +648,45 @@ static void live_banner(const JFChannel *ch, int utc) {
     if (title[0]) snprintf(sub, sizeof sub, "%s  \xC2\xB7  %s", title, times);
     else          sub[0] = '\0';
     hud_set_banner(label, sub, timing_get_us() + LIVE_BANNER_US);
+}
+
+// Startup and reconnect share the same bounded live reserve.
+bool player_live_preroll(PlayerState *ps, bool startup) {
+    if (!ps->live || !ps->playing || decode_ring_cap() <= 0) return true;
+    const unsigned rate = livetv_quality_bps();
+    const int target = live_buffer_target(rate, decode_ring_cap());
+    const u64 began = timing_get_us();
+    char line[120];
+    snprintf(line, sizeof line, "live buffer: target=%d packets (~%u ms) rate=%u", target,
+             (unsigned)((u64)target * 1504ULL * 1000ULL / rate), rate);
+    plog(line);
+    init_btns();
+    if (startup && buffering_active()) buffering_step(TR("Buffering"), true, TR("Start now"));
+    while (running && ps->playing && !s_vdec_error && !ps->stream_ended &&
+           decode_ring_fill() < target && timing_get_us() - began < LIVE_BUFFER_MAX_US) {
+        sysUtilCheckCallback();
+        // Audio is paused during the wait. Its bounded queue can fill first;
+        // the decode thread then stops reading, so waiting longer cannot help.
+        if (!adec_pes_queue_hungry()) { plog("live buffer: audio queue full"); break; }
+        if (startup) {
+            poll_buttons();
+            if (BTN_PRESSED(circle)) { plog("live buffer: start now"); break; }
+            if (buffering_active()) {
+                buffering_progress((float)decode_ring_fill() / (float)target);
+                buffering_frame_paced(33000ULL);
+            } else player_status_screen(ps->item->name, TR("Buffering"));
+        } else if (!player_seek_wait((unsigned)((timing_get_us() - began) / 1000ULL))) {
+            ps->open_cancelled = true;
+            return false;
+        }
+        usleep(20000);
+    }
+    snprintf(line, sizeof line, "live buffer: ready=%d/%d packets waited=%u ms ended=%d",
+             decode_ring_fill(), target, (unsigned)((timing_get_us() - began) / 1000ULL),
+             (int)ps->stream_ended);
+    plog(line);
+    init_btns();
+    return running && ps->playing;
 }
 
 // Reopen the live stream, labelled for the wait screen.  After a failure it
@@ -772,7 +808,7 @@ void show_player_run(const JFItem *item, u32 resume_secs,
     // The quality row on the info screen overrides both; at its default
     // (Auto) vquality_params() resolves to exactly the two cases above, so
     // an install that never touches it requests what it always did.
-    vquality_params(vquality_get(), hd1080_enabled(),
+    vquality_params(live ? livetv_quality_get() : vquality_get(), hd1080_enabled(),
                     display_width, display_height,
                     &ps.req_w, &ps.req_h, NULL, NULL, NULL);
 
@@ -1245,86 +1281,9 @@ void show_player_run(const JFItem *item, u32 resume_secs,
 
     // ---- Pre-roll: fill the read-ahead ring before the picture starts ----
     //
-    // The jitter buffer is full by now, which is only ~0.5 s at 1080p.  The
-    // decode thread keeps reading past that into the compressed ring, and
-    // starting playback before that ring has something in it throws away the
-    // whole point of having one: the first hard scene arrives with no reserve
-    // and stutters, exactly as it did before the ring existed.
-    //
-    // So wait for it here.  Waiting a few seconds up front to play a film
-    // through without stalling is a trade worth making, and the wait is
-    // bounded: it gives up at the deadline, on Circle, or the moment the
-    // stream ends.  Nothing is lost by the timeout — playback simply starts
-    // with whatever was buffered.
-    // Films and episodes start the moment the decoder is ready, the way a
-    // seek restarts them.  On 2026-10-12 every connection that sat behind
-    // this wait stalled (bursts, then ~10 s of nothing from the console) and
-    // the one opened by a seek, which never waits here, ran 25-30 Mbps clean.
-    // Only Live TV still pre-rolls: a live stream has nothing to catch up from.
-    if (ps.playing && live && decode_ring_cap() > 0) {
-        // 90%, was 75%.  The ring is the only thing standing between a slow
-        // patch and a stall, so fill it as far as it will go before starting.
-        // The wait stays bounded by the deadline below and by Circle-to-skip.
-        int target         = (decode_ring_cap() * 9) / 10;  // 90% full
-        u64 deadline       = timing_get_us() + 90000000ULL; // 90 s ceiling
-        if (live) {
-            if (target > LIVE_PREROLL_PACKETS) target = LIVE_PREROLL_PACKETS;
-            if (target < 1) target = 1;
-            deadline = timing_get_us() + LIVE_PREROLL_MAX_US;
-        }
-        u64 last_draw_us   = 0;
-        int last_pct       = -1;
-        plog("preroll: filling read-ahead ring");
-        init_btns();
-        if (buffering_active()) buffering_step(TR("Buffering"), true, TR("Start now"));
-        while (running && ps.playing && decode_ring_fill() < target &&
-               timing_get_us() < deadline) {
-            sysUtilCheckCallback();
-            poll_buttons();
-            if (BTN_PRESSED(circle)) { plog("preroll: skipped by user"); break; }
-            // The sender is stuck in backoff on this connection: stop waiting
-            // on it, the loop below reopens with the smaller window.
-            if (!live && !local && stream_window_reopen_pending()) {
-                plog("preroll: sender backing off, reopening");
-                break;
-            }
-            // The audio queue can fill before the ring does (HD audio is
-            // several Mbps), and the decode thread stops reading when it
-            // does.  Waiting past that point achieves nothing.
-            if (!adec_pes_queue_hungry()) {
-                plog("preroll: audio queue full, starting");
-                break;
-            }
-
-            // Redraw at ~4 Hz: the decode thread owns the socket, so this
-            // loop is doing nothing but showing progress.
-            u64 now = timing_get_us();
-            int pct = decode_ring_fill() * 100 / (decode_ring_cap() ? decode_ring_cap() : 1);
-            if (buffering_active()) {
-                // The presentation animates for the whole wait: ~30 fps,
-                // paced by its own flips, with the fill as its progress.
-                buffering_progress(live ? (float)decode_ring_fill() / (float)target
-                                        : (float)pct / 90.0f);
-                buffering_frame_paced(33000ULL);
-            } else if (pct != last_pct && now - last_draw_us > 250000ULL) {
-                last_draw_us = now;
-                last_pct     = pct;
-                char msg[64];
-                snprintf(msg, sizeof(msg), TR("Buffering... %d%%   (O: start now)"),
-                         pct * 100 / 90 > 100 ? 100 : pct * 100 / 90);
-                player_status_screen(item->name, msg);
-            }
-            usleep(20000);
-        }
-        {
-            char b[80];
-            snprintf(b, sizeof(b), "preroll: done ring=%d/%d packets",
-                     decode_ring_fill(), decode_ring_cap());
-            plog(b);
-        }
-        lc_session_snapshot("after_preroll", false);
-        init_btns();
-    }
+    // Live channels collect a bounded reserve before releasing audio/video.
+    // The same reserve is rebuilt after channel changes and reconnections.
+    if (ps.playing && live) player_live_preroll(&ps, true);
     // Ready (or skipped with O, or the deadline): close the ring and fade.
     // The decode thread keeps filling the ring while the outro plays.
     if (buffering_active()) buffering_finish(ps.playing);

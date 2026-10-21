@@ -1,7 +1,26 @@
-# JellyFin [PS3] 3.3.4: changes
+# JellyFin [PS3] 3.3.5: changes
 
 By jw-notes, based on [vortigauntlet/JellyFin-PS3-LosslessAudio](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio) `v3.2.3`.
 Tested on a retail PS3 with CFW at 1080p.
+
+## New in 3.3.5
+
+- **Live TV in Classic.** My Media includes the server's Live TV tab even though
+  it has no library ID. The channel list and guide keep the Classic header;
+  guide/search retain their own Back actions, while Back from the list returns
+  Home. The tile uses a local antenna icon without requesting server artwork.
+- **Separate Live TV quality** (Settings > Playback > Live TV Quality): 480p /
+  1.5 Mbps, 720p / 4 Mbps (default), or 1080p / 10 Mbps. Channels no longer
+  inherit a movie's higher bitrate. The same setting controls the decoder size
+  and every live stream/reconnect request; audio and TS overhead fit the budget.
+- **Live buffering reserve.** Startup, channel changes and reconnects target
+  about eight seconds at the configured stream rate, capped by the existing
+  ring allocation, audio queue and a 20-second deadline. Startup keeps Start now;
+  cancelling a reconnect stops cleanly. This trades some channel-switch speed
+  for more reserve against short Wi-Fi gaps and adds buffer diagnostics.
+- Host checks cover live/header/guide routing, settings and translations, and
+  reserve sizes across bitrates and constrained memory. The console test on
+  Wi-Fi showed improved Live TV playback, with some buffering still remaining.
 
 ## New in 3.3.4
 

@@ -24,6 +24,7 @@
 #include "ui_internal.h"     // Screensaver (xmb/ui_ambient.cpp)
 #include "autoskip.h"
 #include "directstream.h"
+#include "livetv_quality.h"
 #include "display_24p.h"    // 24Hz Output
 #include "month_bg.h"       // Day / Night Palette
 #include "ui_wave_audio.h"  // Wave Intensity
@@ -82,6 +83,7 @@ static void v_dlloc(char *b, int c, bool *l) {
     else if (note[0]) val_text(b, c, l, TR("USB (not ready)"), false);
     else              val_text(b, c, l, TR("USB drive"), true);
 }
+static void v_livetv(char *b, int c, bool *l) { val_text(b, c, l, livetv_quality_label(), true); }
 static void v_direct(char *b, int c, bool *l)   { val_text(b, c, l, directstream_enabled() ? TR("Auto") : TR("Off"), directstream_enabled()); }
 static void v_24hz(char *b, int c, bool *l)     { val_text(b, c, l, d24_enabled() ? TR("Auto") : TR("Off"), d24_enabled()); }
 static void v_audio(char *b, int c, bool *l)    { val_text(b, c, l, tr(surround_mode_label()), surround_enabled()); }
@@ -226,6 +228,7 @@ static void t_autoskip(int)    { autoskip_set_enabled(!autoskip_enabled()); }
 #if ENABLE_PLAYER_STATS
 static void t_stats(int)       { statsovl_set_enabled(!statsovl_enabled()); }
 #endif
+static void s_livetv(int d) { livetv_quality_step(d); }
 static void t_direct(int)      { directstream_set_enabled(!directstream_enabled()); }
 static void t_dlloc(int)       { dl_location_set_usb(!dl_location_usb()); }
 static void t_24hz(int)        { d24_set_enabled(!d24_enabled()); }
@@ -269,6 +272,7 @@ static const UiRow k_ui[] = {
     VALUE (SET_WAVE_INT,    ICON_MUSIC,       v_wave,      s_wave),
     TOGGLE(SET_AUTOSKIP,    ICON_MOVIE,       v_autoskip,  t_autoskip),
     TOGGLE(SET_24HZ,        ICON_TV,          v_24hz,      t_24hz),
+    VALUE (SET_LIVETV_QUALITY, ICON_ANTENNA,  v_livetv,    s_livetv),
     TOGGLE(SET_DIRECT_STREAM, ICON_MOVIE,     v_direct,    t_direct),
     ACTION(SET_UPDATE,      ICON_TV,          v_update,    a_update),
     ACTION(SET_ABOUT,       ICON_STAR,        v_about,     a_about),

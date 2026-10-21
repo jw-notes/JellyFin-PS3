@@ -2,7 +2,6 @@
   "BUFFERING": {"ja": "バッファリング中", "pt-BR": "CARREGANDO", "de": "PUFFERN", "fr": "MISE EN MÉMOIRE", "es": "CARGANDO"},
   "PREPARING": {"ja": "準備中", "pt-BR": "PREPARANDO", "de": "VORBEREITUNG", "fr": "PRÉPARATION", "es": "PREPARANDO"},
   "Buffering": {"ja": "バッファリング中", "pt-BR": "Carregando", "de": "Puffern", "fr": "Mise en mémoire", "es": "Cargando"},
-  "Buffering... %d%%   (O: start now)": {"ja": "バッファリング中... %d%%   (○：今すぐ開始)", "pt-BR": "Carregando... %d%%   (O: iniciar agora)", "de": "Puffern... %d%%   (O: jetzt starten)", "fr": "Mise en mémoire... %d%%   (O : démarrer maintenant)", "es": "Cargando... %d%%   (O: empezar ya)"},
   "Start now": {"ja": "今すぐ開始", "pt-BR": "Iniciar agora", "de": "Jetzt starten", "fr": "Démarrer maintenant", "es": "Empezar ya"},
   "Preparing": {"ja": "準備中", "pt-BR": "Preparando", "de": "Vorbereitung", "fr": "Préparation", "es": "Preparando"},
   "Initializing decoder...": {"ja": "デコーダーを初期化中...", "pt-BR": "Iniciando o decodificador...", "de": "Decoder wird initialisiert...", "fr": "Initialisation du décodeur...", "es": "Inicializando el decodificador..."},

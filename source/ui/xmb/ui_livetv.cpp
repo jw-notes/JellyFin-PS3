@@ -264,7 +264,7 @@ void read_utc_offset(void) { s_utc_offset = jf_utc_offset_secs(); }
 //  Geometry
 // ---------------------------------------------------------------------------
 
-int band_top(void)    { return XMB_CONTENT_Y + UIS_H(10); }
+int band_top(void)    { return xmb_classic_livetv(g_active_tab) ? xmb_classic_library_y0(g_active_tab) : XMB_CONTENT_Y + UIS_H(10); }
 int band_bottom(void) { return (int)display_height - XMB_BOTTOM_PAD; }
 int row_h(void)       { return UIS_H(62); }
 int row_pitch(void)   { return row_h() + UIS_H(8); }
@@ -1057,7 +1057,9 @@ void xmb_livetv_hints(void) {
         h[n].glyph = 'C'; h[n].label = TRN("List"); n++;
     }
     // Every bar but Search's ends with Square and the visualiser it switches to.
-    h[n].glyph = 'S'; h[n].label = wave_vis_next_label(); n++;
+    if (xmb_classic_livetv(g_active_tab)) {
+        if (!s_guide && !s_search_on) { h[n].glyph = 'C'; h[n].label = TRN("Back"); n++; }
+    } else { h[n].glyph = 'S'; h[n].label = wave_vis_next_label(); n++; }
     draw_hints_bar(h, n);
 }
 
@@ -1123,7 +1125,7 @@ void xmb_cpu_draw_livetv(void) {
         for (int r = 0; r < vis && s_top + r < s_n; r++) {
             const int i = s_top + r;
             const int y = band_top() + r * row_pitch();
-            const bool sel = (i == s_sel);
+            const bool sel = (i == s_sel && xmb_classic_library_header_focus(g_active_tab) < 0);
             drawRect((u32)lx, (u32)y, (u32)XMB_LIST_W, (u32)row_h(), sel ? XMB_PANEL_HI : XMB_PANEL);
             if (sel) drawRect((u32)(lx - UIS_W(4)), (u32)y, UIS_W(3), (u32)row_h(), XMB_ACCENT);
             const int lw = UIS_W(96), lh = UIS_H(54);
@@ -1146,7 +1148,7 @@ void xmb_cpu_draw_livetv(void) {
     const int rows = guide_rows_visible();
     for (int r = 0; r < rows && s_top + r < s_n; r++) {
         const int i = s_top + r, y = guide_top() + r * guide_pitch();
-        const bool sel = (i == s_sel);
+        const bool sel = (i == s_sel && xmb_classic_library_header_focus(g_active_tab) < 0);
         drawRect((u32)guide_x0(), (u32)y, (u32)guide_logo_w(), (u32)guide_row_h(),
                  sel ? XMB_PANEL_HI : XMB_PANEL);
         if (sel) drawRect((u32)(guide_x0() - UIS_W(4)), (u32)y, UIS_W(3), (u32)guide_row_h(), XMB_ACCENT);
@@ -1179,6 +1181,8 @@ static void clip_draw(int x, int y, const char *text, float px, u32 colour, int 
 
 void xmb_draw_livetv(void) {
     tick();
+    if (xmb_classic_livetv(g_active_tab))
+        drawTTF((u32)XMB_ITEM_PAD, (u32)(XMB_OY + UIS_H(86)), TR("Live TV"), UIS_TF(24), XMB_TEXT, true);
     const int cx = (int)display_width / 2;
     if (!s_ch || s_alloc_failed) {
         const char *m = TR("Live TV is unavailable");
@@ -1216,7 +1220,7 @@ void xmb_draw_livetv(void) {
             const int i = s_top + r;
             const JFChannel *c = &s_ch[i];
             const int y = band_top() + r * row_pitch();
-            const bool sel = (i == s_sel);
+            const bool sel = (i == s_sel && xmb_classic_library_header_focus(g_active_tab) < 0);
             const u32 clr = sel ? XMB_WHITE : XMB_TEXT_DIM;
             if (c->favourite)
                 drawIcon((u32)(lx + UIS_W(10)), (u32)(y + (row_h() - UIS_H(14)) / 2 - UIS_H(1)),
@@ -1267,7 +1271,7 @@ void xmb_draw_livetv(void) {
     for (int r = 0; r < rows && s_top + r < s_n; r++) {
         const int i = s_top + r, y = guide_top() + r * guide_pitch();
         const JFChannel *c = &s_ch[i];
-        const bool sel = (i == s_sel);
+        const bool sel = (i == s_sel && xmb_classic_library_header_focus(g_active_tab) < 0);
         if (c->number[0]) drawTTF((u32)(guide_x0() + UIS_W(10)), (u32)(y + UIS_H(8)), c->number,
                                   UIS_TF(15), sel ? XMB_WHITE : XMB_TEXT_FAINT);
         clip_draw(guide_x0() + UIS_W(10), y + UIS_H(30), c->name, UIS_TF(12),

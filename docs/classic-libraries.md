@@ -7,7 +7,7 @@ Collections and generic media libraries use the same page layout. Music and
 Playlists keep this header too, with square artwork and room for artist credits.
 Music retains Albums, Artists, Playlists, Genres and Songs, plus its existing
 artist/genre and playlist drill-down and playback actions. Small displays with
-large text use one row when two rows would overflow. Live TV retains its existing screen.
+large text use one row when two rows would overflow. Live TV keeps the shared header over its channel list and guide.
 
 My Media also includes **Media**, for Downloads, the internal disk and USB drives.
 Its list of places keeps the Classic header; folders and file playback use the
@@ -71,3 +71,17 @@ Resume position; edition/start-over choices remain on full details. Series
 have no single finish estimate. Scores come from the existing background facts
 request, and invalid/missing scores are hidden. Verify a rated film, a resumed
 film and an item without ratings/runtime in both Classic and XMB layouts.
+
+Live TV changes in 3.3.5: My Media shows the Live TV tile even when its tab has no
+library ID. Up at the top of the channel list focuses the Classic header; Back
+returns Home. Search and the guide retain their existing navigation/Back actions.
+Settings > Playback > Live TV Quality is independent of movie quality: 480p /
+1.5 Mbps, 720p / 4 Mbps (default), or 1080p / 10 Mbps. The live reserve targets
+eight seconds at the chosen total stream rate, within existing memory/audio
+limits and a 20-second wait ceiling. It is collected on initial open and again
+after channel changes/reconnections. Startup can be skipped; a reconnect can
+be cancelled. Test on the affected Wi-Fi channels; this is not a measured
+throughput fix and cannot compensate for a sustained bandwidth deficit.
+
+Console feedback for the Live TV changes: playback over Wi-Fi improved, but
+some buffering remains. Further stream/network diagnosis is still needed.

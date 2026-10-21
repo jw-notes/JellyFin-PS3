@@ -22,6 +22,9 @@ bool g_jumpbar_active;
 int g_music_depth, g_music_sub_sel;
 bool g_music_header;
 static bool media_top = true;
+static bool live_top = true, live_modal = false;
+bool xmb_livetv_at_top() { return live_top; }
+bool xmb_livetv_modal() { return live_modal; }
 bool xmb_media_at_top() { return media_top; }
 
 static int focus_notes, focus_x, focus_y, focus_w, focus_h;
@@ -36,6 +39,7 @@ void depth_note_focus_card(const char *id, int w, int h, ThumbImg img) {
 }
 static int layout = UI_LAYOUT_CLASSIC, delegated, switched = -1, level;
 bool xmb_input_media() { ++delegated; return false; }
+bool xmb_input_livetv() { ++delegated; return false; }
 int ui_layout() { return layout; }
 XMBTabKind xmb_kind(int tab) { return g_tabs[tab].kind; }
 bool btn_nav_repeat(bool held, int) { return held; }
@@ -154,6 +158,23 @@ int main() {
     assert(delegated == 1);
     reset(); btn_cur.circle = 1; xmb_classic_library_input(g_active_tab);
     assert(switched == XMB_TAB_HOME);
+    g_tabs[XMB_TAB_LIB0].kind = TABKIND_LIVETV;
+    assert(xmb_classic_livetv(XMB_TAB_LIB0));
+    assert(!xmb_classic_library(XMB_TAB_LIB0));
+    reset(); btn_cur.up = 1; xmb_classic_library_input(g_active_tab);
+    assert(xmb_classic_library_header_focus(g_active_tab) == 0 && delegated == 0);
+    init_btns(); btn_cur.down = 1; xmb_classic_library_input(g_active_tab);
+    assert(xmb_classic_library_header_focus(g_active_tab) == -1);
+    reset(); btn_cur.circle = 1; xmb_classic_library_input(g_active_tab);
+    assert(switched == XMB_TAB_HOME);
+    reset(); live_modal = true; btn_cur.circle = 1; xmb_classic_library_input(g_active_tab);
+    assert(delegated == 1 && switched == -1); // Guide/search retain Back.
+    reset(); btn_cur.up = 1; xmb_classic_library_input(g_active_tab);
+    assert(delegated == 1 && xmb_classic_library_header_focus(g_active_tab) == -1);
+    reset(); live_modal = false; live_top = false; btn_cur.up = 1; xmb_classic_library_input(g_active_tab);
+    assert(delegated == 1 && xmb_classic_library_header_focus(g_active_tab) == -1);
+    reset(); btn_cur.cross = 1; xmb_classic_library_input(g_active_tab);
+    assert(delegated == 1);
     // Preview must use the selected card, not a stale XMB/Home artwork key.
     g_tabs[XMB_TAB_LIB0].kind = TABKIND_MOVIES;
     reset(); GridGeom focus_grid; xmb_grid_geom(g_active_tab, &focus_grid);

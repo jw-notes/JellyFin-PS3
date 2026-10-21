@@ -9,9 +9,9 @@ extern const int i18n_n;
 extern const char *const i18n_keys[];
 extern const char *const *const i18n_text[LANG__COUNT];
 
-const int i18n_n = 593;
+const int i18n_n = 594;
 
-const char *const i18n_keys[593] = {
+const char *const i18n_keys[594] = {
     "  %s  %s free",
     "  (can't be decoded yet)",
     "%.1f MB",
@@ -77,7 +77,6 @@ const char *const i18n_keys[593] = {
     "Blu-ray m2ts",
     "Brighten the background by day, back to the night look after\ndark, with a glow at dawn and dusk. Follows the console clock.",
     "Buffering",
-    "Buffering... %d%%   (O: start now)",
     "CONTAINER",
     "Can't check free HDD space: downloads paused",
     "Can't check free HDD space: downloads paused.",
@@ -241,6 +240,7 @@ const char *const i18n_keys[593] = {
     "License",
     "List",
     "Live TV",
+    "Live TV Quality",
     "Live TV is unavailable",
     "Loading",
     "Loading %.60s...",
@@ -250,6 +250,7 @@ const char *const i18n_keys[593] = {
     "Local (US)",
     "Log Out",
     "Log out of this account?",
+    "Lower quality reduces bandwidth and helps on Wi-Fi.\nApplies only to live channels; movies keep their own quality.",
     "MPEG-TS",
     "Made by",
     "Mark as watched",
@@ -607,7 +608,7 @@ const char *const i18n_keys[593] = {
     "\342\200\271 back %ds",
 };
 
-static const char *const i18n_text_ja[593] = {
+static const char *const i18n_text_ja[594] = {
     "  %s  %s \347\251\272\343\201\215",
     "  \357\274\210\343\201\276\343\201\240\343\203\207\343\202\263\343\203\274\343\203\211\343\201\247\343\201\215\343\201\276\343\201\233\343\202\223\357\274\211",
     "%.1f MB",
@@ -673,7 +674,6 @@ static const char *const i18n_text_ja[593] = {
     "Blu-ray m2ts",
     "\346\230\274\343\201\257\350\203\214\346\231\257\343\202\222\346\230\216\343\202\213\343\201\217\343\201\227\343\200\201\346\227\245\343\201\214\346\232\256\343\202\214\343\202\213\343\201\250\345\244\234\343\201\256\350\246\213\343\201\237\347\233\256\343\201\253\346\210\273\343\201\227\343\201\276\343\201\231\343\200\202\n\345\244\234\346\230\216\343\201\221\343\201\250\345\244\225\346\232\256\343\202\214\343\201\253\343\201\257\345\205\211\343\201\214\343\201\253\343\201\230\343\201\277\343\201\276\343\201\231\343\200\202\346\234\254\344\275\223\343\201\256\346\231\202\350\250\210\343\201\253\345\276\223\343\201\204\343\201\276\343\201\231\343\200\202",
     "\343\203\220\343\203\203\343\203\225\343\202\241\343\203\252\343\203\263\343\202\260\344\270\255",
-    "\343\203\220\343\203\203\343\203\225\343\202\241\343\203\252\343\203\263\343\202\260\344\270\255... %d%%   (\342\227\213\357\274\232\344\273\212\343\201\231\343\201\220\351\226\213\345\247\213)",
     "\343\202\263\343\203\263\343\203\206\343\203\212",
     "HDD\343\201\256\347\251\272\343\201\215\345\256\271\351\207\217\343\202\222\347\242\272\350\252\215\343\201\247\343\201\215\343\201\276\343\201\233\343\202\223\357\274\232\343\203\200\343\202\246\343\203\263\343\203\255\343\203\274\343\203\211\343\202\222\344\270\200\346\231\202\345\201\234\346\255\242\343\201\227\343\201\276\343\201\227\343\201\237",
     "HDD\343\201\256\347\251\272\343\201\215\345\256\271\351\207\217\343\202\222\347\242\272\350\252\215\343\201\247\343\201\215\343\201\276\343\201\233\343\202\223\357\274\232\343\203\200\343\202\246\343\203\263\343\203\255\343\203\274\343\203\211\343\202\222\344\270\200\346\231\202\345\201\234\346\255\242\343\201\227\343\201\276\343\201\227\343\201\237\343\200\202",
@@ -837,6 +837,7 @@ static const char *const i18n_text_ja[593] = {
     "\343\203\251\343\202\244\343\202\273\343\203\263\343\202\271",
     "\344\270\200\350\246\247",
     "\343\203\251\343\202\244\343\203\226TV",
+    "\343\203\251\343\202\244\343\203\226TV\343\201\256\347\224\273\350\263\252",
     "\343\203\251\343\202\244\343\203\226TV\343\201\257\345\210\251\347\224\250\343\201\247\343\201\215\343\201\276\343\201\233\343\202\223",
     "\350\252\255\343\201\277\350\276\274\343\201\277\344\270\255",
     "%.60s \343\202\222\350\252\255\343\201\277\350\276\274\343\201\277\344\270\255...",
@@ -846,6 +847,7 @@ static const char *const i18n_text_ja[593] = {
     "\347\261\263\345\233\275\343\203\255\343\203\274\343\202\253\343\203\253",
     "\343\203\255\343\202\260\343\202\242\343\202\246\343\203\210",
     "\343\201\223\343\201\256\343\202\242\343\202\253\343\202\246\343\203\263\343\203\210\343\201\213\343\202\211\343\203\255\343\202\260\343\202\242\343\202\246\343\203\210\343\201\227\343\201\276\343\201\231\343\201\213\357\274\237",
+    "\347\224\273\350\263\252\343\202\222\344\270\213\343\201\222\343\202\213\343\201\250\351\200\232\344\277\241\351\207\217\343\201\214\346\270\233\343\202\212\343\200\201Wi-Fi\343\201\247\343\202\202\345\256\211\345\256\232\343\201\227\343\201\276\343\201\231\343\200\202\n\343\203\251\343\202\244\343\203\226TV\343\201\256\343\201\277\343\201\253\351\201\251\347\224\250\343\201\225\343\202\214\343\200\201\346\230\240\347\224\273\343\201\256\347\224\273\350\263\252\343\201\257\345\244\211\343\202\217\343\202\212\343\201\276\343\201\233\343\202\223\343\200\202",
     "MPEG-TS",
     "\345\210\266\344\275\234",
     "\350\246\226\350\201\264\346\270\210\343\201\277\343\201\253\343\201\231\343\202\213",
@@ -1203,7 +1205,7 @@ static const char *const i18n_text_ja[593] = {
     "\342\200\271 %d\347\247\222\346\210\273\343\202\213",
 };
 
-static const char *const i18n_text_pt_BR[593] = {
+static const char *const i18n_text_pt_BR[594] = {
     "  %s  %s livres",
     "  (ainda n\303\243o pode ser decodificado)",
     "%.1f MB",
@@ -1269,7 +1271,6 @@ static const char *const i18n_text_pt_BR[593] = {
     "Blu-ray m2ts",
     "Clareia o fundo de dia e volta ao visual noturno ao escurecer,\ncom um brilho ao amanhecer e ao entardecer. Segue o rel\303\263gio do console.",
     "Carregando",
-    "Carregando... %d%%   (O: iniciar agora)",
     "CONT\303\212INER",
     "N\303\243o foi poss\303\255vel verificar o espa\303\247o livre no HD: downloads pausados",
     "N\303\243o foi poss\303\255vel verificar o espa\303\247o livre no HD: downloads pausados.",
@@ -1433,6 +1434,7 @@ static const char *const i18n_text_pt_BR[593] = {
     "Licen\303\247a",
     "Lista",
     "TV ao vivo",
+    "Qualidade da TV ao vivo",
     "A TV ao vivo est\303\241 indispon\303\255vel",
     "Carregando",
     "Carregando %.60s...",
@@ -1442,6 +1444,7 @@ static const char *const i18n_text_pt_BR[593] = {
     "Locais (EUA)",
     "Sair",
     "Sair desta conta?",
+    "Qualidade menor usa menos banda e ajuda no Wi-Fi.\nS\303\263 para canais ao vivo; filmes mant\303\252m sua qualidade.",
     "MPEG-TS",
     "Feito por",
     "Marcar como assistido",
@@ -1799,7 +1802,7 @@ static const char *const i18n_text_pt_BR[593] = {
     "\342\200\271 voltar %ds",
 };
 
-static const char *const i18n_text_de[593] = {
+static const char *const i18n_text_de[594] = {
     "  %s  %s frei",
     "  (kann noch nicht decodiert werden)",
     "%.1f MB",
@@ -1865,7 +1868,6 @@ static const char *const i18n_text_de[593] = {
     "Blu-ray m2ts",
     "Hellt den Hintergrund tags\303\274ber auf und kehrt nach Einbruch der Dunkelheit\nzum Nachtlook zur\303\274ck, mit Gl\303\274hen in der D\303\244mmerung. Folgt der Konsolenuhr.",
     "Puffern",
-    "Puffern... %d%%   (O: jetzt starten)",
     "CONTAINER",
     "Freier HDD-Speicher unbekannt: Downloads pausiert",
     "Freier HDD-Speicher unbekannt: Downloads pausiert.",
@@ -2029,6 +2031,7 @@ static const char *const i18n_text_de[593] = {
     "Lizenz",
     "Liste",
     "Live-TV",
+    "Live-TV-Qualit\303\244t",
     "Live-TV ist nicht verf\303\274gbar",
     "Wird geladen",
     "%.60s wird geladen...",
@@ -2038,6 +2041,7 @@ static const char *const i18n_text_de[593] = {
     "Lokal (USA)",
     "Abmelden",
     "Von diesem Konto abmelden?",
+    "Geringere Qualit\303\244t braucht weniger Bandbreite, gut f\303\274r WLAN.\nNur f\303\274r Live-TV; die Filmqualit\303\244t bleibt unver\303\244ndert.",
     "MPEG-TS",
     "Gemacht von",
     "Als gesehen markieren",
@@ -2395,7 +2399,7 @@ static const char *const i18n_text_de[593] = {
     "\342\200\271 %ds zur\303\274ck",
 };
 
-static const char *const i18n_text_fr[593] = {
+static const char *const i18n_text_fr[594] = {
     "  %s  %s libres",
     "  (ne peut pas encore \303\252tre d\303\251cod\303\251)",
     "%.1f Mo",
@@ -2461,7 +2465,6 @@ static const char *const i18n_text_fr[593] = {
     "Blu-ray m2ts",
     "\303\211claircit l'arri\303\250re-plan le jour et revient \303\240 l'aspect nocturne la nuit,\navec une lueur \303\240 l'aube et au cr\303\251puscule. Suit l'horloge de la console.",
     "Mise en m\303\251moire",
-    "Mise en m\303\251moire... %d%%   (O : d\303\251marrer maintenant)",
     "CONTENEUR",
     "Impossible de v\303\251rifier l'espace libre : t\303\251l\303\251chargements en pause",
     "Impossible de v\303\251rifier l'espace libre : t\303\251l\303\251chargements en pause.",
@@ -2625,6 +2628,7 @@ static const char *const i18n_text_fr[593] = {
     "Licence",
     "Liste",
     "TV en direct",
+    "Qualit\303\251 TV en direct",
     "La TV en direct est indisponible",
     "Chargement",
     "Chargement de %.60s...",
@@ -2634,6 +2638,7 @@ static const char *const i18n_text_fr[593] = {
     "Locales (\303\211.-U.)",
     "Se d\303\251connecter",
     "Se d\303\251connecter de ce compte ?",
+    "Une qualit\303\251 moindre aide en Wi-Fi et r\303\251duit le d\303\251bit.\nUniquement pour le direct ; la qualit\303\251 des films reste inchang\303\251e.",
     "MPEG-TS",
     "Cr\303\251\303\251 par",
     "Marquer comme vu",
@@ -2991,7 +2996,7 @@ static const char *const i18n_text_fr[593] = {
     "\342\200\271 reculer de %ds",
 };
 
-static const char *const i18n_text_es[593] = {
+static const char *const i18n_text_es[594] = {
     "  %s  %s libres",
     "  (a\303\272n no se puede decodificar)",
     "%.1f MB",
@@ -3057,7 +3062,6 @@ static const char *const i18n_text_es[593] = {
     "Blu-ray m2ts",
     "Aclara el fondo de d\303\255a y vuelve al aspecto nocturno al anochecer,\ncon un brillo al amanecer y al atardecer. Sigue el reloj de la consola.",
     "Cargando",
-    "Cargando... %d%%   (O: empezar ya)",
     "CONTENEDOR",
     "No se puede comprobar el espacio libre: descargas en pausa",
     "No se puede comprobar el espacio libre: descargas en pausa.",
@@ -3221,6 +3225,7 @@ static const char *const i18n_text_es[593] = {
     "Licencia",
     "Lista",
     "TV en vivo",
+    "Calidad de TV en directo",
     "La TV en vivo no est\303\241 disponible",
     "Cargando",
     "Cargando %.60s...",
@@ -3230,6 +3235,7 @@ static const char *const i18n_text_es[593] = {
     "Locales (EE. UU.)",
     "Cerrar sesi\303\263n",
     "\302\277Cerrar sesi\303\263n en esta cuenta?",
+    "Una calidad menor reduce el consumo y ayuda con Wi-Fi.\nSolo para canales en directo; los filmes conservan su calidad.",
     "MPEG-TS",
     "Creado por",
     "Marcar como visto",

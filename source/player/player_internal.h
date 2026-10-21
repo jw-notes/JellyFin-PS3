@@ -249,6 +249,8 @@ void player_display_frame(PlayerState *ps);
 // -------------------------------------------------------
 
 bool player_spawn_decode(PlayerState *ps);
+// Startup or reconnect: bounded, rate-based live reserve while output is paused.
+bool player_live_preroll(PlayerState *ps, bool startup);
 
 // Compressed read-ahead ring (player_threads.cpp).  Allocated per playback
 // from whatever memory is free and released on teardown; this is the buffer

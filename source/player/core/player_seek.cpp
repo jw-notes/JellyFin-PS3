@@ -462,6 +462,14 @@ bool player_execute_seek(PlayerState *ps) {
         return false;
     }
 
+    // A channel change/reconnect also needs a reserve; previously only the
+    // initial open buffered, so every recovery started on an empty ring.
+    if (ps->live && !player_live_preroll(ps, false)) {
+        s_seeking = false;
+        ps->paused = was_paused;
+        return false;
+    }
+
     // 6) Resume (unless the user had paused before seeking).
     s_seeking  = false;            // flush window over
     ps->paused = was_paused;

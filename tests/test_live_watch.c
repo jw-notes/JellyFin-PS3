@@ -4,6 +4,7 @@
 //   make -f Makefile.host test_live_watch && ./test_live_watch
 
 #include "live_watch.h"
+#include "live_buffer.h"
 
 #include <stdio.h>
 
@@ -79,6 +80,19 @@ static void looping(void) {
 }
 
 int main(void) {
+    CHECK(live_buffer_target(4000000u, 100000) == 21277);
+    CHECK(live_buffer_target(10000000u, 100000) == 53192);
+    CHECK(live_buffer_target(1500000u, 100000) == 7979);
+    CHECK(live_buffer_target(0, 100000) == live_buffer_target(4000000u, 100000));
+    CHECK(live_buffer_target(10000000u, 1000) == 900);
+    CHECK(live_buffer_target(4000000u, 0) == 0);
+    CHECK(live_buffer_target(4000000u, -1) == 0);
+    CHECK(live_buffer_target(4000000u, 1) == 1);
+    CHECK(live_buffer_target(4294967295u, 100000) == 90000);
+    for (int cap = 1; cap < 100000; cap += 97) {
+        const int target = live_buffer_target(4000000u, cap);
+        CHECK(target > 0 && target <= cap);
+    }
     pausing();
     stalls();
     ended();
