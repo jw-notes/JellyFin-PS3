@@ -88,8 +88,7 @@ All of their work is still here; I fixed and added things on top.
 ## Install
 
 **You need:** a PS3 running **custom firmware** and a **Jellyfin 10.11 or 12**
-server the console can reach on your network. It is developed and tested on
-**Evilnat CFW 4.93**; other CFW should work, and HEN is untested.
+server the console can reach on your network. Tested on **Evilnat CFW 4.93**.
 
 1. Download **`JellyFin-PS3.pkg`** from the [latest release](https://github.com/jw-notes/JellyFin-PS3/releases/latest).
 2. Copy it to the root of a USB stick, or to `/dev_hdd0/packages/` over FTP.
