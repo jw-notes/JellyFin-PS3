@@ -38,6 +38,14 @@ void stream_request_resolve(const StreamPrefs *prefs,
     rq->live = sel->live;
     rq->no_video_copy = prefs->no_video_copy || rq->live;
     if (rq->live && rq->vbitrate == 0) rq->vbitrate = STREAM_LIVE_VIDEO_BPS;
+    // Live is always asked for as High.  A VA-API (AMD VCE) Baseline encode
+    // froze the console 20 frames in, while the same server's High encode
+    // played at 30 fps (2026-10-21).  Baseline only ever saved software
+    // encoders effort; the decoder takes High at every size.
+    if (rq->live) {
+        rq->profile = "high";
+        if (strcmp(rq->level, "42") != 0) rq->level = "41";
+    }
 
     const JFTracks *t = sel->tracks;
     const bool have_audio = t && sel->cur_audio >= 0 && sel->cur_audio < t->n_audio;

@@ -246,10 +246,11 @@ static void live_tv(void) {
     CHECK(live_url(VQORIG, false, true) ==
           head + "&VideoBitrate=9060000&AllowVideoStreamCopy=false" + ac3 + ids);
 
-    // 720p and Auto (the 1080p toggle off) ask for the same re-encode, with
-    // Direct Stream on or off.
+    // 720p and Auto (the 1080p toggle off) ask for the same re-encode, as
+    // High (a hardware Baseline encode froze the console), with Direct Stream
+    // on or off.
     const std::string base720 = "http://server:8096/Videos/CHAN0001/stream.ts?VideoCodec=h264"
-                                "&Profile=baseline&Level=31&MaxWidth=1280&MaxHeight=720";
+                                "&Profile=high&Level=41&MaxWidth=1280&MaxHeight=720";
     const std::string want720 = base720 + "&VideoBitrate=3688000&AllowVideoStreamCopy=false" + mp3 + ids;
     CHECK(live_url(VQ720, false, false) == want720);
     CHECK(live_url(VQA, false, false) == want720);
