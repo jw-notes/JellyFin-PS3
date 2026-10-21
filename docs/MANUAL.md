@@ -15,6 +15,11 @@ Defaults are safe but conservative. For a Blu-ray remux on a wired console:
 | **Audio Output** | Settings → Audio → Audio Output | **5.1** |
 | **24Hz Output** | Settings → Playback → 24Hz Output | **Auto** (the default) |
 
+**Live TV** has its own settings (**Settings → Live TV**), separate from films:
+**Live TV Quality** (Auto, 480p, 720p or 1080p; Auto is 720p at 4 Mbps) and
+**Live TV Buffer** (4, 8 or 15 seconds). On Wi-Fi, if channels stutter, try 480p
+and a 15-second buffer.
+
 **Audio Output** is Stereo / 5.1 / 7.1 / Dolby Digital, and 7.1 appears only
 where the chain reports that it takes eight channels of LPCM — the app queries
 the connected display rather than assuming. A surround mode asks the server to
@@ -86,10 +91,12 @@ All taken on a real PS3 at 1920×1080. More in the
 ## What it does
 
 **Interface**
-- **An XMB-style interface.** Categories sit along a row like the PS3's own
-  menu; press `Down` to step into one and `O` to step back out. Every category
-  uses the same depth model, with a cold-boot animation, XMB menu sounds and
-  left-stick navigation.
+- **Two layouts** (Settings → Display → Layout). **Classic**, the default, lays
+  Home out like Jellyfin in a web browser: rows of posters under a Home / Search /
+  Settings header, with full-width poster grids for each library.
+- **XMB**: categories sit along a row like the PS3's own menu; press `Down` to
+  step into one and `O` to step back out. Every category uses the same depth
+  model, with a cold-boot animation, XMB menu sounds and left-stick navigation.
 - **JellyWave**, a translucent take on the XMB wave, drawn on the GPU behind
   everything, with a day/night palette, particles, and a **Wave Intensity**
   setting.
@@ -106,8 +113,10 @@ All taken on a real PS3 at 1920×1080. More in the
 
 **More than the library**
 - **Live TV and the guide**, from a Jellyfin server with a tuner or an IPTV
-  playlist: a channel list with what's on now, a guide grid, channel up/down
-  while watching.
+  playlist: a grid of channel cards with what's on now, genre tabs worked out
+  from the channel names, a guide grid, and remote-style controls while
+  watching. Channels the server can't open are skipped, and a dropped
+  connection is retried for about a minute.
 - **Downloads**: a film, an episode or a whole season saved to the PS3's hard
   drive (or an NTFS USB drive, from Settings), played offline. They pause while
   you stream, resume after a restart, and always leave 10 GB free on the hard
@@ -311,8 +320,8 @@ Canyon preset), and `O` or `Start` stops.
 **Search.** Type on the on-screen keyboard; `□` deletes and `O` clears. Press
 `Down` to reach the results, then `X` to open one or `△` for its details.
 
-**Settings.** A list of six categories (Playback, Audio, Subtitles, Downloads,
-Display, System), each with its own icon; `X` opens one and shows its settings with
+**Settings.** A list of seven categories (Playback, Live TV, Audio, Subtitles,
+Downloads, Display, System), each with its own icon; `X` opens one and shows its settings with
 what the highlighted one does underneath. `O` goes back to the list, `L2`/`R2` move
 to the previous or next category, `Left`/`Right` change a value in either direction
 (`X` still steps forward), and `Up` from the first category returns to the tabs.
@@ -322,12 +331,16 @@ and Español. It follows the PS3's system language; **Settings → Display → L
 picks one by hand (the names are in their own language, so you can always find the
 right one). Titles and descriptions come from your server as it has them.
 
-**Live TV.** `X` watches the channel, `△` makes it a favourite, `Right` opens the
-guide (`O` or `Left` at its first column comes back). While watching, `Up`/`Down`
-change channel. A big channel list is shown a category at a time (`L2`/`R2`), with
-two pages of your own in front: **My Channels** (everything you starred, from all
-categories) and **Recently watched**. `Start` (**Customise**) hides the categories
-you never watch, and the tab reopens on the page you left it on.
+**Live TV.** `X` watches the channel and `△` makes it a favourite. `L2`/`R2` move
+between the tabs: **Favourites** (everything you starred), **Recently watched**,
+**All Channels**, then genres such as News, Sports, Movies, Kids or Crime &
+Mystery, worked out from the channel names (a genre needs three channels for a
+tab). `Start` (**Customise**) hides the tabs you never use, and the page reopens on
+the tab you left it on. In Classic, `□` opens the guide; in XMB, `Right` does
+(`O` or `Left` at its first column comes back).
+
+While watching, the D-pad works like a TV remote: `Left`/`Right` change channel
+and `Up`/`Down` change the volume. The left stick moves around the player bar.
 
 **Media.** `X` opens a drive or folder and then a file's page, where `X` plays or
 resumes it; `O` goes up a folder, `L2`/`R2` page through a long one.

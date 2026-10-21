@@ -84,6 +84,8 @@ Installing over an older version keeps your sign-in and settings.
 For the best picture and sound, turn on **Settings → Playback → 1080p Playback**,
 set **Settings → Audio → Audio Output** to 5.1, and pick **Max** under Quality on a
 film's page. If something stutters, drop Quality to **Very High**.
+Live TV has its own settings under **Settings → Live TV**; on Wi-Fi, 480p and a
+15-second buffer are the smoothest.
 The [manual](docs/MANUAL.md) explains every setting and button.
 
 ## Building

@@ -1,7 +1,29 @@
-# JellyFin [PS3] 3.3.7: changes
+# JellyFin [PS3] 3.3.8: changes
 
 By jw-notes, based on [vortigauntlet/JellyFin-PS3-LosslessAudio](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio) `v3.2.3`.
 Tested on a retail PS3 with CFW at 1080p.
+
+## New in 3.3.8
+
+- **Smoother Live TV on Wi-Fi.** When data trickled in, the player kept
+  waiting on part of a packet instead of feeding the decoder, so pictures
+  stalled with plenty of video already buffered and half the frames were
+  dropped to keep up with the sound. It now goes back to feeding the decoder.
+- **No more lost network after a few minutes of Live TV.** On a laggy Wi-Fi
+  link the large receive window let in more than the console's network memory
+  could hold, and the whole console lost its network until a restart. Live TV
+  now uses a smaller window (128 KB, plenty for a channel); films are
+  unchanged.
+- **Reconnects for about a minute** after a channel drops, instead of giving
+  up after a few seconds.
+- **Picture with 1080p Playback off.** A server that encodes in hardware sends
+  live channels at 1080p whatever was asked; the decoder is now always set up
+  for that on Live TV (it showed sound and no picture before).
+- **Live TV settings have their own section** (Settings > Live TV): Live TV
+  Quality and Live TV Buffer. Auto is 720p at 4 Mbps and no longer follows the
+  films' 1080p Playback setting.
+- **Classic Settings fits on one screen**: the list starts under the header,
+  so all seven sections show without scrolling.
 
 ## New in 3.3.7
 
