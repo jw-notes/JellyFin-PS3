@@ -104,6 +104,10 @@ All taken on a real PS3 at 1920×1080. More in the
   Added, one category at a time.
 - **Full details pages** (`X` on a title): play or resume, start over, version
   and quality pickers, cast, backdrop, and "Back to Season" for episodes.
+  In Classic the page is laid out like Jellyfin's web page: the poster beside
+  the title, details and buttons, then the synopsis, Genres and Director, and
+  the cast as round photos. `Down` from the Quality row moves onto the cast and
+  `Left`/`Right` scroll through all of it.
   `△` anywhere flips a poster to show its synopsis (quick-peek).
 - **Movies, TV, Collections and Music** as poster grids with an A-Z jump bar.
 - **Search** with an on-screen keyboard; results open the details page or

@@ -1,7 +1,22 @@
-# JellyFin [PS3] 3.3.8: changes
+# JellyFin [PS3] 3.3.9: changes
 
 By jw-notes, based on [vortigauntlet/JellyFin-PS3-LosslessAudio](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio) `v3.2.3`.
 Tested on a retail PS3 with CFW at 1080p.
+
+## New in 3.3.9
+
+- **Films no longer lose the network over Wi-Fi.** A film at 1080p on the
+  large receive window hit the same console-wide "no buffer space" failure as
+  Live TV did, 13 seconds in. The app now asks at start-up whether the console
+  is on Wi-Fi or a cable; over Wi-Fi every stream uses the small window, and a
+  wired console keeps the large one for high-bitrate films.
+- **Classic details page redesigned**, after Jellyfin's web page: a larger
+  poster at the left with the title, details, scores and buttons beside it
+  (Play / Resume right under the details), the synopsis, labelled Genres and
+  Director rows, and the cast as round photos.
+- **The cast scrolls.** `Down` from the Quality row moves onto the cast;
+  `Left`/`Right` scroll through everyone, with arrows when there is more. Up to
+  30 people per title are loaded (was 12).
 
 ## New in 3.3.8
 

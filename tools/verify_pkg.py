@@ -40,7 +40,7 @@ with tempfile.TemporaryDirectory() as scratch:
             pos = data_start + data_off
             values[key] = sfo[pos:pos + length].rstrip(b"\0").decode()
     for key, expected in {"CATEGORY": "AT", "TITLE": "JellyFin [PS3]",
-                          "TITLE_ID": "JFPS30000", "APP_VER": "03.38"}.items():
+                          "TITLE_ID": "JFPS30000", "APP_VER": "03.39"}.items():
         require(values.get(key) == expected, f"Unexpected {key}: {values.get(key)}")
     require((extracted / "USRDIR/EBOOT.BIN").read_bytes()[:4] == b"SCE\0",
             "Executable is not a SELF")
