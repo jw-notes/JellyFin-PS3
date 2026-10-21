@@ -7,14 +7,12 @@
 </div>
 
 <p align="center">
-  <img src="docs/screenshots/3.3/livetv.png" width="49%">
-  <img src="docs/screenshots/3.3/search.png" width="49%">
-  <img src="docs/screenshots/3.3/settings.png" width="49%">
-  <img src="docs/screenshots/3.3/themes.png" width="49%">
+  <img src="docs/screenshots/3.3.6/home.png" alt="The Classic home screen" width="100%">
 </p>
 
-Watch your Jellyfin films, shows and music on a PS3, with a menu that looks and
-feels like the console's own.
+Watch your Jellyfin films, shows, music and Live TV on a PS3. Browse in the
+**Classic** layout, laid out like Jellyfin in a web browser, or in an **XMB**
+layout that looks and feels like the console's own menu.
 
 This is my continuation of
 [vortigauntlet's LosslessAudio fork](https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio),
@@ -24,12 +22,54 @@ All of their work is still here, I just fixed and added things on top.
 ## Features
 
 - Lossless TrueHD, Atmos and DTS-HD MA in 5.1 or 7.1, plus 1080p and 24 Hz output for films
+- Two layouts: Classic (rows of posters under a header) or XMB (the PS3's own style)
+- Live TV with a channel grid, genre tabs and remote-style controls
 - Search as you type, with recent searches and Movies / Shows / Episodes filters
 - A full-screen artwork screensaver that shows what each title is about
 - Nine themes; each one recolours the whole app, the wave and the logo included
 - Sign in with a Quick Connect code from your phone or computer, no typing needed
-- Live TV with a channel grid, automatic genre tabs and remote-style controls
 - Music player with visualisers, offline downloads, and files from USB drives
+
+## A quick look
+
+### Live TV
+
+Every channel as a card, with genre tabs worked out from the channel names
+(News, Sports, Movies, Kids, Crime & Mystery and more). While watching, the
+D-pad works like a TV remote: left and right change channel, up and down the volume.
+
+<p align="center">
+  <img src="docs/screenshots/3.3.6/livetv.png" alt="Live TV channel grid with genre tabs" width="90%">
+</p>
+
+### Search
+
+Results appear as you type, and L2 / R2 narrow them to Movies, Shows or Episodes.
+
+<p align="center">
+  <img src="docs/screenshots/3.3.6/search.png" alt="Search results filtered to movies" width="90%">
+</p>
+
+### Artwork screensaver
+
+After a few idle minutes the screen fills with backdrops from your library,
+with what each one is about.
+
+<p align="center">
+  <img src="docs/screenshots/3.3.6/screensaver.png" alt="Artwork screensaver" width="90%">
+</p>
+
+### Settings and themes
+
+Everything is grouped into a few short pages. Each theme recolours the whole app;
+this is Synthwave in the XMB layout.
+
+<p align="center">
+  <img src="docs/screenshots/3.3.6/settings.png" alt="Settings" width="90%">
+</p>
+<p align="center">
+  <img src="docs/screenshots/3.3/themes.png" alt="Synthwave theme in the XMB layout" width="90%">
+</p>
 
 ## Install
 
