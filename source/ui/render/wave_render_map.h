@@ -51,6 +51,8 @@
 #ifndef WAVE_RENDER_MAP_H
 #define WAVE_RENDER_MAP_H
 
+#include <stdbool.h>            // the host tests compile this as C
+
 #include "wave_motion.h"
 
 // --- drive ---------------------------------------------------------------

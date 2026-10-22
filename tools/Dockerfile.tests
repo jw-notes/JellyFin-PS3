@@ -1,0 +1,13 @@
+FROM ubuntu:24.04
+
+# The host tests (tests/Makefile.host).  They build with the host's own
+# compiler, not the PS3 toolchain, so this image is separate from
+# Dockerfile.ps3: libfaad for test_aac, ffmpeg for the tones and fixtures
+# `make check` generates, ntfs-3g for the drive images test_lfs makes.
+# Build it with
+#   docker build -f tools/Dockerfile.tests -t jellyfin-ps3-tests tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential ca-certificates python3 libfaad-dev ffmpeg ntfs-3g \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build/tests

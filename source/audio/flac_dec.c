@@ -212,9 +212,9 @@ int flac_decode_frame(const uint8_t *buf, int len, const FlacInfo *info, int32_t
 
     // the coded frame / sample number: a UTF-8 style number of 1 to 7 bytes
     int pos = 4;
+    if (len <= pos) return 0;
     const int lead = buf[pos];
     int extra;
-    if (len <= pos) return 0;
     if ((lead & 0x80) == 0) extra = 0;
     else if ((lead & 0xE0) == 0xC0) extra = 1;
     else if ((lead & 0xF0) == 0xE0) extra = 2;

@@ -56,13 +56,19 @@ Logic that can run on a PC lives behind host-tested headers and is checked in
 `tests/`:
 
 ```powershell
-docker run --rm --mount "type=bind,source=$PWD,target=/build" -w /build/tests jellyfin-ps3-build:2026-07-26 make -f Makefile.host check
+docker build -f tools/Dockerfile.tests -t jellyfin-ps3-tests tools
+docker run --rm --mount "type=bind,source=$PWD,target=/build" jellyfin-ps3-tests make -f Makefile.host -j8 check
 ```
+
+The tests have their own image (`tools/Dockerfile.tests`): they build with the
+host compiler and need libfaad (`test_aac`), ffmpeg (the tone files the audio
+tests decode) and ntfs-3g (the drive images `test_lfs` makes), none of which
+the PS3 build image has. The PowerPC byte-order check at the end is skipped
+unless a ppc64 cross compiler and qemu are installed.
 
 Run a single test with `make -f Makefile.host test_livetv && ./test_livetv`.
 Delete a test binary first (or use `make -B`) if you changed a header it uses,
-or an old binary can report a pass. A few audio tests need ffmpeg-generated
-tone files and fail without them.
+or an old binary can report a pass.
 
 Tests worth knowing about:
 
