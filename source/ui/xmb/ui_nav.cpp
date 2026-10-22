@@ -1,6 +1,7 @@
 // XMB navigation — tab switching and the browse-mode input handlers
 // (settings, TV sub-screens, collections sub-screens, jump bar, item lists).
 
+#include "user_prefs.h"
 #include "menusnow.h"
 #include "autoskip.h"
 #include "display_24p.h"
@@ -37,6 +38,8 @@ void xmb_switch_tab(int new_tab) {
     if (new_tab < 0 || new_tab >= XMB_TAB_COUNT) return;
     if (!g_tabs[new_tab].enabled) return;
     int old = g_active_tab;
+    // Leaving Settings: this PS3 user's settings go into their save.
+    if (old == XMB_TAB_SETTINGS && new_tab != old) user_prefs_save();
     // Under the spine each category remembers where it was (render/depth.h).
     // A tab whose paged window or name filter is dropped just below starts
     // from its top again, so its old position is forgotten, not restored.

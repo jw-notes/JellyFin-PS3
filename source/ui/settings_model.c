@@ -104,13 +104,16 @@ static const setting_row k_rows[] = {
       TRN("Send a Wake-on-LAN signal to the server PC (X). It is also sent when\n"
       "the server can't be reached. The PC must allow wake-up in its BIOS.")},
     { SET_DEBUG_LOG, SEC_SYSTEM, TRN("Debug Logging"),
-      TRN("Write a diagnostic log to /dev_hdd0/tmp/player_log.txt (on by default).\n"
+      TRN("Write a diagnostic log to /dev_hdd0/tmp/player_log.txt (off by default).\n"
       "Use Send Log to Server when reporting a problem.")},
 #if ENABLE_PLAYER_STATS
     { SET_STATS,     SEC_SYSTEM, TRN("Player Stats Overlay"),
       TRN("Show playback statistics over the video:\n"
       "frame rate, bitrate, buffer and decoder figures.")},
 #endif
+    { SET_SHARE_LOGIN, SEC_SYSTEM, TRN("Share Sign-in"),
+      TRN("On: PS3 users with no sign-in of their own use this account.\n"
+      "One account can be shared; users signed in to their own keep it.")},
     { SET_LOGOUT,    SEC_SYSTEM, TRN("Log Out"),
       TRN("Sign out of this Jellyfin account.\n"
       "You will need to log in again to browse your library.")},

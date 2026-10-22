@@ -34,6 +34,15 @@ int  load_config(void);
 // a fixed id let any other login (e.g. an RPCS3 test run) take over this
 // install's Jellyfin device slot and revoke its token.
 const char *jf_device_id(void);
+// Settings > Share Sign-in: this sign-in lent to the PS3 users with none of
+// their own (on).  Borrowed: this PS3 user is using another's shared sign-in.
+bool jf_login_shared(void);
+bool jf_login_borrowed(void);
+// Another PS3 user's account is shared: this one cannot be as well.
+bool jf_login_share_taken(void);
+// End that share (its owner may have been deleted with their save data).
+void jf_login_end_other_share(void);
+void jf_login_set_shared(bool on);
 
 // Raised by the http layer when an authenticated request comes back 401 —
 // the saved token is dead.  The XMB loop drops the session and returns to
@@ -277,7 +286,7 @@ void jellyfin_logout(void);
 void jellyfin_session_expired(void);
 
 // Screens (each blocks until the user navigates away)
-int  do_login(void);
+int  do_login(void);   // 1 signed in, 0 refused / unreachable, -1 backed out
 void show_library_browser(void);
 void show_search(void);
 void show_main_menu(void);

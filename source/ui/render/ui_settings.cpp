@@ -70,6 +70,11 @@ static void v_debug(char *b, int c, bool *l)    { val_onoff(b, c, l, plog_enable
 static void v_hd1080(char *b, int c, bool *l)   { val_onoff(b, c, l, hd1080_enabled()); }
 static void v_particles(char *b, int c, bool *l){ val_onoff(b, c, l, menusnow_enabled()); }
 static void v_sounds(char *b, int c, bool *l)   { val_onoff(b, c, l, ui_sfx_enabled()); }
+static void v_share(char *b, int c, bool *l) {
+    if (jf_login_borrowed())          val_text(b, c, l, TR("Shared with you"), false);
+    else if (jf_login_share_taken())  val_text(b, c, l, TR("Another account is shared"), false);
+    else                              val_onoff(b, c, l, jf_login_shared());
+}
 static void v_daynight(char *b, int c, bool *l) { val_onoff(b, c, l, daynight_enabled()); }
 static void v_autoskip(char *b, int c, bool *l) { val_onoff(b, c, l, autoskip_enabled()); }
 #if ENABLE_PLAYER_STATS
@@ -225,6 +230,10 @@ static void t_debug(int)       { plog_set_enabled(!plog_enabled()); }
 static void t_hd1080(int)      { hd1080_set_enabled(!hd1080_enabled()); }
 static void t_particles(int)   { menusnow_set_enabled(!menusnow_enabled()); }
 static void t_sounds(int)      { ui_sfx_set_enabled(!ui_sfx_enabled()); }
+static void t_share(int) {
+    if (jf_login_share_taken()) jf_login_end_other_share();
+    else                        jf_login_set_shared(!jf_login_shared());
+}
 static void t_daynight(int)    { daynight_set_enabled(!daynight_enabled()); }
 static void t_autoskip(int)    { autoskip_set_enabled(!autoskip_enabled()); }
 #if ENABLE_PLAYER_STATS
@@ -290,6 +299,7 @@ static const UiRow k_ui[] = {
     TOGGLE(SET_DL_LOCATION, ICON_COLLECTIONS, v_dlloc,     t_dlloc),
     ACTION(SET_DOWNLOADS,   ICON_COLLECTIONS, v_downloads, a_downloads),
     ACTION(SET_OFFLINE_LIB, ICON_PLAY,        v_offline,   a_offline),
+    TOGGLE(SET_SHARE_LOGIN, ICON_LOGOUT,      v_share,     t_share),
     ACTION(SET_LOGOUT,      ICON_LOGOUT,      NULL,        a_logout),
 };
 

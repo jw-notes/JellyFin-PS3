@@ -41,26 +41,28 @@ static bool stream_budget_enabled(void) {
 // Helper — wait for O with error message
 // -------------------------------------------------------
 void show_error(const char *line1, const char *line2) {
-#if !BUILD_FOR_RPCS3
-    drawHeader();
-    drawText(40, 100, tr(line1));
-    if (line2 && line2[0]) drawText(40, 130, tr(line2));
-    drawText(40, 160, TR("O: back"));
-    flip();
-#else
-    // Emulator: the bitmap-font (NV3089) glyph blits dead-lock the RSX FIFO in
-    // the fragile post-failure state (Dead FIFO ... nv3089 decode_transfer),
-    // taking the whole emulator down instead of showing this message.  So drop
-    // the text and just hold a drained frame; the reason is in player_log.txt.
-    // Mirrors player_status_screen()'s gating in player.cpp.
-    (void)line1; (void)line2;
-    flip();
-#endif
+    // Drawn every frame while it waits: the PS button's menu draws over the
+    // app's frames, and a screen that stops flipping freezes the console.
     init_btns();
     while (running) {
         sysUtilCheckCallback();
         poll_buttons();
         if (BTN_PRESSED(circle)) return;
+        waitflip();
+#if !BUILD_FOR_RPCS3
+        drawHeader();
+        drawText(40, 100, tr(line1));
+        if (line2 && line2[0]) drawText(40, 130, tr(line2));
+        drawText(40, 160, TR("O: back"));
+#else
+        // Emulator: the bitmap-font (NV3089) glyph blits dead-lock the RSX FIFO in
+        // the fragile post-failure state (Dead FIFO ... nv3089 decode_transfer),
+        // taking the whole emulator down instead of showing this message.  So drop
+        // the text and just hold a drained frame; the reason is in player_log.txt.
+        // Mirrors player_status_screen()'s gating in player.cpp.
+        (void)line1; (void)line2;
+#endif
+        flip();
     }
 }
 

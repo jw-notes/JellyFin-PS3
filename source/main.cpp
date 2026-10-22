@@ -1,3 +1,4 @@
+#include "user_prefs.h"
 #include "audio_bitstream.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -137,6 +138,9 @@ int main(int argc, const char *argv[]) {
     crash_log("6 ui_init");
     ui_init();
     plog_load_setting();   // starts logging only if the user enabled it
+    // This PS3 user's own settings, from their save data, before any is read.
+    crash_log("6.2 user_prefs_begin");
+    user_prefs_begin();
     // Theme, first of the restores and deliberately right after the logger:
     // g_theme is already built-in 0 via its static initialiser (so the boot
     // frames above were themed), and this applies the user's saved choice.
@@ -341,7 +345,13 @@ int main(int argc, const char *argv[]) {
         if (!g_token[0]) {
             boot_anim_leave();
             crash_log("12 do_login");
-            if (!do_login()) {
+            const int signed_in = do_login();
+            if (signed_in < 0) {
+                // Backed out of sign-in: back to the server address.
+                g_server[0] = '\0';
+                continue;
+            }
+            if (!signed_in) {
                 // Signed out and the server will not have us (unreachable,
                 // or a bad password): what is already downloaded still plays.
                 // Opening it keeps the server URL, so sign-in can be retried
@@ -385,6 +395,7 @@ int main(int argc, const char *argv[]) {
     }
 
     crash_log("14 done");
+    user_prefs_save();       // this PS3 user's settings, into their save
     // First, while the network is still up: the active download parks itself
     // back in the queue with its data (resumes next launch).
     xmb_season_stop();       // a season being queued reads the server: let it finish
