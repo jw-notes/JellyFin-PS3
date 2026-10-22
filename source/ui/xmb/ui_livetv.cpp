@@ -301,11 +301,42 @@ int band_top(void)    { return xmb_classic_livetv(g_active_tab) ? xmb_classic_li
 int band_bottom(void) { return (int)display_height - XMB_BOTTOM_PAD; }
 int row_h(void)       { return UIS_H(62); }
 int row_pitch(void)   { return row_h() + UIS_H(8); }
+// The XMB list: wider than the search list, as a row carries a logo, the name
+// and the programme; and a little lower, for the category tabs above it.
+int list_w(void) {
+    const int full = (int)display_width - 2 * XMB_ITEM_PAD;
+    return full < UIS_W(940) ? full : UIS_W(940);
+}
+int list_x(void)   { return ((int)display_width - list_w()) / 2; }
+int list_top(void) { return band_top() + UIS_H(16); }
 int rows_visible(void) {
-    const int n = (band_bottom() - band_top() + UIS_H(8)) / row_pitch();
+    const int n = (band_bottom() - list_top() + UIS_H(8)) / row_pitch();
     return n < 1 ? 1 : n;
 }
-int list_x(void) { return ((int)display_width - XMB_LIST_W) / 2; }
+// Where a row's parts go, shared by the RSX, CPU and text passes.  The number
+// column is there only when a channel on screen has a number: many IPTV lists
+// have none, and an empty column reads as a gap.
+struct LiveRow { int x, y, w, h, logo_x, logo_y, logo_w, logo_h, num_r, text_x, right_x, right_w; };
+bool list_numbers(void) {
+    const int vis = rows_visible();
+    for (int r = 0; r < vis && s_top + r < s_n; r++)
+        if (s_ch[s_top + r].number[0]) return true;
+    return false;
+}
+LiveRow live_row(int r, bool numbers) {
+    LiveRow o;
+    o.x = list_x(); o.y = list_top() + r * row_pitch();
+    o.w = list_w(); o.h = row_h();
+    o.num_r   = o.x + UIS_W(58);
+    o.logo_h  = o.h - UIS_H(12);
+    o.logo_w  = o.logo_h * 16 / 9;
+    o.logo_x  = (numbers ? o.num_r + UIS_W(14) : o.x + UIS_W(8));
+    o.logo_y  = o.y + (o.h - o.logo_h) / 2;
+    o.text_x  = o.logo_x + o.logo_w + UIS_W(18);
+    o.right_w = UIS_W(230);
+    o.right_x = o.x + o.w - UIS_W(18) - o.right_w;
+    return o;
+}
 
 // Classic shows the channels as a full-width grid of wide cards (logo,
 // number and name, the programme on now) with the library pages' margins and
@@ -700,10 +731,6 @@ void key_label(int key, int cat, char *out, int cap) {
     else if (key == LP_FAVS)        snprintf(out, (size_t)cap, "%s", TR("Favourites"));
     else if (key == LP_RECENT) snprintf(out, (size_t)cap, "%s", TR("Recently watched"));
     else                       cat_label(cat, out, cap);
-}
-
-void page_label(char *out, int cap) {
-    key_label(s_pages[s_page].key, s_pages[s_page].cat, out, cap);
 }
 
 void keep_visible(void) {
@@ -1190,6 +1217,26 @@ void xmb_livetv_gpu(void) {
             ui_card_gpu_selection(card_x(g, rel), card_y(g, rel), g.card_w, g.card_h);
         return;
     }
+    if (!s_guide && s_ch && s_n > 0 && ui_card_gpu_ready()) {
+        // The list: a rounded panel per channel, the logo on a near-black tile,
+        // and the ring that glides between rows as the XMB's other lists do.
+        const bool numbers = list_numbers();
+        const bool focus = xmb_classic_library_header_focus(g_active_tab) < 0;
+        const int vis = rows_visible();
+        for (int r = 0; r < vis && s_top + r < s_n; r++) {
+            const LiveRow o = live_row(r, numbers);
+            const u32 fill = (focus && s_top + r == s_sel) ? XMB_PANEL_HI : XMB_PANEL;
+            wave_draw_rrect_outline_gpu(o.x, o.y, o.w, o.h, UIS_H(8), 1, XMB_HAIRLINE, 255, fill, fill, 225);
+            wave_draw_rrect_gpu(o.logo_x, o.logo_y, o.logo_w, o.logo_h, UIS_H(6),
+                                LIVE_CARD_FILL, LIVE_CARD_FILL, 255);
+        }
+        const int rel = s_sel - s_top;
+        if (focus && rel >= 0 && rel < vis && s_sel < s_n) {
+            const LiveRow o = live_row(rel, numbers);
+            spine_focus_ring_gpu(o.x, o.y, o.w, o.h);
+        }
+        return;
+    }
     if (!s_guide || !s_ch || s_n <= 0) return;
     const int rows = guide_rows_visible();
     const int radius = UIS_H(4);
@@ -1266,24 +1313,27 @@ void xmb_cpu_draw_livetv(void) {
 
     if (!s_guide) {
         const int vis = rows_visible();
-        const int lx = list_x();
+        const bool numbers = list_numbers();
         for (int r = 0; r < vis && s_top + r < s_n; r++) {
             const int i = s_top + r;
-            const int y = band_top() + r * row_pitch();
+            const LiveRow o = live_row(r, numbers);
             const bool sel = (i == s_sel && xmb_classic_library_header_focus(g_active_tab) < 0);
-            drawRect((u32)lx, (u32)y, (u32)XMB_LIST_W, (u32)row_h(), sel ? XMB_PANEL_HI : XMB_PANEL);
-            if (sel) drawRect((u32)(lx - UIS_W(4)), (u32)y, UIS_W(3), (u32)row_h(), XMB_ACCENT);
-            const int lw = UIS_W(96), lh = UIS_H(54);
-            draw_logo(&s_ch[i], lx + UIS_W(70), y + (row_h() - lh) / 2, lw, lh);
-            // The programme's progress, a thin bar under its title on the right.
+            if (!ui_card_gpu_ready()) {
+                drawRect((u32)o.x, (u32)o.y, (u32)o.w, (u32)o.h, sel ? XMB_PANEL_HI : XMB_PANEL);
+                if (sel) drawRect((u32)(o.x - UIS_W(4)), (u32)o.y, UIS_W(3), (u32)o.h, XMB_ACCENT);
+                drawRect((u32)o.logo_x, (u32)o.logo_y, (u32)o.logo_w, (u32)o.logo_h, LIVE_CARD_FILL);
+            }
+            // The logo, square, in the middle of its tile, as on Classic's cards.
+            const int ls = o.logo_h - UIS_H(6);
+            draw_logo(&s_ch[i], o.logo_x + (o.logo_w - ls) / 2, o.logo_y + (o.logo_h - ls) / 2, ls, ls);
+            // The programme's progress, between its times and what is next.
             NowNext nn;
             now_next(&s_ch[i], now, &nn);
             const int pm = livetv_progress_permille(now, nn.now_start, nn.now_end);
             if (pm >= 0) {
-                const int bw = UIS_W(250), bx = lx + XMB_LIST_W - UIS_W(16) - bw;
-                const int by = y + UIS_H(31);
-                drawRect((u32)bx, (u32)by, (u32)bw, UIS_H(3), XMB_HAIRLINE);
-                drawRect((u32)bx, (u32)by, (u32)(bw * pm / 1000), UIS_H(3), XMB_ACCENT);
+                const int by = o.y + UIS_H(30);
+                drawRect((u32)o.right_x, (u32)by, (u32)o.right_w, UIS_H(3), XMB_HAIRLINE);
+                drawRect((u32)o.right_x, (u32)by, (u32)(o.right_w * pm / 1000), UIS_H(3), XMB_ACCENT);
             }
         }
         return;
@@ -1324,6 +1374,45 @@ static void clip_draw(int x, int y, const char *text, float px, u32 colour, int 
     drawTTF_clipped((u32)x, (u32)y, text, px, colour, max_w, bold ? UI_FACE_BOLD : UI_FACE_REGULAR);
 }
 
+// The categories as tabs, the Music page's style: every one in a row, the
+// current one bold and underlined, L2 / R2 at the ends.  When they do not all
+// fit before `right`, the row starts late enough to show the current one.
+// Classic draws them a size larger, under its page title.
+static void draw_cat_tabs(int x, int y, int right, bool large) {
+    const float px = large ? UIS_TF(16.0f) : UIS_TF(14.0f);
+    const int icon_h = large ? UIS_H(22) : UIS_H(20);
+    const int cy     = y + (large ? UIS_H(10) : UIS_H(9));
+    const int ul_y   = y + (large ? UIS_H(24) : UIS_H(21));
+    const int gap    = large ? UIS_W(34) : UIS_W(28);
+    const int lw = ps_btn_width('L', icon_h), rw = ps_btn_width('R', icon_h);
+    const int tabs_x = x + lw + UIS_W(18);
+    const int avail = right - rw - UIS_W(18) - tabs_x;
+    static char lab[MAX_PAGES][64];
+    int w[MAX_PAGES];
+    const int n = s_npages < MAX_PAGES ? s_npages : MAX_PAGES;
+    for (int p = 0; p < n; p++) {
+        key_label(s_pages[p].key, s_pages[p].cat, lab[p], sizeof lab[p]);
+        w[p] = ttf_text_width(lab[p], px, p == s_page);
+    }
+    int first = 0;
+    for (;;) {
+        int span = 0;
+        for (int p = first; p <= s_page && p < n; p++) span += w[p] + (p > first ? gap : 0);
+        if (span <= avail || first >= s_page) break;
+        first++;
+    }
+    draw_ps_button_vcentered((u32)x, cy, 'L', icon_h, 255);
+    int tx = tabs_x;
+    for (int p = first; p < n; p++) {
+        if (tx + w[p] > tabs_x + avail) break;
+        const bool on = p == s_page;
+        drawTTF((u32)tx, (u32)y, lab[p], px, on ? XMB_WHITE : XMB_TEXT_FAINT, on);
+        if (on) drawRect((u32)tx, (u32)ul_y, (u32)w[p], UIS_H(3), XMB_ACCENT);
+        tx += w[p] + gap;
+    }
+    draw_ps_button_vcentered((u32)(tx - gap + UIS_W(18)), cy, 'R', icon_h, 255);
+}
+
 // Classic's heading, laid out as the library pages': the title, the category
 // (or search) under it, and the window's place in the list on the right.
 static void classic_heading(void) {
@@ -1337,38 +1426,7 @@ static void classic_heading(void) {
         snprintf(line, sizeof line, TR("Search: %s  (%d found)  -  O to go back"), s_term, s_n);
         drawTTF((u32)x, (u32)sub_y, line, UIS_TF(15), XMB_ACCENT_ALT);
     } else if (paging()) {
-        // The categories as tabs, the Music page's style: every one in a row,
-        // the current one bold and underlined, L2 / R2 at the ends.  When
-        // they do not all fit, the row starts late enough to show the current.
-        const float px = UIS_TF(16.0f);
-        const int icon_h = UIS_H(22), cy = sub_y + UIS_H(10), gap = UIS_W(34);
-        const int lw = ps_btn_width('L', icon_h), rw = ps_btn_width('R', icon_h);
-        const int tabs_x = x + lw + UIS_W(18);
-        const int avail = (int)display_width - x - rw - UIS_W(18) - tabs_x;
-        static char lab[MAX_PAGES][64];
-        int w[MAX_PAGES];
-        const int n = s_npages < MAX_PAGES ? s_npages : MAX_PAGES;
-        for (int p = 0; p < n; p++) {
-            key_label(s_pages[p].key, s_pages[p].cat, lab[p], sizeof lab[p]);
-            w[p] = ttf_text_width(lab[p], px, p == s_page);
-        }
-        int first = 0;
-        for (;;) {
-            int span = 0;
-            for (int p = first; p <= s_page && p < n; p++) span += w[p] + (p > first ? gap : 0);
-            if (span <= avail || first >= s_page) break;
-            first++;
-        }
-        draw_ps_button_vcentered((u32)x, cy, 'L', icon_h, 255);
-        int tx = tabs_x;
-        for (int p = first; p < n; p++) {
-            if (tx + w[p] > tabs_x + avail) break;
-            const bool on = p == s_page;
-            drawTTF((u32)tx, (u32)sub_y, lab[p], px, on ? XMB_WHITE : XMB_TEXT_FAINT, on);
-            if (on) drawRect((u32)tx, (u32)(sub_y + UIS_H(24)), (u32)w[p], UIS_H(3), XMB_ACCENT);
-            tx += w[p] + gap;
-        }
-        draw_ps_button_vcentered((u32)(tx - gap + UIS_W(18)), cy, 'R', icon_h, 255);
+        draw_cat_tabs(x, sub_y, (int)display_width - x, true);
     }
     if (s_ch && s_n > 0) {
         const LiveGrid g = live_grid();
@@ -1397,12 +1455,9 @@ void xmb_draw_livetv(void) {
     } else if (s_search_on && !s_guide) {
         char line[200];
         snprintf(line, sizeof line, TR("Search: %s  (%d found)  -  O to go back"), s_term, s_n);
-        drawTTF((u32)list_x(), (u32)(band_top() - UIS_H(18)), line, UIS_TF(13), XMB_ACCENT_ALT);
+        drawTTF((u32)list_x(), (u32)(list_top() - UIS_H(30)), line, UIS_TF(14), XMB_ACCENT_ALT);
     } else if (paging() && !s_guide) {
-        char lab[96], line[160];
-        page_label(lab, sizeof lab);
-        snprintf(line, sizeof line, "L2 <   %s   (%d / %d)   > R2", lab, s_page + 1, s_npages);
-        drawTTF((u32)list_x(), (u32)(band_top() - UIS_H(18)), line, UIS_TF(13), XMB_ACCENT_ALT);
+        draw_cat_tabs(list_x(), list_top() - UIS_H(32), list_x() + list_w() - UIS_W(90), false);
     }
     if (s_n <= 0) {
         const char *m = s_failed ? TR("Couldn't load the channel list")
@@ -1445,47 +1500,56 @@ void xmb_draw_livetv(void) {
 
     if (!s_guide) {
         const int vis = rows_visible();
-        const int lx = list_x();
+        const bool numbers = list_numbers();
         for (int r = 0; r < vis && s_top + r < s_n; r++) {
             const int i = s_top + r;
             const JFChannel *c = &s_ch[i];
-            const int y = band_top() + r * row_pitch();
+            const LiveRow o = live_row(r, numbers);
             const bool sel = (i == s_sel && xmb_classic_library_header_focus(g_active_tab) < 0);
-            const u32 clr = sel ? XMB_WHITE : XMB_TEXT_DIM;
-            if (c->favourite)
-                drawIcon((u32)(lx + UIS_W(10)), (u32)(y + (row_h() - UIS_H(14)) / 2 - UIS_H(1)),
-                         ICON_STAR, UIS_TF(14.0f), XMB_ACCENT_ALT);
             // Channel number: right-aligned in its column, so the digits line up.
             if (c->number[0]) {
-                const int nw = ttf_text_width(c->number, UIS_TF(17));
-                drawTTF((u32)(lx + UIS_W(62) - nw), (u32)(y + (row_h() - UIS_H(17)) / 2 - UIS_H(1)),
-                        c->number, UIS_TF(17), XMB_TEXT_FAINT);
+                const int nw = ttf_text_width(c->number, UIS_TF(18));
+                drawTTF((u32)(o.num_r - nw), (u32)(o.y + (o.h - UIS_H(18)) / 2 - UIS_H(1)),
+                        c->number, UIS_TF(18), sel ? XMB_TEXT : XMB_TEXT_FAINT);
             }
-            // Name; the programme (title, then "Next:") on the right.
-            const int name_x = lx + UIS_W(182);
-            const int right_w = UIS_W(270);
-            const int name_w = XMB_LIST_W - UIS_W(182) - right_w - UIS_W(24);
-            clip_draw(name_x, y + (row_h() - UIS_H(18)) / 2 - UIS_H(1), c->name, UIS_TF(18), clr, name_w, sel);
             NowNext nn;
             now_next(c, now, &nn);
-            const int rx = lx + XMB_LIST_W - UIS_W(16) - UIS_W(250);
+            // The name, with the programme on now under it; alone, it is
+            // centred.  A favourite gets its star after the name.
+            const int text_r = (nn.now[0] ? o.right_x - UIS_W(24) : o.x + o.w - UIS_W(18));
+            const int star_w = c->favourite ? UIS_W(24) : 0;
+            const int name_y = nn.now[0] ? o.y + UIS_H(9) : o.y + (o.h - UIS_H(18)) / 2 - UIS_H(1);
+            const int name_max = text_r - o.text_x - star_w;
+            clip_draw(o.text_x, name_y, c->name, UIS_TF(18), sel ? XMB_WHITE : XMB_TEXT, name_max, sel);
+            if (c->favourite) {
+                int nw = ttf_text_width(c->name, UIS_TF(18), sel);
+                if (nw > name_max) nw = name_max;
+                drawIcon((u32)(o.text_x + nw + UIS_W(8)), (u32)(name_y + UIS_H(2)),
+                         ICON_STAR, UIS_TF(14.0f), XMB_ACCENT_ALT);
+            }
             if (nn.now[0]) {
-                clip_draw(rx, y + UIS_H(8), nn.now, UIS_TF(14), sel ? XMB_TEXT : XMB_TEXT_DIM,
-                          UIS_W(250), false);
+                clip_draw(o.text_x, o.y + UIS_H(35), nn.now, UIS_TF(14), sel ? XMB_TEXT : XMB_TEXT_DIM,
+                          text_r - o.text_x, false);
+                // On the right: the slot's times over its progress bar, and
+                // what is next under it.
+                char a[16], b[16], times[48];
+                fmt_hm(nn.now_start, a, sizeof a);
+                fmt_hm(nn.now_end, b, sizeof b);
+                snprintf(times, sizeof times, "%s - %s", a, b);
+                drawTTF((u32)o.right_x, (u32)(o.y + UIS_H(9)), times, UIS_TF(13), XMB_TEXT_DIM);
                 if (nn.next[0]) {
                     char hm[16], line[160];
                     fmt_hm(nn.next_start, hm, sizeof hm);
                     snprintf(line, sizeof line, TR("Next: %s  %s"), hm, nn.next);
-                    clip_draw(rx, y + UIS_H(40), line, UIS_TF(12), XMB_TEXT_FAINT, UIS_W(250), false);
+                    clip_draw(o.right_x, o.y + UIS_H(39), line, UIS_TF(12), XMB_TEXT_FAINT, o.right_w, false);
                 }
             }
         }
-        if (s_n > vis) {
-            char pos[24];
-            snprintf(pos, sizeof pos, "%d / %d", s_sel + 1, s_n);
-            const int pw = ttf_text_width(pos, UIS_TF(13));
-            drawTTF((u32)(lx + XMB_LIST_W - pw), (u32)(band_top() - UIS_H(18)), pos, UIS_TF(13), XMB_TEXT_FAINT);
-        }
+        // Where the selection is in the list, at the right of the tabs.
+        char pos[24];
+        snprintf(pos, sizeof pos, "%d / %d", s_sel + 1, s_n);
+        const int pw = ttf_text_width(pos, UIS_TF(14));
+        drawTTF((u32)(list_x() + list_w() - pw), (u32)(list_top() - UIS_H(30)), pos, UIS_TF(14), XMB_TEXT_FAINT);
         return;
     }
 

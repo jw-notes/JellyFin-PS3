@@ -560,7 +560,7 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
             }
             cast_all[cast_total++] = i;
         }
-        const bool cast_row = classic && cast_total > 0;
+        const bool cast_row = cast_total > 0;
         const bool dl_capable = strcmp(it->type, "Movie") == 0 ||
                                 strcmp(it->type, "Episode") == 0 ||
                                 strcmp(it->type, "Video") == 0;
@@ -630,9 +630,16 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
                 init_btns();
                 break;
             }
-            const bool nav_d = BTN_PRESSED(down), nav_u = BTN_PRESSED(up);
+            bool nav_d = BTN_PRESSED(down), nav_u = BTN_PRESSED(up);
+            // The XMB layout has the cast above the buttons: Up from the
+            // first row goes into it and Down comes back.
+            if (!classic && nav_u && frow == 0 && cast_row) { frow = 3; nav_u = false; }
+            else if (!classic && nav_d && frow == 3) {
+                frow = 0; nav_d = false;
+                if (fcol >= n0) fcol = n0 - 1;
+            }
             if (nav_d && frow == 0 && n1 > 0)              { frow = 1; if (fcol >= n1) fcol = n1 - 1; }
-            else if (nav_d && (frow == 1 || (frow == 0 && n1 == 0)) && cast_row) frow = 3;
+            else if (nav_d && (frow == 1 || (frow == 0 && n1 == 0)) && cast_row && classic) frow = 3;
             if (nav_u && frow == 1)                        { frow = 0; if (fcol >= n0) fcol = n0 - 1; }
             else if (nav_u && frow == 3) {
                 frow = n1 > 0 ? 1 : 0;
@@ -1001,16 +1008,22 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
         const int KW = classic ? UIS_H(92) : UIS_W(58), KD = classic ? UIS_H(92) : UIS_H(87);
         const int KP = classic ? UIS_W(130) : UIS_W(104);
         const int KX = TX;
+        // The XMB layout fills the width beside the poster, leaving room for
+        // the "more" arrow, then scrolls the rest as Classic does.
+        if (!classic) {
+            cast_max = (W - XMB_OX - KX - UIS_W(60)) / KP;
+            if (cast_max > 8) cast_max = 8;
+            if (cast_max < 1) cast_max = 1;
+        }
         if (cast_sel >= cast_total) cast_sel = cast_total > 0 ? cast_total - 1 : 0;
         if (cast_sel < cast_top) cast_top = cast_sel;
         if (cast_sel >= cast_top + cast_max) cast_top = cast_sel - cast_max + 1;
         if (cast_top > cast_total - cast_max) cast_top = cast_total > cast_max ? cast_total - cast_max : 0;
-        if (!classic) cast_top = 0;
         int cast_idx[JF_MAX_PEOPLE], n_cast = 0;
         for (int k = cast_top; k < cast_total && n_cast < cast_max; k++) cast_idx[n_cast++] = cast_all[k];
         if (frow == 3 && cast_row) {
             const int fk = cast_sel - cast_top;
-            spine_focus_ring_gpu(KX + fk * KP + (KP - KW) / 2, KY, KW, KD);
+            spine_focus_ring_gpu(KX + fk * KP + (classic ? (KP - KW) / 2 : 0), KY, KW, KD);
         }
 
         rsxSync();
@@ -1239,8 +1252,10 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
             const int ay = KY + KD / 2 - (int)apx / 2;
             if (cast_top > 0)
                 drawTTF((u32)(KX - UIS_W(22)), (u32)ay, "\xE2\x80\xB9", apx, XMB_TEXT_DIM);
+            const int ax = classic ? KX + cast_max * KP + UIS_W(4)
+                                   : KX + (cast_max - 1) * KP + KW + UIS_W(14);
             if (cast_top + cast_max < cast_total)
-                drawTTF((u32)(KX + cast_max * KP + UIS_W(4)), (u32)ay, "\xE2\x80\xBA", apx, XMB_TEXT_DIM);
+                drawTTF((u32)ax, (u32)ay, "\xE2\x80\xBA", apx, XMB_TEXT_DIM);
         }
 
         // Selector labels.
