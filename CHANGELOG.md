@@ -10,6 +10,14 @@ public: it froze on the Home screen on real hardware, ran out of memory at
 1080p, and had sign-in and update-check bugs (see 3.3.0 below). vortigauntlet's own release notes for 3.2.3
 and earlier are kept at the end, as he wrote them.
 
+## 3.4.2
+
+- **Fixed a FLAC decoder bug.** A FLAC frame cut off after its first four
+  bytes (a damaged or partly downloaded file) made the decoder read one byte
+  past the end of its buffer. It now waits for the rest of the frame.
+- The developer tests all run again, in their own Docker image
+  (`tools/Dockerfile.tests`); see the developer guide.
+
 ## 3.4.1
 
 - **A default picture for cast without a photo.** Actors the server has no
