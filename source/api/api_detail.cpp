@@ -134,6 +134,11 @@ static void parse_people(const char *json, JFPerson *arr, int max, int *count) {
         person->id[0] = person->name[0] = person->role[0] = '\0';
         json_get_in_range(obj_start, olen, "Name", person->name, sizeof(person->name));
         json_get_in_range(obj_start, olen, "Id",   person->id,   sizeof(person->id));
+        {
+            char tag[48] = "";
+            json_get_in_range(obj_start, olen, "PrimaryImageTag", tag, sizeof(tag));
+            person->has_image = tag[0] != '\0';
+        }
         char role[64] = "", type[24] = "";
         json_get_in_range(obj_start, olen, "Role", role, sizeof(role));
         json_get_in_range(obj_start, olen, "Type", type, sizeof(type));

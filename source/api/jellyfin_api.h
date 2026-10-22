@@ -56,6 +56,7 @@ typedef struct {
     char id[64];      // person item id (for the headshot image)
     char name[64];    // "Arnold Schwarzenegger"
     char role[64];    // "as The Terminator" / "Director" (character or job)
+    bool has_image;   // the server has a photo (PrimaryImageTag); else a silhouette
 } JFPerson;
 
 // Identity of an item beyond its name -- what an offline copy needs to be

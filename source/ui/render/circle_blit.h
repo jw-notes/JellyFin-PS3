@@ -169,6 +169,65 @@ static inline void cb_fill_circle(const CbSurface *s, int dx, int dy, int d,
     }
 }
 
+// The default picture for a person with no photo: a head and shoulders in
+// `fg` on `bg`, in a w x h box at (dx, dy). `round` clips it to the circle of
+// diameter w (w == h) with the same rim as cb_fill_circle; otherwise it fills
+// the box and the caller frames it. Same write-only contract: nothing outside
+// the shape is touched.
+static inline void cb_fill_avatar(const CbSurface *s, int dx, int dy, int w, int h,
+                                  int round, unsigned int bg, unsigned int fg,
+                                  unsigned int rim)
+{
+    if (w <= 0 || h <= 0) return;
+    // The figure's scale: the circle's diameter, or on a tall card a little
+    // wider than the card so the shoulders run off its sides as a photo's do.
+    float u = (float)(w < h ? w : h);
+    if (!round) {
+        const float a = (float)w * 1.3f, b = (float)h * 0.9f;
+        u = a < b ? a : b;
+    }
+    const float cx   = (float)dx + (float)w * 0.5f;
+    const float base = (float)dy + (float)h;             // shoulders sit on the bottom
+    // Head: a circle. Shoulders: the top of a wide circle cut by the box.
+    const float hy = base - u * 0.62f, hr = u * 0.19f, hr2 = hr * hr;
+    const float sy = base + u * 0.20f, sr = u * 0.42f, sr2 = sr * sr;
+    const float r    = (float)w * 0.5f;
+    const float ccy  = (float)dy + r;
+    const float r2   = r * r;
+    const float r_in = r - 1.0f;
+    const float ri2  = r_in > 0.0f ? r_in * r_in : 0.0f;
+
+    for (int row = 0; row < h; row++) {
+        const int y = dy + row;
+        if (cb_row_clipped(s, y)) continue;
+        const float py = (float)y + 0.5f;
+        int c0 = dx, c1 = dx + w;
+        if (round) {
+            const float yy = py - ccy, sp2 = r2 - yy * yy;
+            if (sp2 <= 0.0f) continue;
+            const float span = sqrtf(sp2);
+            const int a = (int)(cx - span), b = (int)(cx + span) + 1;
+            if (a > c0) c0 = a;
+            if (b < c1) c1 = b;
+        }
+        if (c0 < 0)    c0 = 0;
+        if (c1 > s->w) c1 = s->w;
+        unsigned int *dst = s->px + (size_t)y * (size_t)s->pitch;
+        for (int col = c0; col < c1; col++) {
+            const float px = (float)col + 0.5f;
+            if (round) {
+                const float xx = px - cx, yy = py - ccy, dd = xx * xx + yy * yy;
+                if (dd > r2) continue;
+                if (dd > ri2) { dst[col] = rim; continue; }
+            }
+            const float hx = px - cx, hyd = py - hy;
+            const float ox = px - cx, oyd = py - sy;
+            const int person = hx * hx + hyd * hyd <= hr2 || ox * ox + oyd * oyd <= sr2;
+            dst[col] = person ? fg : bg;
+        }
+    }
+}
+
 #ifdef __cplusplus
 }
 #endif

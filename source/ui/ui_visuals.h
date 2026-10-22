@@ -596,6 +596,10 @@ void xmb_cpu_blit_thumb_scaled(const char *item_id, int x, int y, int w, int h);
 void xmb_cpu_blit_thumb_circle(const char *item_id, int x, int y, int d,
                                u32 rim);
 
+// A default head-and-shoulders picture, for a person the server has no photo
+// of: round (diameter w, with the rim) or filling a w x h card.
+void xmb_cpu_draw_avatar(int x, int y, int w, int h, bool round, u32 rim);
+
 // Music sub-tab header row.  active = g_music_subtab; focused = the d-pad
 // is on the header (active label pops white instead of just underlined).
 void xmb_draw_music_subtabs(int x, int y, int active, bool focused);

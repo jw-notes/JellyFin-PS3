@@ -124,6 +124,15 @@ void xmb_cpu_blit_thumb_circle(const char *item_id, int x, int y, int d,
     else
         cb_fill_circle(&s, x, y, d, XMB_THUMB_DIM, rim);
 }
+// The picture for a person with no photo: a head-and-shoulders silhouette in
+// the theme's faint text colour on the placeholder grey, round (diameter w) or
+// filling a w x h card.
+void xmb_cpu_draw_avatar(int x, int y, int w, int h, bool round, u32 rim)
+{
+    CbSurface s = cb_surface();
+    cb_fill_avatar(&s, x, y, w, h, round ? 1 : 0, XMB_THUMB_DIM, XMB_TEXT_FAINT, rim);
+}
+
 // Search results: small scaled thumb, dim placeholder while loading.
 // Reuses the Movies-tab poster size so a thumb cached from browsing is
 // shared with the search list.

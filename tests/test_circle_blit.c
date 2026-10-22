@@ -311,9 +311,82 @@ static void test_rim(void)
     free(black);
 }
 
+// The default person picture: inside its shape only, a head and shoulders in
+// the figure colour, background around them, and clipped like everything else.
+#define AV_BG  0x00202020u
+#define AV_FG  0x00808080u
+#define AV_RIM 0x00505050u
+static void test_avatar(void)
+{
+    puts("- avatar");
+    const CbSurface s = surf(0, 0);
+
+    // Round, at several sizes and positions, partly off every edge.
+    const int pos[][3] = { {40, 30, 60}, {10, 10, 24}, {-20, 40, 60}, {130, -15, 50}, {50, 90, 64} };
+    for (unsigned i = 0; i < sizeof pos / sizeof pos[0]; i++) {
+        fb_reset();
+        const int dx = pos[i][0], dy = pos[i][1], d = pos[i][2];
+        cb_fill_avatar(&s, dx, dy, d, d, 1, AV_BG, AV_FG, AV_RIM);
+        char what[48];
+        snprintf(what, sizeof what, "avatar round at (%d,%d) d=%d", dx, dy, d);
+        check_outside_untouched(what, dx, dy, d);
+        check_inside_filled(what, dx, dy, d, 0);
+        int bad = 0;
+        for (int k = 0; k < W * H; k++)
+            if (g_fb[k] != SENTINEL && g_fb[k] != AV_BG && g_fb[k] != AV_FG && g_fb[k] != AV_RIM) bad++;
+        ok(bad == 0, "%s: %d pixel(s) in a colour it was not given", what, bad);
+    }
+
+    // The figure: head centre and shoulders are the figure colour, the top
+    // corners of the disc's interior and the gap beside the head are background.
+    fb_reset();
+    cb_fill_avatar(&s, 40, 20, 80, 80, 1, AV_BG, AV_FG, AV_RIM);
+    const float u = 80.0f;
+    const int hx = 80, hy = (int)(20 + 80 - u * 0.62f);
+    ok(g_fb[hy * W + hx] == AV_FG, "head centre is the figure colour");
+    ok(g_fb[(20 + 76) * W + 80] == AV_FG, "shoulders reach the bottom of the circle");
+    ok(g_fb[(20 + 12) * W + 80] == AV_BG, "above the head is background");
+    ok(g_fb[hy * W + (int)(80 - u * 0.30f)] == AV_BG, "beside the head is background");
+
+    // Box mode fills exactly its rectangle (the caller draws the frame).
+    fb_reset();
+    cb_fill_avatar(&s, 30, 25, 58, 87, 0, AV_BG, AV_FG, AV_RIM);
+    int outside = 0, holes = 0, fg = 0;
+    for (int y = 0; y < H; y++)
+        for (int x = 0; x < W; x++) {
+            const int in = x >= 30 && x < 88 && y >= 25 && y < 112;
+            const unsigned p = g_fb[y * W + x];
+            if (!in && p != SENTINEL) outside++;
+            if (in && p == SENTINEL) holes++;
+            if (in && p == AV_FG) fg++;
+        }
+    ok(outside == 0, "box avatar: %d pixel(s) outside its box", outside);
+    ok(holes == 0, "box avatar: %d hole(s) inside its box", holes);
+    ok(fg > 58 * 87 / 6, "box avatar: the figure covers a fair part of the card (%d px)", fg);
+
+    // Row clipping applies too.
+    fb_reset();
+    const CbSurface sc = surf(40, 60);
+    cb_fill_avatar(&sc, 40, 20, 80, 80, 1, AV_BG, AV_FG, AV_RIM);
+    int stray = 0;
+    for (int y = 0; y < H; y++)
+        for (int x = 0; x < W; x++)
+            if ((y < 40 || y >= 60) && g_fb[y * W + x] != SENTINEL) stray++;
+    ok(stray == 0, "avatar honours the row clip (%d stray)", stray);
+
+    // Degenerate sizes write nothing.
+    fb_reset();
+    cb_fill_avatar(&s, 10, 10, 0, 0, 1, AV_BG, AV_FG, AV_RIM);
+    cb_fill_avatar(&s, 10, 10, -5, 20, 0, AV_BG, AV_FG, AV_RIM);
+    int any = 0;
+    for (int k = 0; k < W * H; k++) if (g_fb[k] != SENTINEL) any++;
+    ok(any == 0, "zero or negative size writes nothing");
+}
+
 int main(void)
 {
     src_init();
+    test_avatar();
     test_basic();
     test_area();
     test_clipping();

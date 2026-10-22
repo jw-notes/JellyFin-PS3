@@ -1044,12 +1044,22 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
         // Cast: 58x87 (2:3) portraits on a 104 px pitch from x=313, y=493.  The
         // canvas has no crew here except the director, who gets the line
         // above, so crew entries are skipped.
-        for (int k = 0; classic && k < n_cast; k++)
-            xmb_cpu_blit_thumb_circle(detail.people[cast_idx[k]].id, KX + k * KP + (KP - KW) / 2,
-                                      KY, KW, XMB_HAIRLINE);
+        // A person with no photo (or one that failed to load) gets the
+        // default silhouette instead of an empty placeholder.
+        for (int k = 0; classic && k < n_cast; k++) {
+            const JFPerson *pp = &detail.people[cast_idx[k]];
+            const int px = KX + k * KP + (KP - KW) / 2;
+            if (pp->has_image && !thumb_failed(pp->id))
+                xmb_cpu_blit_thumb_circle(pp->id, px, KY, KW, XMB_HAIRLINE);
+            else
+                xmb_cpu_draw_avatar(px, KY, KW, KW, true, XMB_HAIRLINE);
+        }
         for (int k = 0; !classic && k < n_cast; k++) {
+            const JFPerson *pp = &detail.people[cast_idx[k]];
             const int kx = TX + k * KP;
-            if (!xmb_cpu_blit_thumb(detail.people[cast_idx[k]].id, kx, KY, KW, KD))
+            if (!pp->has_image || thumb_failed(pp->id))
+                xmb_cpu_draw_avatar(kx, KY, KW, KD, false, XMB_HAIRLINE);
+            else if (!xmb_cpu_blit_thumb(pp->id, kx, KY, KW, KD))
                 drawRect((u32)kx, (u32)KY, (u32)KW, (u32)KD, XMB_THUMB_DIM);
             drawRect((u32)(kx - 1), (u32)(KY - 1), (u32)(KW + 2), 1, XMB_HAIRLINE);
             drawRect((u32)(kx - 1), (u32)(KY + KD), (u32)(KW + 2), 1, XMB_HAIRLINE);
