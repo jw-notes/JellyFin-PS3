@@ -124,6 +124,17 @@ void xmb_cpu_blit_thumb_circle(const char *item_id, int x, int y, int d,
     else
         cb_fill_circle(&s, x, y, d, XMB_THUMB_DIM, rim);
 }
+// The same from a square image (the user's picture): fetched at d x d, so
+// nothing is squeezed into the circle.  False until it is there.
+bool xmb_cpu_blit_thumb_circle_sq(const char *key, int x, int y, int d, u32 rim)
+{
+    thumb_request(key, d, d);
+    const Bitmap *bm = thumb_get(key, d, d);
+    if (!bm || !bm->pixels || !bm->width || !bm->height) return false;
+    CbSurface s = cb_surface();
+    cb_blit_circle(&s, bm->pixels, (int)bm->width, (int)bm->height, x, y, d, rim);
+    return true;
+}
 // The picture for a person with no photo: a head-and-shoulders silhouette in
 // the theme's faint text colour on the placeholder grey, round (diameter w) or
 // filling a w x h card.

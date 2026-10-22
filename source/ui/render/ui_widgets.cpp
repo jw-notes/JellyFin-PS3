@@ -20,6 +20,8 @@
 #include "ps_buttons_png.h"
 #include "jfmark_png.h"
 #include "plog.h"
+#include "jellyfin_api.h"      // g_userid: the header picture
+#include "thumbnail_cache.h"
 
 // -------------------------------------------------------
 // Tab icon codepoints (Tabler Icons)
@@ -153,6 +155,37 @@ void xmb_clock_after(unsigned seconds, char *out, size_t cap) {
     clock_strings(seconds, out, cap, date, sizeof date);
 }
 
+// Room kept at the right of the top row for the user's picture.
+static int s_topbar_right_reserve = 0;
+
+static void user_box(int *x, int *y, int *d) {
+    *d = UIS_H(34);
+    *x = (int)display_width - (int)XMB_ITEM_PAD - *d;
+    *y = XMB_OY + UIS_H(20) + UIS_H(12) - *d / 2;
+}
+
+// A user with no picture (or one that fails) gets the default silhouette.
+void xmb_cpu_draw_user(void) {
+    if (!g_userid[0]) return;
+    char key[80];
+    snprintf(key, sizeof key, "user:%s", g_userid);
+    int x, y, d;
+    user_box(&x, &y, &d);
+    const int ct = g_cpu_clip_top, cb = g_cpu_clip_bot;
+    g_cpu_clip_top = 0; g_cpu_clip_bot = 0;
+    if (thumb_failed(key) || !xmb_cpu_blit_thumb_circle_sq(key, x, y, d, XMB_HAIRLINE))
+        xmb_cpu_draw_avatar(x, y, d, d, true, XMB_HAIRLINE);
+    g_cpu_clip_top = ct; g_cpu_clip_bot = cb;
+}
+
+void xmb_draw_topbar_user(void) {
+    int x, y, d;
+    user_box(&x, &y, &d);
+    s_topbar_right_reserve = g_userid[0] ? d + UIS_W(16) : 0;
+    xmb_draw_topbar();
+    s_topbar_right_reserve = 0;
+}
+
 void xmb_draw_topbar(void) {
     const int oy    = XMB_OY;
     const float la  = (float)(int)(g_topbar_logo_a * 16.0f + 0.5f) / 16.0f;
@@ -240,7 +273,7 @@ void xmb_draw_topbar(void) {
     const float date_px = UIS_TF(11.0f);         // Satoshi 500
     int tw = ttf_text_width_face(t_str, time_px, UI_FACE_TAB);
     int dw = ttf_text_width_face(d_str, date_px, UI_FACE_TAB_REG);
-    int tx = (int)display_width - (int)XMB_ITEM_PAD - tw;
+    int tx = (int)display_width - (int)XMB_ITEM_PAD - s_topbar_right_reserve - tw;
     drawTTF_face((u32)tx, (u32)(row_y + UIS_H(2)), t_str, time_px,
                  XMB_TEXT, UI_FACE_TAB);
     drawTTF_face((u32)(tx - dw - UIS_H(10)), (u32)(row_y + UIS_H(7)),

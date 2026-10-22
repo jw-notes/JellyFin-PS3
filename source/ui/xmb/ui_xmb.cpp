@@ -249,6 +249,7 @@ static void xmb_draw_gpu_phase(int tab) {
 // CPU draw phase — direct framebuffer writes, runs after rsxSync().
 static void xmb_draw_cpu_phase(int tab) {
     if (xmb_classic_chrome(tab)) xmb_classic_header_cpu(tab);
+    else                         xmb_cpu_draw_user();
     if (xmb_classic_active(tab)) { xmb_classic_cpu(); return; }
     // Only when the GPU phase did not already lay it down as a blended quad.
     if (!s_div_on_gpu && spine_divider_alpha() >= 0.5f)
@@ -292,7 +293,7 @@ static void xmb_draw_cpu_phase(int tab) {
 static void xmb_draw_text_phase(int tab) {
     if (xmb_classic_active(tab)) { xmb_classic_text(); return; }
     if (xmb_classic_chrome(tab)) xmb_classic_header_text(tab);
-    else                         xmb_draw_topbar();
+    else                         xmb_draw_topbar_user();
 
     wd_stage("topbar done");
     if (tab == XMB_TAB_HOME) {

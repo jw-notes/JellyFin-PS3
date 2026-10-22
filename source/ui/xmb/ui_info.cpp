@@ -1031,6 +1031,7 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
 
         // ---- CPU phase ---------------------------------------------------
         if (classic) xmb_classic_header_cpu(g_active_tab);
+        else         xmb_cpu_draw_user();
         if (!poster_gpu && show_poster) {
             if (poster_cpu.pixels) info_blit(&poster_cpu, PX, PY);
             else xmb_cpu_blit_thumb_scaled(it->id, PX, PY, PW, PH);
@@ -1082,7 +1083,7 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
 
         // ---- text --------------------------------------------------------
         if (classic) xmb_classic_header_text(g_active_tab);
-        else { xmb_draw_topbar(); spine_draw(); }
+        else { xmb_draw_topbar_user(); spine_draw(); }
 
         // Title: 25px/700 display face, -0.01em.
         {

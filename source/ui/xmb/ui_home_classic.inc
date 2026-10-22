@@ -281,7 +281,7 @@ void xmb_classic_header_gpu(int tab) {
 }
 
 void xmb_classic_header_text(int tab) {
-    xmb_draw_topbar();
+    xmb_draw_topbar_user();
     const int page = classic_page(tab);
     const int lib_focus = xmb_classic_library_header_focus(tab);
     const bool focus = (tab == XMB_TAB_HOME && s_cfocus == -1) || lib_focus >= 0;
@@ -299,6 +299,7 @@ void xmb_classic_header_text(int tab) {
 }
 
 void xmb_classic_header_cpu(int tab) {
+    xmb_cpu_draw_user();
     if (ui_card_gpu_ready()) return;
     const int page = classic_page(tab);
     const int lib_focus = xmb_classic_library_header_focus(tab);

@@ -354,7 +354,14 @@ static void fetch_thread_fn(void *arg) {
         // "logo:<id>" is a channel logo: fitted inside the slot and never
         // cropped, since cropping a wordmark cuts the name off.
         const bool logo = strncmp(item_id, "logo:", 5) == 0;
-        if (logo)
+        // "user:<id>" is the signed-in user's own picture, for the header.
+        const bool user = strncmp(item_id, "user:", 5) == 0;
+        if (user)
+            snprintf(url, sizeof(url),
+                "%s/Users/%s/Images/Primary?fillWidth=%d&fillHeight=%d"
+                "&quality=85&format=Jpeg",
+                g_server, item_id + 5, tw, th);
+        else if (logo)
             snprintf(url, sizeof(url),
                 "%s/Items/%s/Images/Primary?maxWidth=%d&maxHeight=%d"
                 "&quality=85&format=Jpeg",

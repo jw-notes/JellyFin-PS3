@@ -599,6 +599,8 @@ void xmb_cpu_blit_thumb_circle(const char *item_id, int x, int y, int d,
 // A default head-and-shoulders picture, for a person the server has no photo
 // of: round (diameter w, with the rim) or filling a w x h card.
 void xmb_cpu_draw_avatar(int x, int y, int w, int h, bool round, u32 rim);
+// A square image (fetched at d x d) as a circle; false until it has loaded.
+bool xmb_cpu_blit_thumb_circle_sq(const char *key, int x, int y, int d, u32 rim);
 
 // Music sub-tab header row.  active = g_music_subtab; focused = the d-pad
 // is on the header (active label pops white instead of just underlined).
@@ -614,6 +616,11 @@ void xmb_cpu_draw_search_results(void);
 void xmb_draw_jumpbar(int tab);
 void draw_hints_bar(const Hint *hints, int n);
 void xmb_draw_topbar(void);         // brand top-left, clock top-right
+// The signed-in user's picture, round at the right of the top row as in
+// Jellyfin's own header.  Draw the picture in the CPU phase, then the top bar
+// with xmb_draw_topbar_user(), which moves the clock left to make room.
+void xmb_cpu_draw_user(void);
+void xmb_draw_topbar_user(void);
 // The lockup's mark, with its BELL bell_px wide and its top-left at (x,y).
 // The raster carries the design's drop shadow in a padded box, so it draws
 // slightly larger than bell_px and slightly above/left of (x,y).
