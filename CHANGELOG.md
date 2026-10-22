@@ -10,6 +10,22 @@ public: it froze on the Home screen on real hardware, ran out of memory at
 1080p, and had sign-in and update-check bugs (see 3.3.0 below). vortigauntlet's own release notes for 3.2.3
 and earlier are kept at the end, as he wrote them.
 
+## 3.4.1
+
+- **A default picture for cast without a photo.** Actors the server has no
+  photo for now show a head-and-shoulders silhouette instead of a blank box,
+  on film, episode and series pages, in both layouts.
+- **The XMB cast scrolls.** The XMB details page shows up to eight people
+  (was five). `Up` from the Play row moves onto the cast, `Left`/`Right`
+  scroll through everyone, with arrows when there is more, and `Down` goes
+  back to the buttons.
+- **Live TV in the XMB layout redesigned.** The genre tabs show as tabs with
+  the `L2`/`R2` buttons, as in Classic. The list is wider, with rounded rows,
+  the logo on a dark tile, and the programme on now under the channel name,
+  with its times, progress and what's next on the right. The number column
+  only appears when channels have numbers, so IPTV lists without them no
+  longer have a gap on the left.
+
 ## 3.4.0
 
 - **New name: JellyFin [PS].** The app is still for the PS3, but the name leaves

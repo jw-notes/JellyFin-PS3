@@ -107,7 +107,9 @@ All taken on a real PS3 at 1920×1080. More in the
   In Classic the page is laid out like Jellyfin's web page: the poster beside
   the title, details and buttons, then the synopsis, Genres and Director, and
   the cast as round photos. `Down` from the Quality row moves onto the cast and
-  `Left`/`Right` scroll through all of it.
+  `Left`/`Right` scroll through all of it. In the XMB layout the cast sits
+  above the buttons: `Up` from the Play row moves onto it. Anyone without a
+  photo on the server gets a default silhouette.
   `△` anywhere flips a poster to show its synopsis (quick-peek).
 - **Movies, TV, Collections and Music** as poster grids with an A-Z jump bar.
 - **Search** with an on-screen keyboard; results open the details page or
@@ -340,7 +342,8 @@ between the tabs: **Favourites** (everything you starred), **Recently watched**,
 **All Channels**, then genres such as News, Sports, Movies, Kids or Crime &
 Mystery, worked out from the channel names (a genre needs three channels for a
 tab). `Start` (**Customise**) hides the tabs you never use, and the page reopens on
-the tab you left it on. In Classic, `□` opens the guide; in XMB, `Right` does
+the tab you left it on. Classic shows the channels as a grid of cards; XMB as a
+list with the programme on now, its times and progress, and what's next. In Classic, `□` opens the guide; in XMB, `Right` does
 (`O` or `Left` at its first column comes back).
 
 While watching, the D-pad works like a TV remote: `Left`/`Right` change channel

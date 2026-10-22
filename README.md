@@ -126,7 +126,7 @@ explains every setting and button.
 | Where | Buttons |
 |---|---|
 | **Menus (Classic)** | D-pad / left stick move · `X` open · `△` quick-peek · `O` back · `L1` / `R1` Home, Search, Settings |
-| **Film page** | `X` play / resume · `Down` to the quality row, then onto the cast · `Left` / `Right` scroll the cast |
+| **Film page** | `X` play / resume · onto the cast with `Down` from the quality row (Classic) or `Up` from Play (XMB) · `Left` / `Right` scroll the cast |
 | **Playing a film** | Any button shows the bar · `L2` / `R2` skip (hold to scrub) · `△` audio and subtitles · `L1` picture size · `O` stop |
 | **Live TV** | `Left` / `Right` change channel · `Up` / `Down` volume · `L2` / `R2` change tab · `□` guide |
 | **Music** | `L1` / `R1` previous / next track · `△` shuffle · `□` change visualiser |
