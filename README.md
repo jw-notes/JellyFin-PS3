@@ -52,6 +52,7 @@ since. See the [changelog](CHANGELOG.md) for everything that changed.
 | 🎨 **Make it yours** | Two layouts (Classic and XMB), nine themes that each recolour the whole app in either layout, an artwork screensaver |
 | 🌍 **Your language** | English, 日本語, Português (Brasil), Deutsch, Français and Español; follows the PS3's language, or pick one in Settings → Display |
 | 🔐 **Easy sign-in** | Quick Connect: approve a code from your phone or computer instead of typing |
+| 👥 **Every PS3 user** | Each user on the console has their own Jellyfin account and settings, kept as PS3 save data; Share Sign-in lends one account to the rest |
 | ⬆️ **Updates built in** | Settings → System → Software Update downloads and installs new releases |
 
 ---
@@ -102,6 +103,12 @@ server the console can reach on your network. Tested on **Evilnat CFW 4.93**.
 
 Installing over an older version keeps your sign-in and settings. Later
 updates install from inside the app.
+
+Each PS3 user signs in to their own account, and keeps their own theme,
+layout, language and other settings. Coming from an older version, the first
+PS3 user to open the app keeps the existing sign-in; the others sign in once
+(the server is filled in). To have everyone use one account, turn on
+**Settings → System → Share Sign-in**.
 
 ---
 
@@ -172,9 +179,10 @@ server settings make a big difference:
 
 <br>
 
-- **Something went wrong?** Settings → System → **Send Log to Server** uploads
-  the log; it appears in Jellyfin under Dashboard → Logs as `upload_PS3_….log`.
-  Over FTP it is at `/dev_hdd0/tmp/player_log.txt`.
+- **Something went wrong?** Turn on Settings → System → **Debug Logging** (off
+  by default), do it again, then **Send Log to Server** uploads the log; it
+  appears in Jellyfin under Dashboard → Logs as `upload_PS3_….log`. Over FTP it
+  is at `/dev_hdd0/tmp/player_log.txt`.
 - **Films buffer:** lower Quality on the film's page, or use a cable instead of Wi-Fi.
 - **Live TV stutters:** set Live TV Quality to 480p and the buffer to 15 seconds,
   and check the server tips above.

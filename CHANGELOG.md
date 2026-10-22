@@ -10,6 +10,34 @@ public: it froze on the Home screen on real hardware, ran out of memory at
 1080p, and had sign-in and update-check bugs (see 3.3.0 below). vortigauntlet's own release notes for 3.2.3
 and earlier are kept at the end, as he wrote them.
 
+## 3.4.3
+
+- **Every PS3 user has their own sign-in and settings.** They are kept as PS3
+  save data, the way the console's own apps keep theirs, so each user on the
+  console (the profiles on the XMB's first screen) has their own Jellyfin
+  account, theme, layout, language, quality and so on. The save shows in
+  Game → Saved Data Utility as JellyFin [PS], with the account it is signed in
+  to. Screen size, 1080p, Audio Output, 24 Hz, the download location and the
+  server's MAC address stay the console's.
+- **Share Sign-in** (Settings → System) lends your account to the PS3 users who
+  have none of their own; anyone signed in to their own account keeps it. One
+  account can be shared at a time. A user borrowing it can log out without
+  signing the owner out, and anyone can end a share whose owner was deleted.
+- **Updating:** the first PS3 user to open 3.4.3 keeps the existing sign-in.
+  The others sign in once (the server is filled in), and everyone starts from
+  the settings as they were.
+- **Your profile picture** shows at the top right, in both layouts, as in
+  Jellyfin's own header. No picture shows a silhouette.
+- **About** (Settings → System) has three sections, Updates, Credits and
+  Licences, switched with `L1` / `R1`.
+- **Fixed: the PS button froze the console on the sign-in screen**, and on the
+  "Couldn't sign in", "Session expired" and playback error screens. They drew
+  one frame and stopped, and the PS button's menu needs the app to keep drawing.
+- **Backing out of Quick Connect or the keyboard** returns to the sign-in
+  choice instead of the "Couldn't sign in" message.
+- **Debug Logging is off by default.** Turn it on in Settings → System to
+  report a problem.
+
 ## 3.4.2
 
 - **Fixed a FLAC decoder bug.** A FLAC frame cut off after its first four

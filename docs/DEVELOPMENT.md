@@ -152,6 +152,15 @@ The screen holds still for about a second while each shot is taken.
 - **The update download avoids `github.com`.** The PS3's TLS lacks the ciphers
   GitHub's download servers require, so updates come through `api.github.com`
   (see [Releasing](#releasing)).
+- **Every screen has to keep drawing.** The PS button's menu draws over the
+  app's frames; a screen that draws once and then waits for a button freezes
+  the whole console when the menu opens. Wait loops redraw and flip every frame.
+- **Each PS3 user's data is save data.** The sign-in and the per-user settings
+  (the list is in `source/util/jf_paths.cpp`) live in the save
+  `JFPS30000-LOGIN` (`source/api/login_store.cpp`, `source/util/user_prefs.cpp`):
+  the system picks the signed-in PS3 user's folder, so the app never has to
+  work out who that is. At start-up the settings are unpacked to
+  `/dev_hdd0/tmp/jf_user/` and `jf_data_path()` points there.
 - **Escaping.** Writing C source through shell here-docs has turned `\n` into
   real line breaks and `\0` into NUL bytes. Write patch scripts to files, and
   scan edited files for stray control characters before building.

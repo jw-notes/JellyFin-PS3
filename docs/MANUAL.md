@@ -274,6 +274,16 @@ Then either:
 Installing over an existing copy is fine — your login and settings live outside
 the app and are kept.
 
+**PS3 users:** each user on the console keeps their own sign-in and settings
+(theme, layout, language, quality, subtitles, Live TV tabs and so on) as PS3
+save data, shown in Game → Saved Data Utility as JellyFin [PS] with the account
+it is signed in to. Deleting that save signs the user out. Screen size, 1080p,
+Audio Output, 24 Hz, the download location and the server's MAC address are
+the console's, shared by everyone. **Settings → System → Share Sign-in** lends
+your account to the users who have none of their own (one account at a time);
+a user signed in to their own account keeps it. Coming from an older version,
+the first PS3 user to open the app keeps the existing sign-in.
+
 **Signing in:** if your server has Quick Connect switched on (Dashboard →
 General), press `X` at the sign-in screen and the console shows a code; approve
 it in the Jellyfin app on your phone (Settings → Quick Connect). `□` still
@@ -579,8 +589,8 @@ source/
 
 ## Logging
 
-Debug logging is **on by default** and you toggle it from the Settings tab
-(**Debug Logging**). That choice sticks across restarts in
+Debug logging is **off by default**; turn it on from the Settings tab
+(**Debug Logging**) when you need to report a problem. That choice sticks across restarts in
 `/dev_hdd0/tmp/jellyfin_settings.txt`. When it's on, output goes to
 `/dev_hdd0/tmp/player_log.txt`, and **Settings → System → Send Log to Server**
 uploads it to your Jellyfin server (Dashboard → Logs) so you can attach it to a
