@@ -110,7 +110,7 @@ static void categories(void) {
     CHECK(settings_row_in_category(-1) == -1 && settings_row_in_category(n) == -1);
     // The ones the screen's icons are chosen for.
     CHECK(settings_row(settings_category_row(SEC_DOWNLOADS, 0))->id == SET_DL_LOCATION);
-    CHECK(settings_row(settings_category_row(SEC_SYSTEM, settings_category_row_count(SEC_SYSTEM) - 1))->id == SET_LOGOUT);
+    CHECK(settings_row(settings_category_row(SEC_ACCOUNT, settings_category_row_count(SEC_ACCOUNT) - 1))->id == SET_LOGOUT);
 }
 
 static int fully_visible(int n, int sel, int item_h, int gap, int band_h, int scroll) {

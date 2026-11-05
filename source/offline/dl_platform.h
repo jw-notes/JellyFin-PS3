@@ -74,6 +74,8 @@ int      dl_plat_reserve_gb(void);
 int  dl_plat_file_open_append(const char *path);   // handle >= 0, or -1
 int  dl_plat_file_write(int fh, const void *buf, int len);  // len, or -1
 bool dl_plat_file_sync(int fh);
+// The most one file under `path` can hold; 0 for no limit worth asking about.
+uint64_t dl_plat_max_file_bytes(const char *path);
 void dl_plat_file_close(int fh);
 
 // ---- time, locking, logging --------------------------------------------

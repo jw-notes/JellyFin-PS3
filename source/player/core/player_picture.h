@@ -12,9 +12,11 @@ PicSize picture_get(void);               // what the video quad should use
 
 // One call per player-loop frame.  L1 enters the mode; inside it the d-pad
 // resizes (Left/Right = width, Up/Down = height, held = repeat), R1 switches
-// the d-pad to moving the picture, Triangle resets both, L1 / X / O leave.  Returns true while the mode owns the input, in
+// the d-pad to moving the picture, holding Triangle for 3 s resets both, O leaves.  Returns true while the mode owns the input, in
 // which case the HUD must not see this frame's buttons.
 bool    picture_mode_input(void);
+// X on the bar's PICTURE chip: the bar goes away and the panel takes the buttons.
+void    picture_mode_open(void);
 
 // Select: Fit -> Fill -> Stretch (picture_size.h), saved for every video.  A
 // banner names the new mode.  Called once per frame the button is pressed.

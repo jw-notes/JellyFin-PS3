@@ -5,13 +5,14 @@
 // grace-bridged to ride out the bit's frame-to-frame flicker:
 //   * quick TAP  -> +10s skip, batched by a 1s gate so taps stack into one
 //                   reopen further ahead.
-//   * HOLD       -> pause and scrub the seek bar +25s/-25s every 250ms. The
+//   * HOLD       -> pause and scrub the seek bar, smoothly and faster the longer
+//                   it is held (scrub_motion.h). The
 //                   STREAM itself is never re-fetched while held — the
 //                   single reopen to the scrubbed spot happens on release —
 //                   but a trickplay preview thumbnail is (see trickplay.h),
 //                   since that is a separate, much cheaper request the
 //                   server already has sitting on disk.
-// The D-pad also gives +10s taps via the HUD.
+// With the seek bar highlighted, the D-pad's Left / Right do exactly the same.
 
 #include <stdio.h>
 #include <string.h>
@@ -37,6 +38,7 @@
 #include "dl_manager.h"   // offline downloads yield to playback
 #include "api_livetv.h"   // jf_livestream_close
 #include "stream_request.h"   // stream_select_initial
+#include "scrub_motion.h"
 
 extern void crash_log(const char *msg);
 
@@ -66,10 +68,10 @@ static u32 scrub_target_ms(const PlayerState *ps) {
 }
 
 static const u64 SEEK_HOLD_DELAY_US = 400000ULL;   // held longer than this -> scrub
-static const u64 SEEK_SCRUB_STEP_US = 250000ULL;   // one scrub step per 250ms
-static const s32 SEEK_SCRUB_SECS    = 25;          // +25s per scrub step
+static const u64 SEEK_SCRUB_STEP_US = 250000ULL;   // a new preview thumbnail at most this often
 static const s32 SEEK_TAP_SECS      = 10;          // +10s per quick tap
 static const u64 SEEK_GRACE_US      = 250000ULL;   // bridge digital-bit flicker
+static const u64 SEEK_GRACE_PAD_US  = 30000ULL;    // the d-pad does not flicker: answer at once
 static const u64 SEEK_TAP_GATE_US   = 450000ULL;   // batch window for quick taps (was 1 s: felt laggy)
 
 // -------------------------------------------------------
@@ -88,13 +90,20 @@ HudAction player_seek_input_update(PlayerState *ps, HudAction act) {
     PlayerSeekInput *sk = &ps->seek;
 
     int dir = 0;
+    bool pad = false;
     if      (btn_cur.r2) dir = +1;
     else if (btn_cur.l2) dir = -1;
+    else if (hud_scrub_focused()) {
+        if      (btn_cur.right) { dir = +1; pad = true; }
+        else if (btn_cur.left)  { dir = -1; pad = true; }
+    }
     u64 now = timing_get_us();
-    if (dir != 0) sk->active_us = now;
+    if (dir != 0) { sk->active_us = now; sk->pad = pad; }
     // Ride over brief 1-frame dropouts so a real hold isn't chopped.
-    if (dir == 0 && sk->dir != 0 && now - sk->active_us < SEEK_GRACE_US)
+    if (dir == 0 && sk->dir != 0 &&
+        now - sk->active_us < (sk->pad ? SEEK_GRACE_PAD_US : SEEK_GRACE_US))
         dir = sk->dir;
+    const s64 pos_ms = (s64)((ps->play_base_us + audio_get_clock_us()) / 1000ULL);
 
     switch (sk->state) {
     case SEEK_IDLE:
@@ -108,7 +117,8 @@ HudAction player_seek_input_update(PlayerState *ps, HudAction act) {
     case SEEK_PRESS:
         if (dir == 0) {
             // Quick press/release = TAP: +10s, batched by the 1s gate.
-            sk->pending_secs += sk->dir * SEEK_TAP_SECS;
+            sk->pending_secs = (s32)(scrub_clamp_offset(
+                (s64)(sk->pending_secs + sk->dir * SEEK_TAP_SECS) * 1000LL, pos_ms, ps->total_secs) / 1000LL);
             sk->tap_gate_us = now + SEEK_TAP_GATE_US;
             sk->state       = SEEK_IDLE;
             sk->dir         = 0;
@@ -119,7 +129,10 @@ HudAction player_seek_input_update(PlayerState *ps, HudAction act) {
             sk->dir           = dir;
             sk->scrub_resume  = !ps->paused;
             ps->paused        = true;
-            sk->scrub_step_us = now - SEEK_SCRUB_STEP_US;   // first step now
+            sk->scrub_step_us = now;
+            sk->scrub_ms      = (s64)sk->pending_secs * 1000LL;   // on from any taps still waiting
+            sk->scrub_t0_us   = now;
+            sk->scrub_last_us = now;
             sk->tap_gate_us   = 0;
             plog("seek: scrub begin");
             trickplay_scrub_update(ps->item->id, ps->source.id,
@@ -143,10 +156,16 @@ HudAction player_seek_input_update(PlayerState *ps, HudAction act) {
             plog("seek: scrub end");
             trickplay_release_sheet();   // give its memory back -- see trickplay.cpp
         } else {
-            sk->dir = dir;
+            if (dir != sk->dir) { sk->dir = dir; sk->scrub_t0_us = now; }   // turning round starts slow
+            // By the time passed, not per frame, so a slow frame costs no distance.
+            const float held = (float)(now - sk->scrub_t0_us) / 1e6f;
+            const float dt   = (float)(now - sk->scrub_last_us) / 1e6f;
+            sk->scrub_last_us = now;
+            sk->scrub_ms += (s64)((float)dir * scrub_speed(held, ps->total_secs) * dt * 1000.0f);
+            sk->scrub_ms  = scrub_clamp_offset(sk->scrub_ms, pos_ms, ps->total_secs);
+            sk->pending_secs = (s32)(sk->scrub_ms / 1000LL);
             if (now - sk->scrub_step_us >= SEEK_SCRUB_STEP_US) {
                 sk->scrub_step_us = now;
-                sk->pending_secs += dir * SEEK_SCRUB_SECS;   // move bar +25s
                 trickplay_scrub_update(ps->item->id, ps->source.id,
                                        scrub_target_ms(ps));
             }
@@ -245,6 +264,7 @@ bool player_execute_seek(PlayerState *ps) {
     vdec_flush();
 #endif
     adec_flush();
+    audio_clock_restart();
     crash_log("jc1 jbuf_clear");
     jbuf_clear();
     crash_log("jc2 jbuf_clear done");

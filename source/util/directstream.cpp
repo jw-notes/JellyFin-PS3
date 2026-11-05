@@ -31,3 +31,24 @@ void directstream_set_enabled(bool on) {
     fprintf(f, "%d\n", s_enabled ? 1 : 0);
     fclose(f);
 }
+
+static int s_directplay = -1;
+
+bool directplay_enabled(void) {
+    if (s_directplay < 0) {
+        s_directplay = 0;
+        FILE *f = fopen(jf_data_path("jellyfin_directplay.txt"), "r");
+        if (f) {
+            int v = 0;
+            if (fscanf(f, "%d", &v) == 1) s_directplay = v != 0;
+            fclose(f);
+        }
+    }
+    return s_directplay != 0;
+}
+
+void directplay_set_enabled(bool on) {
+    s_directplay = on ? 1 : 0;
+    FILE *f = fopen(jf_data_path("jellyfin_directplay.txt"), "w");
+    if (f) { fprintf(f, "%d\n", s_directplay); fclose(f); }
+}

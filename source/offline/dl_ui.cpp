@@ -82,6 +82,7 @@ const char *dl_ui_result_text(int r) {
     case DL_E_EXISTS:    return TR("Already downloaded or in the queue");
     case DL_E_FULL:      return TR("The download list is full");
     case DL_E_NO_SPACE:  return TR("Not enough HDD space");
+    case DL_E_TOO_BIG:   return TR("Over 4 GB, too big for a FAT32 drive: lower the quality");
     case DL_E_SPACE_UNKNOWN: return TR("Can't check free HDD space: downloads paused");
     case DL_E_SIZE_UNKNOWN:  return TR("Size unknown, can't check space");
     case DL_E_IO:        return TR("Could not write to the HDD");
@@ -162,21 +163,37 @@ void dl_ui_row(const DlStatus *st, const DlUiContext *cx, DlUiRow *o) {
     snprintf(o->title, sizeof(o->title), "%s", r->title[0] ? r->title : r->id);
     o->permille = -1;
 
-    char done[24], total[24];
+    char done[24], total[24], est[24];
     dl_ui_format_bytes(r->bytes_done, done, sizeof(done));
     dl_ui_format_bytes(r->bytes_total, total, sizeof(total));
+    dl_ui_format_bytes(r->est_bytes, est, sizeof(est));
+    // A transcode never says how long it will be, so the figure to measure it
+    // against is the estimate made when it was queued, marked as one.  Once it
+    // has passed the estimate, the estimate says nothing.
+    const bool estimated = r->bytes_total == 0 && r->est_bytes > r->bytes_done;
     if (r->state == DL_COMPLETED)
         snprintf(o->size, sizeof(o->size), "%s", total);
     else if (r->bytes_total > 0 && r->bytes_done > 0)
         snprintf(o->size, sizeof(o->size), "%s of %s", done, total);
+    else if (r->bytes_total > 0)
+        snprintf(o->size, sizeof(o->size), "%s", total);
+    else if (estimated && r->bytes_done > 0)
+        snprintf(o->size, sizeof(o->size), "%s of ~%s", done, est);
+    else if (estimated)
+        snprintf(o->size, sizeof(o->size), "~%s", est);
     else if (r->bytes_done > 0)
-        snprintf(o->size, sizeof(o->size), "%s", done);   // a transcode: no total
+        snprintf(o->size, sizeof(o->size), "%s", done);
 
-    const int pm = dl_progress_permille(r);
+    int pm = dl_progress_permille(r);
+    if (pm < 0 && estimated) {
+        // Short of full: an estimate cannot say it has finished.
+        pm = (int)(r->bytes_done / (r->est_bytes / 1000 + 1));
+        if (pm > 990) pm = 990;
+    }
     switch (r->state) {
     case DL_DOWNLOADING:
         snprintf(o->status, sizeof(o->status), TR("Downloading"));
-        o->permille = pm;          // -1 for a transcode (length unknown)
+        o->permille = pm;          // -1 when neither a length nor an estimate is known
         o->emphasis = true;
         break;
     case DL_QUEUED:

@@ -100,6 +100,24 @@ static int port_fs_mkdir(const char *native) {
     return (sysLv2FsStat(native, &st) == 0 && (st.st_mode & S_IFDIR)) ? 0 : -1;
 }
 
+static int port_fs_open_append(const char *native) {
+    s32 fd = -1;
+    if (sysLv2FsOpen(native, SYS_O_RDWR | SYS_O_CREAT | SYS_O_APPEND, &fd, 0644, NULL, 0) != 0 || fd < 0)
+        return -1;
+    return (int)fd;
+}
+
+static int port_fs_write(int fd, const void *buf, uint32_t n) {
+    u64 written = 0;
+    if (sysLv2FsWrite(fd, buf, n, &written) != 0) return -1;
+    return (int)written;
+}
+
+static bool port_fs_sync(int fd) { return sysLv2FsFsync(fd) == 0; }
+static int  port_fs_unlink(const char *native) { return sysLv2FsUnlink(native) == 0 ? 0 : -1; }
+static int  port_fs_rmdir(const char *native)  { return sysLv2FsRmdir(native) == 0 ? 0 : -1; }
+static int  port_fs_rename(const char *from, const char *to) { return sysLv2FsRename(from, to) == 0 ? 0 : -1; }
+
 static uint64_t port_now_us(void) { return timing_get_us(); }
 static void     port_log(const char *line) { plog(line); }
 
@@ -107,6 +125,7 @@ static const LfsPort PS3_PORT = {
     port_usb_present, port_fat_mounted,
     port_fs_list, port_fs_stat, port_fs_open, port_fs_read, port_fs_close, port_fs_space, port_fs_mkdir,
     port_now_us, port_lock, port_unlock, port_log,
+    port_fs_open_append, port_fs_write, port_fs_sync, port_fs_unlink, port_fs_rmdir, port_fs_rename,
 };
 
 // ---- the hotplug thread -----------------------------------------------------------

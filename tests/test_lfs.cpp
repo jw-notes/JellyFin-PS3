@@ -268,9 +268,58 @@ static void fat_stick() {
     CHECK(lfs_read(h, 0, buf, 16) == LFS_E_REMOVED);
     lfs_close(h);
     lfs_close(fresh);
+
+    // Writing, as the downloads do.
+    printf("- FAT32 stick: writing\n");
+    CHECK(lfs_drive_writable("usb2:/"));
+    CHECK(lfs_drive_why_readonly("usb2:/")[0] == '\0');
+    CHECK(lfs_max_file_bytes("usb2:/store") == 0xFFFFFFFFULL);
+    CHECK(lfs_mkdir("usb2:/store") == 0);
+    CHECK(lfs_mkdir("usb2:/store") == 0);               // there already
+    int w = lfs_open_append("usb2:/store/part.ts");
+    CHECK(w >= 0);
+    CHECK(lfs_write(w, "hello ", 6) == 6);
+    CHECK(lfs_sync(w));
+    CHECK(lfs_size(w) == 6);
+    CHECK(lfs_read(w, 0, buf, 6) == 6 && memcmp(buf, "hello ", 6) == 0);  // the handle reads too
+    lfs_close(w);
+    w = lfs_open_append("usb2:/store/part.ts");         // on from the end
+    CHECK(w >= 0 && lfs_size(w) == 6);
+    CHECK(lfs_write(w, "world", 5) == 5);
+    lfs_close(w);
+    lfs_entry st;
+    CHECK(lfs_stat("usb2:/store/part.ts", &st) && st.size == 11);
+    write_file(g_fat_root[2] + "/store/other.ts", "x");
+    CHECK(lfs_rename("usb2:/store/part.ts", "usb2:/store/other.ts") == LFS_E_EXISTS);
+    CHECK(lfs_remove("usb2:/store/other.ts") == 0);
+    CHECK(lfs_rename("usb2:/store/part.ts", "usb2:/store/media.ts") == 0);
+    CHECK(lfs_stat("usb2:/store/media.ts", &st) && !lfs_stat("usb2:/store/part.ts", &st));
+    CHECK(lfs_remove("usb2:/store/nothing.ts") == 0);   // not there: fine
+    CHECK(lfs_remove("usb2:/store") == LFS_E_BADPATH);  // a folder
+    CHECK(lfs_rmdir("usb2:/store/media.ts") == LFS_E_BADPATH);
+    // The file-size limit: refused, and what is there stands.  (A sparse file: no 4 GB of disk.)
+    const std::string big = g_fat_root[2] + "/store/big.ts";
+    write_file(big, "");
+    CHECK(truncate(big.c_str(), (off_t)(0xFFFFFFFFULL - 8)) == 0);
+    w = lfs_open_append("usb2:/store/big.ts");
+    CHECK(w >= 0);
+    CHECK(lfs_write(w, "12345678", 8) == 8);
+    CHECK(lfs_write(w, "9", 1) == LFS_E_TOOBIG);
+    CHECK(lfs_size(w) == 0xFFFFFFFFULL);
+    CHECK(lfs_drive_writable("usb2:/"));                // the drive is fine
+    lfs_close(w);
+    CHECK(lfs_remove("usb2:/store/big.ts") == 0);
+    CHECK(lfs_remove("usb2:/store/media.ts") == 0);
+    CHECK(lfs_rmdir("usb2:/store") == 0);
+    // The internal disk stays read only here (the downloads use it through lv2 themselves).
+    CHECK(lfs_mkdir("hdd:/video/nope") == LFS_E_READONLY);
+    CHECK(lfs_max_file_bytes("hdd:/video") == 0);
+
     g_present[2] = false; g_fat_up[2] = false;
     poll();
     CHECK(!has_drive("usb2"));
+    // Unplugged: it says so instead of writing.
+    CHECK(!lfs_drive_writable("usb2:/"));
 }
 
 // Contents of the NTFS / exFAT images (fixtures/fs/tree.py)

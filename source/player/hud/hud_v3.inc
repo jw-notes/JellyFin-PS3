@@ -147,6 +147,8 @@ static void v3_draw_banner(void) {
     }
 }
 
+void xmb_clock_after(unsigned seconds, char *out, size_t cap);   // ui_widgets.cpp
+
 static void hud_body_v3(u64 elapsed_us, bool paused, bool scrubbing) {
     const int W = (int)s_ovl_w;
     const u32 WHITE = 0x00FFFFFF;
@@ -178,7 +180,7 @@ static void hud_body_v3(u64 elapsed_us, bool paused, bool scrubbing) {
     // What X does by default: PLAY while paused, PAUSE while playing.  A
     // 64 px disc at the start of the title row, the title moved right of it.
     const int pb_d = UIS_H(50), pb_x = v3x(57), pb_y = v3y(529);
-    {
+    if (!g_hud.live) {          // nothing to pause on a live channel
         const bool foc = g_hud.focus == FOCUS_PP;
         if (foc)
             v3_rrect(pb_x - UIS_W(5), pb_y - UIS_H(5), pb_d + UIS_H(10), pb_d + UIS_H(10),
@@ -207,7 +209,7 @@ static void hud_body_v3(u64 elapsed_us, bool paused, bool scrubbing) {
     const int chips_right = v3x(1223);
     if (g_hud.title[0]) {
         const float tpx = UIS_TF(30.0f);
-        const int tx0 = pb_x + pb_d + UIS_W(20);
+        const int tx0 = g_hud.live ? pb_x : pb_x + pb_d + UIS_W(20);
         char tb[128];
         snprintf(tb, sizeof tb, "%s", g_hud.title);
         const int maxw = v3x(960) - tx0;
@@ -328,25 +330,11 @@ static void hud_body_v3(u64 elapsed_us, bool paused, bool scrubbing) {
         if (p > 1.0f) p = 1.0f;
         fill = (int)(p * (float)bw);
     }
-    if (fill > 0) v3_rrect(bx, by, fill, bh, bh / 2, 0, XMB_ACCENT, 255, 0, 0);
-    if (!g_hud.live && (scrubbing || g_hud.focus == FOCUS_REW || g_hud.focus == FOCUS_FF))
+    // While it moves these are the GPU's (hud_scrub_bar_gpu); the track stays here.
+    if (fill > 0 && !g_hud.scrub_moving) v3_rrect(bx, by, fill, bh, bh / 2, 0, XMB_ACCENT, 255, 0, 0);
+    if (!g_hud.live && !g_hud.scrub_moving && g_hud.focus == FOCUS_REW)
         v3_rrect(bx + fill - UIS_H(7), by + bh / 2 - UIS_H(7), UIS_H(14), UIS_H(14),
                  UIS_H(7), 0, WHITE, 255, 0, 0);
-
-    // REW / FF focus: the step they will jump, above the bar at its ends.
-    if (!g_hud.live && (g_hud.focus == FOCUS_REW || g_hud.focus == FOCUS_FF)) {
-        char st[24];
-        const int n = V3_INCR[g_hud.incr_idx < 0 ? 0 : g_hud.incr_idx % 3];
-        const float spx = UIS_TF(12.5f);
-        if (g_hud.focus == FOCUS_REW) {
-            snprintf(st, sizeof st, TR("\xE2\x80\xB9 back %ds"), n);
-            drawTTF((u32)bx, (u32)(by - UIS_H(24)), st, spx, XMB_ACCENT_ALT);
-        } else {
-            snprintf(st, sizeof st, TR("ahead %ds \xE2\x80\xBA"), n);
-            const int sw = ttf_text_width(st, spx);
-            drawTTF((u32)(bx + bw - sw), (u32)(by - UIS_H(24)), st, spx, XMB_ACCENT_ALT);
-        }
-    }
 
     // Trickplay preview while hold-scrubbing, centred on the play head.
     if (scrubbing) {
@@ -385,12 +373,29 @@ static void hud_body_v3(u64 elapsed_us, bool paused, bool scrubbing) {
             int len = (int)strlen(pt);
             while (len > 1 && ttf_text_width(pt, tpx) > tw_max) pt[--len] = 0;
             drawTTF((u32)(bx + bw2 + UIS_W(12)), (u32)v3y(644), pt, tpx, 0x00C2C2C2);
+            // The channel R1 goes to, under the times.
+            if (g_hud.live_next[0]) {
+                const char *lab = TR("NEXT CHANNEL");
+                const int nw = ttf_text_width(g_hud.live_next, tpx);
+                const int lw = ttf_text_width_face(lab, UIS_TF(9.5f), UI_FACE_EYEBROW);
+                drawTTF((u32)(bx + bw - nw), (u32)v3y(662), g_hud.live_next, tpx, 0x00E0E0E0);
+                drawTTF_face((u32)(bx + bw - nw - lw - UIS_W(10)), (u32)(v3y(662) + UIS_H(2)), lab,
+                             UIS_TF(9.5f), 0x00C2C2C2, UI_FACE_EYEBROW);
+            }
         } else {
             const bool hv = (int)display_height < 720;      // heavy on SD: see the chips
             drawTTF((u32)bx, (u32)v3y(644), el_s, tpx, 0x00E0E0E0, hv);
             if (rem_s[0]) {
                 const int rw = ttf_text_width(rem_s, tpx, hv);
                 drawTTF((u32)(bx + bw - rw), (u32)v3y(644), rem_s, tpx, 0x00E0E0E0, hv);
+            }
+            // When it finishes, if it plays on from here.
+            if (g_hud.total_secs > el) {
+                char clock[16], ends[64];
+                xmb_clock_after(g_hud.total_secs - el, clock, sizeof clock);
+                snprintf(ends, sizeof ends, TR("Ends at %s"), clock);
+                const int ew = ttf_text_width(ends, tpx, hv);
+                drawTTF((u32)(bx + (bw - ew) / 2), (u32)v3y(644), ends, tpx, 0x00C2C2C2, hv);
             }
         }
     }
@@ -400,23 +405,32 @@ static void hud_body_v3(u64 elapsed_us, bool paused, bool scrubbing) {
 
     // ---- hints: what X does, then Tracks / Stop / Hide ----
     {
-        Hint h[7]; int n = 0;
+        Hint h[10]; int n = 0;
         h[n].glyph = 'X';
-        h[n].label = g_hud.focus == FOCUS_REW    ? TRN("Back")
-                   : g_hud.focus == FOCUS_FF     ? TRN("Ahead")
-                   : g_hud.focus == FOCUS_AUDIO  ? TRN("Audio")
+        h[n].label = g_hud.focus == FOCUS_AUDIO  ? TRN("Audio")
                    : g_hud.focus == FOCUS_VOLUME ? TRN("Volume")
                    : g_hud.focus == FOCUS_CC     ? TRN("Subtitles")
-                   : g_hud.focus == FOCUS_ASPECT ? TRN("Picture shape")
+                   : g_hud.focus == FOCUS_ASPECT ? TRN("Picture")
+                   : g_hud.live                  ? TRN("Picture")
                    : paused                      ? TRN("Play") : TRN("Pause");
         n++;
         if (g_hud.live) {
-            h[n].glyph = 'D'; h[n].label = TRN("Channel"); n++;
+            h[n].glyph = 'D'; h[n].label = TRN("Volume");  n++;
+            h[n].glyph = 'l'; h[n].label = "";             n++;   // L1 R1: one cluster
+            h[n].glyph = 'r'; h[n].label = TRN("Channel"); n++;
         } else {
+            if (g_hud.focus == FOCUS_REW) { h[n].glyph = 'D'; h[n].label = TRN("Seek"); n++; }
             h[n].glyph = 'L'; h[n].label = "";       n++;   // L2 R2: one cluster
             h[n].glyph = 'R'; h[n].label = TRN("Rewind / Fast Forward"); n++;
+            if (g_hud.has_prev && g_hud.has_next) {
+                h[n].glyph = 'l'; h[n].label = "";                     n++;
+                h[n].glyph = 'r'; h[n].label = TRN("Previous / Next"); n++;
+            } else if (g_hud.has_next) {
+                h[n].glyph = 'r'; h[n].label = TRN("Next");            n++;
+            } else if (g_hud.has_prev) {
+                h[n].glyph = 'l'; h[n].label = TRN("Previous");        n++;
+            }
         }
-        if (!g_hud.live) { h[n].glyph = 'l'; h[n].label = TRN("Picture size"); n++; }
         h[n].glyph = 'T'; h[n].label = TRN("Tracks"); n++;
         h[n].glyph = 'C'; h[n].label = TRN("Stop");   n++;
         h[n].glyph = 'S'; h[n].label = TRN("Hide");   n++;
@@ -429,4 +443,26 @@ static void hud_body_v3(u64 elapsed_us, bool paused, bool scrubbing) {
     // The track menu, lifted above the chips instead of sitting on the strip.
     if (g_hud.menu_visible && g_hud.menu_n > 0)
         draw_menu(W, v3y(560) + HUD_STRIP_H + 6);
+}
+
+// The fill and head while the position is moving: a few FIFO words a frame, where
+// composing and uploading the HUD would be many milliseconds.
+static s64 s_bar_target_ms = 0;
+static s64 s_bar_shown_ms  = 0;
+static u64 s_bar_last_us   = 0;
+
+void hud_scrub_bar_gpu(void) {
+    const u64 now = timing_get_us();
+    const u64 dt  = s_bar_last_us ? now - s_bar_last_us : 0;
+    s_bar_last_us = now;
+    s_bar_shown_ms = g_hud.scrub_moving ? scrub_glide(s_bar_shown_ms, s_bar_target_ms, dt) : s_bar_target_ms;
+    if (!g_hud.visible || !g_hud.scrub_moving || g_hud.live || g_hud.total_secs == 0) return;
+    const int bx = v3x(57), by = v3y(628), bw = v3x(1223) - v3x(57), bh = UIS_H(6);
+    s64 fill = s_bar_shown_ms * (s64)bw / ((s64)g_hud.total_secs * 1000);
+    if (fill < 0) fill = 0;
+    if (fill > bw) fill = bw;
+    if (fill >= bh) wave_draw_rrect_gpu(bx, by, (int)fill, bh, bh / 2, XMB_ACCENT, XMB_ACCENT, 255);
+    const int d = UIS_H(14);
+    wave_draw_rrect_gpu(bx + (int)fill - d / 2, by + bh / 2 - d / 2, d, d, d / 2,
+                        0x00FFFFFF, 0x00FFFFFF, 255);
 }

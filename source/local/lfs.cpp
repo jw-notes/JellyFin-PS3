@@ -605,7 +605,15 @@ static bool port_has_writer(int p) {           // io lock held
     return false;
 }
 
+static const LfsNet *s_net = NULL;
+#define NET_HANDLE_BASE 0x4000
+void lfs_set_net(const LfsNet *net) { s_net = net; }
+
 int lfs_open(const char *path) {
+    if (s_net && strcmp(path, s_net->path) == 0) {
+        const int nh = s_net->open();
+        return nh < 0 ? LFS_E_IO : NET_HANDLE_BASE + nh;
+    }
     Target t;
     int rc = resolve(path, &t);
     if (rc < 0) return rc;
@@ -645,6 +653,7 @@ int lfs_open(const char *path) {
 }
 
 uint64_t lfs_size(int hnd) {
+    if (hnd >= NET_HANDLE_BASE) return s_net ? s_net->size(hnd - NET_HANDLE_BASE) : 0;
     Guard io(LOCK_IO);
     return (hnd >= 0 && hnd < MAX_HANDLES && s_h[hnd].used) ? s_h[hnd].size : 0;
 }
@@ -653,6 +662,10 @@ static void write_failed(int p, const char *what);
 static void settle(int p);
 
 void lfs_close(int hnd) {
+    if (hnd >= NET_HANDLE_BASE) {
+        if (s_net) s_net->close(hnd - NET_HANDLE_BASE);
+        return;
+    }
     Guard io(LOCK_IO);
     if (hnd < 0 || hnd >= MAX_HANDLES || !s_h[hnd].used) return;
     Handle &h = s_h[hnd];
@@ -732,6 +745,8 @@ static int read_slice(int hnd, uint64_t off, uint8_t *buf, uint32_t n) {
 }
 
 int lfs_read(int hnd, uint64_t off, void *buf, uint32_t n) {
+    if (hnd >= NET_HANDLE_BASE)
+        return s_net ? s_net->read(hnd - NET_HANDLE_BASE, off, buf, n) : LFS_E_IO;
     uint8_t *p = (uint8_t *)buf;
     uint32_t done = 0;
     while (done < n) {
@@ -777,7 +792,7 @@ static void settle(int p) {
 static int resolve_write(const char *path, Target *t, uint32_t *epoch) {
     int rc = resolve(path, t);
     if (rc < 0) return rc;
-    if (t->kind != T_NTFS) return LFS_E_READONLY;
+    if (t->kind != T_NTFS && !(t->kind == T_NATIVE && t->port >= 0)) return LFS_E_READONLY;
     *epoch = port_epoch(t->port);
     return 0;
 }
@@ -785,6 +800,7 @@ static int resolve_write(const char *path, Target *t, uint32_t *epoch) {
 // io lock held: the drive is still the one resolved, and takes writes
 static int write_gate(const Target &t, uint32_t epoch) {
     if (!target_alive(t, epoch)) return LFS_E_REMOVED;
+    if (t.kind == T_NATIVE) return 0;                 // a FAT32 stick: lv2's to refuse
     if (!s_ntfs[t.port].mounted || !s_ntfs[t.port].writable) return LFS_E_READONLY;
     return 0;
 }
@@ -809,7 +825,8 @@ bool lfs_drive_writable(const char *path) {
 const char *lfs_drive_why_readonly(const char *path) {
     Target t;
     if (resolve(path, &t) < 0) return TR("The drive is not connected");
-    if (t.kind != T_NTFS) return TR("Downloads need an NTFS drive");
+    if (t.kind == T_NATIVE && t.port >= 0) return "";
+    if (t.kind != T_NTFS) return TR("Downloads need an NTFS/FAT32 drive");
     Guard g(LOCK_TABLE);
     const Slot &s = s_slot[t.port];
     if (s.state != SLOT_MOUNTED) return TR("The drive is not connected");
@@ -826,6 +843,7 @@ int lfs_mkdir(const char *path) {
     if (rc < 0) return rc;
     Guard io(LOCK_IO);
     if ((rc = write_gate(t, epoch)) < 0) return rc;
+    if (t.kind == T_NATIVE) return P.fs_mkdir && P.fs_mkdir(t.native) == 0 ? 0 : LFS_E_IO;
     rc = mkdirNtfsPath(&s_ntfs[t.port], t.rest);
     return write_outcome(t, rc == -2 ? 0 : rc, "making a folder");
 }
@@ -836,6 +854,12 @@ int lfs_remove(const char *path) {
     if (rc < 0) return rc;
     Guard io(LOCK_IO);
     if ((rc = write_gate(t, epoch)) < 0) return rc;
+    if (t.kind == T_NATIVE) {
+        bool d = false; uint64_t sz = 0, mt = 0;
+        if (!P.fs_stat || P.fs_stat(t.native, &d, &sz, &mt) != 0) return 0;
+        if (d) return LFS_E_BADPATH;
+        return P.fs_unlink && P.fs_unlink(t.native) == 0 ? 0 : LFS_E_IO;
+    }
     NtfsInfo i;
     if (statNtfs(&s_ntfs[t.port], t.rest, &i) == 0 && i.isDir) return LFS_E_BADPATH;
     rc = unlinkNtfsPath(&s_ntfs[t.port], t.rest);
@@ -848,6 +872,12 @@ int lfs_rmdir(const char *path) {
     if (rc < 0) return rc;
     Guard io(LOCK_IO);
     if ((rc = write_gate(t, epoch)) < 0) return rc;
+    if (t.kind == T_NATIVE) {
+        bool d = false; uint64_t sz = 0, mt = 0;
+        if (!P.fs_stat || P.fs_stat(t.native, &d, &sz, &mt) != 0) return 0;
+        if (!d) return LFS_E_BADPATH;
+        return P.fs_rmdir && P.fs_rmdir(t.native) == 0 ? 0 : LFS_E_IO;
+    }
     NtfsInfo i;
     if (statNtfs(&s_ntfs[t.port], t.rest, &i) == 0 && !i.isDir) return LFS_E_BADPATH;
     rc = rmdirNtfsPath(&s_ntfs[t.port], t.rest);
@@ -862,6 +892,12 @@ int lfs_rename(const char *from, const char *to) {
     if (a.port != b.port) return LFS_E_BADPATH;
     Guard io(LOCK_IO);
     if ((rc = write_gate(a, ea)) < 0) return rc;
+    if (a.kind != b.kind) return LFS_E_BADPATH;
+    if (a.kind == T_NATIVE) {
+        bool d = false; uint64_t sz = 0, mt = 0;
+        if (P.fs_stat && P.fs_stat(b.native, &d, &sz, &mt) == 0) return LFS_E_EXISTS;
+        return P.fs_rename && P.fs_rename(a.native, b.native) == 0 ? 0 : LFS_E_IO;
+    }
     NtfsInfo i;
     if (statNtfs(&s_ntfs[a.port], b.rest, &i) == 0) return LFS_E_EXISTS;
     rc = renameNtfsPath(&s_ntfs[a.port], a.rest, b.rest);
@@ -880,6 +916,17 @@ int lfs_open_append(const char *path) {
     if (slot < 0) return LFS_E_TOOMANY;
     Handle &h = s_h[slot];
     memset(&h, 0, sizeof h);
+    if (t.kind == T_NATIVE) {
+        h.kind = T_NATIVE; h.port = t.port; h.epoch = epoch;
+        h.fd = P.fs_open_append ? P.fs_open_append(t.native) : -1;
+        if (h.fd < 0) return target_alive(t, epoch) ? LFS_E_IO : LFS_E_REMOVED;
+        bool d = false; uint64_t sz = 0, mt = 0;
+        if (P.fs_stat && P.fs_stat(t.native, &d, &sz, &mt) == 0) h.size = sz;
+        h.pos = ~0ULL;
+        h.writing = true;
+        h.used = true;
+        return slot;
+    }
     h.kind = T_NTFS; h.port = t.port; h.epoch = epoch; h.fd = -1;
     NtfsVolume *v = &s_ntfs[t.port];
     rc = openNtfs(&h.nf, v, t.rest);
@@ -898,6 +945,22 @@ int lfs_open_append(const char *path) {
     return slot;
 }
 
+#define FAT32_FILE_MAX 0xFFFFFFFFULL
+
+// The NTFS writer writes through, so only lv2's cache has anything to wait for.
+bool lfs_sync(int hnd) {
+    Guard io(LOCK_IO);
+    if (hnd < 0 || hnd >= MAX_HANDLES || !s_h[hnd].used) return false;
+    const Handle &h = s_h[hnd];
+    return h.kind != T_NATIVE || !P.fs_sync || P.fs_sync(h.fd);
+}
+
+uint64_t lfs_max_file_bytes(const char *path) {
+    Target t;
+    if (resolve(path, &t) < 0) return 0;
+    return t.kind == T_NATIVE && t.port >= 0 ? FAT32_FILE_MAX : 0;
+}
+
 int lfs_write(int hnd, const void *buf, uint32_t n) {
     Guard io(LOCK_IO);
     if (hnd < 0 || hnd >= MAX_HANDLES || !s_h[hnd].used || !s_h[hnd].writing) return LFS_E_IO;
@@ -906,6 +969,22 @@ int lfs_write(int hnd, const void *buf, uint32_t n) {
         Guard g(LOCK_TABLE);
         const Slot &s = s_slot[h.port];
         if (s.state != SLOT_MOUNTED || s.epoch != h.epoch) return LFS_E_REMOVED;
+    }
+    if (h.kind == T_NATIVE) {
+        if (h.size + n > FAT32_FILE_MAX) return LFS_E_TOOBIG;
+        const uint8_t *q = (const uint8_t *)buf;
+        uint32_t put = 0;
+        while (put < n) {
+            const int w = P.fs_write ? P.fs_write(h.fd, q + put, n - put) : -1;
+            if (w <= 0) {
+                h.size += put;
+                return P.usb_present && !P.usb_present(h.port) ? LFS_E_REMOVED : LFS_E_IO;
+            }
+            put += (uint32_t)w;
+        }
+        h.size += n;
+        h.pos = ~0ULL;
+        return (int)n;
     }
     if (!s_ntfs[h.port].writable) return LFS_E_READONLY;
     seekNtfs(&h.nf, h.nf.size);                          // appends only (a read may have moved it)

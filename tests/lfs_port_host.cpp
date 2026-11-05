@@ -94,6 +94,29 @@ static int h_fs_mkdir(const char *native) {
     return (mkdir(path.c_str(), 0755) == 0 || errno == EEXIST) ? 0 : -1;
 }
 
+static int h_fs_open_append(const char *native) {
+    std::string path;
+    if (!map(native, &path)) return -1;
+    return open(path.c_str(), O_RDWR | O_CREAT | O_APPEND, 0644);
+}
+static int h_fs_write(int fd, const void *buf, uint32_t n) {
+    const ssize_t w = write(fd, buf, n);
+    return w < 0 ? -1 : (int)w;
+}
+static bool h_fs_sync(int fd) { return fsync(fd) == 0; }
+static int h_fs_unlink(const char *native) {
+    std::string path;
+    return map(native, &path) && unlink(path.c_str()) == 0 ? 0 : -1;
+}
+static int h_fs_rmdir(const char *native) {
+    std::string path;
+    return map(native, &path) && rmdir(path.c_str()) == 0 ? 0 : -1;
+}
+static int h_fs_rename(const char *from, const char *to) {
+    std::string a, b;
+    return map(from, &a) && map(to, &b) && rename(a.c_str(), b.c_str()) == 0 ? 0 : -1;
+}
+
 static uint64_t h_now(void) { return g_now_us; }
 static void h_lock(int w)   { pthread_mutex_lock(&s_mu[w]); }
 static void h_unlock(int w) { pthread_mutex_unlock(&s_mu[w]); }
@@ -104,6 +127,7 @@ const LfsPort HOST_PORT = {
     h_usb_present, h_fat_mounted,
     h_fs_list, h_fs_stat, h_fs_open, h_fs_read, h_fs_close, h_fs_space, h_fs_mkdir,
     h_now, h_lock, h_unlock, h_log,
+    h_fs_open_append, h_fs_write, h_fs_sync, h_fs_unlink, h_fs_rmdir, h_fs_rename,
 };
 
 extern "C" void lfs_start(void) {}

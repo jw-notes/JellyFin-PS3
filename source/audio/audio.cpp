@@ -135,8 +135,16 @@ bool audio_clock_valid(void) {
     return adec_get_read_pts_us() != 0;
 }
 
+// The block count stands in for the PTS clock until a stream's first PTS, so
+// it has to count from that stream's start.  Callers add it to play_base_us: a
+// count left over from earlier playback reads as a position past the target.
+void audio_clock_restart(void) {
+    s_audio_blocks = 0;
+}
+
 void audio_open(int channels) {
     crash_log("a1 audio_open enter");
+    audio_clock_restart();
     int rc;
     char buf[128];
 

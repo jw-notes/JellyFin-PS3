@@ -58,5 +58,9 @@
   "the file is empty": {"ja": "ファイルが空です", "pt-BR": "o arquivo está vazio", "de": "die Datei ist leer", "fr": "le fichier est vide", "es": "el archivo está vacío"},
   "not a video file this player reads": {"ja": "このプレーヤーが読める動画ファイルではありません", "pt-BR": "não é um arquivo de vídeo que este player lê", "de": "keine Videodatei, die dieser Player lesen kann", "fr": "n'est pas un fichier vidéo que ce lecteur sait lire", "es": "no es un archivo de vídeo que este reproductor lea"},
   "Critics %s": {"ja": "批評 %s", "pt-BR": "Crítica %s", "de": "Kritiker %s", "fr": "Critiques %s", "es": "Crítica %s"},
-  "Ends at %s": {"ja": "終了予定 %s", "pt-BR": "Termina às %s", "de": "Endet um %s", "fr": "Fin à %s", "es": "Termina a las %s"}
+  "Ends at %s": {"ja": "終了予定 %s", "pt-BR": "Termina às %s", "de": "Endet um %s", "fr": "Fin à %s", "es": "Termina a las %s"},
+  "Filmography": {"ja": "出演作品", "pt-BR": "Filmografia", "de": "Filmografie", "fr": "Filmographie", "es": "Filmografía"},
+  "Movie": {"ja": "映画", "pt-BR": "Filme", "de": "Film", "fr": "Film", "es": "Película"},
+  "Series": {"ja": "シリーズ", "pt-BR": "Série", "de": "Serie", "fr": "Série", "es": "Serie"},
+  "Couldn't reach the server.": {"ja": "サーバーに接続できませんでした。", "pt-BR": "Não foi possível conectar ao servidor.", "de": "Der Server war nicht erreichbar.", "fr": "Impossible de joindre le serveur.", "es": "No se pudo conectar con el servidor."}
 }

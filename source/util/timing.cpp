@@ -234,6 +234,11 @@ static const s64 AVSYNC_ABS_THRESH_US = 3000000;   // >3s from audio clk => abso
 
 s64 avsync_compute_diff(u64 video_pts_us, u64 play_base_us) {
     if (video_pts_us == 0) return 0;
+    // Only a real PTS can be compared with the video's.  The block count that
+    // stands in before the first one says nothing about this stream's
+    // timestamps: latching the base from it, or dropping frames against it,
+    // throws away good video.
+    if (!audio_clock_valid()) return 0;
     u64 audio_clk = audio_get_clock_us();
     if (audio_clk == 0) return 0;
     if (!s_avsync_vbase_set) {

@@ -76,6 +76,8 @@ bool g_search_focus_results = false;
 int  g_search_sel           = 0;
 int  g_search_scroll        = 0;
 char g_search_buf[64];
+int  g_search_cur = 0;
+bool g_osk_lower = false, g_osk_accent = false;
 int  g_search_results_count = 0;
 XMBItem g_search_results[XMB_ITEMS_MAX];
 
@@ -392,10 +394,30 @@ bool xmb_handle_input_search(void) {
     char prev_buf[sizeof(g_search_buf)];
     strcpy(prev_buf, g_search_buf);
 
+    search_edit_clamp(g_search_buf, &g_search_cur);
+
+    // On the keyboard with text in the box, L1 / R1 move the text cursor, and
+    // Square + L1 clear the box, as the PS3's own keyboard does.  Anywhere else
+    // they change tabs.
+    if (!g_search_focus_results && g_search_buf[0]) {
+        if ((btn_cur.square && BTN_PRESSED(l1)) || (btn_cur.l1 && BTN_PRESSED(square))) {
+            g_search_buf[0] = '\0';
+            g_search_cur = 0;
+            results_clear();
+            ui_sfx_play(SFX_CANCEL);
+            return false;
+        }
+        if (BTN_PRESSED(l1) || BTN_PRESSED(r1)) {
+            search_edit_move(g_search_buf, &g_search_cur, BTN_PRESSED(l1) ? -1 : +1);
+            ui_sfx_play(SFX_CURSOR);
+            return false;
+        }
+    }
     if (BTN_PRESSED(l1)) { g_search_focus_results = false; xmb_switch_tab(xmb_next_enabled(g_active_tab, -1)); return false; }
     if (BTN_PRESSED(r1)) { g_search_focus_results = false; xmb_switch_tab(xmb_next_enabled(g_active_tab, +1)); return false; }
     // L2 / R2: show only films, shows or episodes, over the answer already here.
-    if ((BTN_PRESSED(l2) || BTN_PRESSED(r2)) && xmb_search_has_filters()) {
+    // (On the keyboard they are its a/A and a/accent keys, below.)
+    if (g_search_focus_results && (BTN_PRESSED(l2) || BTN_PRESSED(r2)) && xmb_search_has_filters()) {
         g_search_filter = search_filter_step(g_search_filter, BTN_PRESSED(l2) ? -1 : +1,
                                              g_search_filter_n);
         filter_apply();
@@ -438,6 +460,7 @@ bool xmb_handle_input_search(void) {
         }
         if (BTN_PRESSED(cross)) {
             snprintf(g_search_buf, sizeof g_search_buf, "%s", s_recent.term[g_search_sel]);
+            g_search_cur = (int)strlen(g_search_buf);
             results_clear();
             g_search_focus_results = false;
             g_search_sel = g_search_scroll = 0;
@@ -466,10 +489,10 @@ bool xmb_handle_input_search(void) {
     //
     // No early return: this falls through to the change detection below, which
     // is what re-arms the debounce and eventually sends the shortened term.
-    if (BTN_REPEAT(square)) {
+    if (BTN_REPEAT(square) && !btn_cur.l1) {
         int len = (int)strlen(g_search_buf);
         if (len > 0) {
-            g_search_buf[len - 1] = '\0';
+            search_edit_backspace(g_search_buf, &g_search_cur);
             // Deleting back to nothing means there is no query any more, so
             // drop the hits with it rather than leaving the previous term's
             // results sitting under an empty box.
@@ -483,6 +506,29 @@ bool xmb_handle_input_search(void) {
     int row_count = OSK_ROWS_N + 1;
 
     if (!g_search_focus_results) {
+        // The keyboard's own buttons: R2 a/A, L2 letters / symbols, Select a/accent,
+        // Triangle a space, Start Enter (on to the results, at once if they are not
+        // in yet).
+        if (BTN_PRESSED(r2)) { g_osk_lower = !g_osk_lower; ui_sfx_play(SFX_OPTION); }
+        if (BTN_PRESSED(select)) { g_osk_accent = !g_osk_accent; ui_sfx_play(SFX_OPTION); }
+        if (BTN_PRESSED(triangle) && g_search_buf[0])
+            search_edit_insert(g_search_buf, (int)sizeof g_search_buf, &g_search_cur, ' ');
+        if (BTN_PRESSED(l2)) {
+            g_osk_sym = !g_osk_sym;
+            const int ml = osk_row_len(g_osk_row);
+            if (g_osk_col >= ml) g_osk_col = ml - 1;
+            ui_sfx_play(SFX_OPTION);
+        }
+        if (BTN_PRESSED(start) && g_search_buf[0]) {
+            if (g_search_results_count > 0) {
+                g_search_focus_results = true;
+                g_search_sel = g_search_scroll = 0;
+            } else {
+                s_search_pending = true;
+                s_search_edit_us = timing_get_us() - SEARCH_DEBOUNCE_US;
+            }
+            ui_sfx_play(SFX_DECIDE);
+        }
         if (BTN_REPEAT(up)) {
             if (g_osk_row == 0) {
                 g_osk_row = row_count - 1;
@@ -579,11 +625,9 @@ bool xmb_handle_input_search(void) {
     if (!g_search_focus_results && BTN_PRESSED(cross)) {
         if (g_osk_row == OSK_ROWS_N) {
             if (g_osk_col == 0) {
-                int len = strlen(g_search_buf);
-                if (len < (int)sizeof(g_search_buf)-1) { g_search_buf[len]=' '; g_search_buf[len+1]='\0'; }
+                search_edit_insert(g_search_buf, (int)sizeof g_search_buf, &g_search_cur, ' ');
             } else if (g_osk_col == 1) {
-                int len = strlen(g_search_buf);
-                if (len > 0) g_search_buf[len-1] = '\0';
+                search_edit_backspace(g_search_buf, &g_search_cur);
             } else {
                 g_search_buf[0] = '\0';
                 results_clear();
@@ -598,11 +642,9 @@ bool xmb_handle_input_search(void) {
             } else {
                 char ch = osk_current_char();
                 if (ch) {
-                    int len = strlen(g_search_buf);
-                    if (len < (int)sizeof(g_search_buf)-1) {
-                        g_search_buf[len] = ch;
-                        g_search_buf[len+1] = '\0';
-                    }
+                    char text[3];
+                    search_key_text(ch, g_osk_lower && !g_osk_sym, g_osk_accent && !g_osk_sym, text);
+                    search_edit_insert_text(g_search_buf, (int)sizeof g_search_buf, &g_search_cur, text);
                 }
             }
         }

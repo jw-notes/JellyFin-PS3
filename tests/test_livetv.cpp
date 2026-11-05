@@ -158,6 +158,14 @@ static void programmes(void) {
     CHECK(livetv_programme_at(ch, 5, ref_ticks(2026, 10, 3, 21, 15, 0)) == 3);
     CHECK(livetv_programme_at(ch, 5, ref_ticks(2026, 10, 3, 22, 0, 0)) == -1);
     CHECK(livetv_programme_at(ch, 0, ref_ticks(2026, 10, 3, 18, 0, 0)) == -1);
+
+    // What is on next: the earliest start after the time, out of order allowed.
+    CHECK(livetv_programme_after(ch, 5, ref_ticks(2026, 10, 3, 17, 30, 0)) == 1);
+    CHECK(livetv_programme_after(ch, 5, ref_ticks(2026, 10, 3, 18, 30, 0)) == 2);  // zero length skipped
+    CHECK(livetv_programme_after(ch, 5, ref_ticks(2026, 10, 3, 19, 45, 0)) == 2);
+    CHECK(livetv_programme_after(ch, 5, ref_ticks(2026, 10, 3, 20, 15, 0)) == 3);
+    CHECK(livetv_programme_after(ch, 5, ref_ticks(2026, 10, 3, 22, 0, 0)) == -1);
+    CHECK(livetv_programme_after(ch, 0, ref_ticks(2026, 10, 3, 18, 0, 0)) == -1);
     free(json);
 }
 

@@ -30,6 +30,13 @@
 #include "surround.h"
 #include "audio_bitstream.h"
 #include "plog.h"
+#include "http_file.h"
+#include "directstream.h"
+#include "vquality.h"
+#include "hd1080.h"
+#include "jellyfin_api.h"
+#include "ui.h"
+#include "ui_buffering.h"
 
 // A picture whose PTS is 0 reads as "no PTS", so a stream entered at a key frame starts its clock
 // a little before it: mkv_ts does the same (MKV_TS_PTS_BASE_US).
@@ -187,26 +194,11 @@ static const char *file_name_of(const char *path) {
     return n;
 }
 
-bool show_player_file(const char *path, const char *title, u32 resume_secs, char *why, int why_cap) {
-    static LocalInfo info;            // ~1.7 KB, ~3.5 KB: off the stack
-    static PlayerLocal local;
-    memset(&info, 0, sizeof(info));
-    memset(&local, 0, sizeof(local));
-
-    int fd = lfs_open(path);
-    if (fd < 0) {
-        set_why(why, why_cap, fd == LFS_E_REMOVED ? TR("The drive was removed.") : TR("The file could not be opened."));
-        return false;
-    }
-    const uint64_t size = lfs_size(fd);
-    char err[64] = "";
-    const bool probed = local_probe(local_read_at, &fd, size, file_name_of(path), &info, err, sizeof err);
-    lfs_close(fd);
-    if (!probed) {
-        set_why(why, why_cap, err[0] ? err : TR("This file could not be read."));
-        return false;
-    }
-
+// A probed file as the player's session: refused here, before anything is torn down for
+// playback, if it cannot play.
+static bool local_setup(const char *path, uint64_t size, LocalInfo &info, PlayerLocal &local,
+                        char *why, int why_cap) {
+    int fd;
     // Refuse here, before anything is torn down for playback: HEVC and the like never reach the decoder.
     const LocalAudioPrefs prefs = { surround_enabled(), audio_passthrough_wanted() };
     if (!local_can_play(&info, &prefs, why, why_cap)) return false;
@@ -285,6 +277,30 @@ bool show_player_file(const char *path, const char *title, u32 resume_secs, char
                  local.tracks.n_audio, info.n_audio, local.start_audio);
         plog(b);
     }
+    return true;
+}
+
+bool show_player_file(const char *path, const char *title, u32 resume_secs, char *why, int why_cap) {
+    static LocalInfo info;            // ~1.7 KB, ~3.5 KB: off the stack
+    static PlayerLocal local;
+    memset(&info, 0, sizeof(info));
+    memset(&local, 0, sizeof(local));
+
+    int fd = lfs_open(path);
+    if (fd < 0) {
+        set_why(why, why_cap, fd == LFS_E_REMOVED ? TR("The drive was removed.") : TR("The file could not be opened."));
+        return false;
+    }
+    const uint64_t size = lfs_size(fd);
+    char err[64] = "";
+    const bool probed = local_probe(local_read_at, &fd, size, file_name_of(path), &info, err, sizeof err);
+    lfs_close(fd);
+    if (!probed) {
+        set_why(why, why_cap, err[0] ? err : TR("This file could not be read."));
+        return false;
+    }
+
+    if (!local_setup(path, size, info, local, why, why_cap)) return false;
 
     // No Jellyfin id: nothing in the player can then ask the server about it.
     static JFItem item;
@@ -292,5 +308,73 @@ bool show_player_file(const char *path, const char *title, u32 resume_secs, char
     snprintf(item.name, sizeof(item.name), "%s", title && title[0] ? title : file_name_of(path));
     snprintf(item.type, sizeof(item.type), "Video");
     show_player_run(&item, resume_secs, NULL, &local);
+    return true;
+}
+
+// ---- direct play: the original file, from the server ------------------------------------------
+
+// The session the server keeps for it is opened first, so progress reports as it does for a
+// stream.  Everything that can refuse comes before the player starts, and a refusal leaves
+// the server stream to play it instead.
+bool player_direct_try(const JFItem *item, u32 resume_secs, const char *media_source_id) {
+    if (!directplay_enabled()) return false;
+    if (strcmp(item->type, "Movie") != 0 && strcmp(item->type, "Episode") != 0 &&
+        strcmp(item->type, "Video") != 0) return false;
+    if (strncmp(g_server, "http://", 7) != 0) return false;
+    // A lower quality step is a request for the server to bring the bitrate down.
+    u32 w = 0, h = 0;
+    unsigned bitrate = 1;
+    vquality_params(vquality_get(), hd1080_enabled(), display_width, display_height,
+                    &w, &h, NULL, NULL, &bitrate);
+    if (bitrate != 0) return false;
+
+    if (!buffering_active()) buffering_begin(item->id, item->name);
+    buffering_step(TR("Connecting to server..."), false, NULL);
+    buffering_frame();
+
+    static char session[64];
+    static JFMediaSource source;
+    static LocalInfo info;
+    static PlayerLocal local;
+    unsigned total = 0;
+    memset(&source, 0, sizeof source);
+    session[0] = '\0';
+    if (!jellyfin_get_playback_info(item->id, media_source_id, session, sizeof session, &total,
+                                    NULL, &source, true) || !source.id[0]) {
+        plog("direct: no playback info");
+        return false;
+    }
+    char enc[288];
+    url_encode_query(source.id, enc, sizeof enc);
+    char url[768];
+    snprintf(url, sizeof url, "%s/Videos/%s/stream?static=true&MediaSourceId=%s", g_server, enc, enc);
+    if (!http_file_set_url(url)) {
+        plog("direct: the server's address cannot be read this way");
+        return false;
+    }
+    int fd = lfs_open(HTTP_FILE_PATH);
+    if (fd < 0) {
+        plog("direct: the server would not serve the file");
+        return false;
+    }
+    const uint64_t size = lfs_size(fd);
+    char why[96] = "";
+    memset(&info, 0, sizeof info);
+    memset(&local, 0, sizeof local);
+    const bool probed = local_probe(local_read_at, &fd, size, "media", &info, why, sizeof why);
+    lfs_close(fd);
+    if (!probed || !local_setup(HTTP_FILE_PATH, size, info, local, why, sizeof why)) {
+        char b[160];
+        snprintf(b, sizeof b, "direct: through the server instead: %.120s", why);
+        plog(b);
+        return false;
+    }
+    local.net = true;
+    snprintf(local.session_id, sizeof local.session_id, "%s", session);
+    snprintf(local.source_id, sizeof local.source_id, "%s", source.id);
+    snprintf(local.label, sizeof local.label, "%s", source.label);
+    if (!local.plan.runtime_secs) local.plan.runtime_secs = total;
+    plog("direct: playing the original file");
+    show_player_run(item, resume_secs, media_source_id, &local);
     return true;
 }

@@ -76,7 +76,10 @@ static void v_share(char *b, int c, bool *l) {
     else                              val_onoff(b, c, l, jf_login_shared());
 }
 static void v_daynight(char *b, int c, bool *l) { val_onoff(b, c, l, daynight_enabled()); }
-static void v_autoskip(char *b, int c, bool *l) { val_onoff(b, c, l, autoskip_enabled()); }
+static void v_skipintro(char *b, int c, bool *l) { val_text(b, c, l, tr(skip_mode_label(skip_intro_mode())), true); }
+static void v_skipcredits(char *b, int c, bool *l) { val_text(b, c, l, tr(skip_mode_label(skip_credits_mode())), true); }
+static void v_directplay(char *b, int c, bool *l) { val_onoff(b, c, l, directplay_enabled()); }
+static void v_homeorder(char *b, int c, bool *l) { val_text(b, c, l, TR("Open"), true); }
 #if ENABLE_PLAYER_STATS
 static void v_stats(char *b, int c, bool *l)    { val_onoff(b, c, l, statsovl_enabled()); }
 #endif
@@ -91,8 +94,9 @@ static void v_dlloc(char *b, int c, bool *l) {
 }
 static void v_livetv(char *b, int c, bool *l) { val_text(b, c, l, tr(livetv_quality_label()), true); }
 static void v_livebuf(char *b, int c, bool *l) { val_text(b, c, l, livetv_buffer_label(), true); }
+static void v_onnow(char *b, int c, bool *l) { val_onoff(b, c, l, livetv_onnow_enabled()); }
 static void v_direct(char *b, int c, bool *l)   { val_text(b, c, l, directstream_enabled() ? TR("Auto") : TR("Off"), directstream_enabled()); }
-static void v_24hz(char *b, int c, bool *l)     { val_text(b, c, l, d24_enabled() ? TR("Auto") : TR("Off"), d24_enabled()); }
+static void v_24hz(char *b, int c, bool *l)     { const int m = d24_mode(); val_text(b, c, l, m == D24_FILMS_ONLY ? TR("Films only") : m == D24_AUTO ? TR("Auto") : TR("Off"), d24_enabled()); }
 static void v_audio(char *b, int c, bool *l)    { val_text(b, c, l, tr(surround_mode_label()), surround_enabled()); }
 static void v_dialogue(char *b, int c, bool *l) {
     // Nothing is decoded here with Dolby Digital output, so there is nothing
@@ -223,6 +227,7 @@ static void a_wake(void) {
     }
     if (wol_send(mac)) s_wake_sent_us = timing_get_us();
 }
+static void a_homeorder(void)  { xmb_home_order_screen(); }
 static void a_downloads(void)  { xmb_show_downloads(); }
 static void a_offline(void)    { xmb_show_offline(); }
 
@@ -235,15 +240,18 @@ static void t_share(int) {
     else                        jf_login_set_shared(!jf_login_shared());
 }
 static void t_daynight(int)    { daynight_set_enabled(!daynight_enabled()); }
-static void t_autoskip(int)    { autoskip_set_enabled(!autoskip_enabled()); }
+static void s_skipintro(int d)   { skip_intro_step(d); }
+static void s_skipcredits(int d) { skip_credits_step(d); }
+static void t_directplay(int)    { directplay_set_enabled(!directplay_enabled()); }
 #if ENABLE_PLAYER_STATS
 static void t_stats(int)       { statsovl_set_enabled(!statsovl_enabled()); }
 #endif
 static void s_livetv(int d) { livetv_quality_step(d); }
 static void s_livebuf(int d) { livetv_buffer_step(d); }
+static void t_onnow(int)    { livetv_onnow_toggle(); }
 static void t_direct(int)      { directstream_set_enabled(!directstream_enabled()); }
 static void t_dlloc(int)       { dl_location_set_usb(!dl_location_usb()); }
-static void t_24hz(int)        { d24_set_enabled(!d24_enabled()); }
+static void s_24hz(int d)       { d24_mode_step(d); }
 static void s_audio(int d)     { surround_step(d); }
 static void s_dialogue(int d)  { if (!audio_passthrough_wanted()) centermix_step(d); }
 static void s_subfont(int d)   { subfont_step(d); }
@@ -282,10 +290,14 @@ static const UiRow k_ui[] = {
     TOGGLE(SET_PARTICLES,   ICON_PHOTO,       v_particles, t_particles),
     TOGGLE(SET_DAYNIGHT,    ICON_PHOTO,       v_daynight,  t_daynight),
     VALUE (SET_WAVE_INT,    ICON_MUSIC,       v_wave,      s_wave),
-    TOGGLE(SET_AUTOSKIP,    ICON_MOVIE,       v_autoskip,  t_autoskip),
-    TOGGLE(SET_24HZ,        ICON_TV,          v_24hz,      t_24hz),
+    VALUE (SET_SKIP_INTRO,  ICON_MOVIE,       v_skipintro, s_skipintro),
+    VALUE (SET_SKIP_CREDITS, ICON_MOVIE,      v_skipcredits, s_skipcredits),
+    TOGGLE(SET_DIRECT_PLAY, ICON_MOVIE,       v_directplay, t_directplay),
+    ACTION(SET_HOME_ORDER,  ICON_DESKTOP,     v_homeorder, a_homeorder),
+    VALUE (SET_24HZ,        ICON_TV,          v_24hz,      s_24hz),
     VALUE (SET_LIVETV_QUALITY, ICON_ANTENNA,  v_livetv,    s_livetv),
     VALUE (SET_LIVETV_BUFFER,  ICON_ANTENNA,  v_livebuf,   s_livebuf),
+    TOGGLE(SET_ONNOW,          ICON_ANTENNA,  v_onnow,     t_onnow),
     TOGGLE(SET_DIRECT_STREAM, ICON_MOVIE,     v_direct,    t_direct),
     ACTION(SET_UPDATE,      ICON_TV,          v_update,    a_update),
     ACTION(SET_ABOUT,       ICON_STAR,        v_about,     a_about),
@@ -344,6 +356,7 @@ static int cat_icon(setting_section s) {
     case SEC_SUBTITLES: return ICON_CAPTIONS;
     case SEC_DOWNLOADS: return ICON_DOWNLOAD;
     case SEC_DISPLAY:   return ICON_DESKTOP;
+    case SEC_ACCOUNT:   return ICON_LOGOUT;
     default:            return ICON_SETTINGS;
     }
 }

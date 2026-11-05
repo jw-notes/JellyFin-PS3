@@ -108,7 +108,67 @@ static void test_filter(void) {
     CHECK(search_filter_step(SF_MOVIES, -1, none) == SF_ALL);
 }
 
+static void test_edit(void) {
+    char b[8] = "";
+    int c = 0;
+    search_edit_insert(b, sizeof b, &c, 'a');
+    search_edit_insert(b, sizeof b, &c, 'c');
+    CHECK(!strcmp(b, "ac") && c == 2);
+    search_edit_move(b, &c, -1);
+    search_edit_insert(b, sizeof b, &c, 'b');          // in the middle
+    CHECK(!strcmp(b, "abc") && c == 2);
+    search_edit_backspace(b, &c);                      // left of the cursor
+    CHECK(!strcmp(b, "ac") && c == 1);
+    search_edit_move(b, &c, -1);
+    search_edit_move(b, &c, -1);                       // stops at the start
+    CHECK(c == 0);
+    search_edit_backspace(b, &c);                      // nothing to the left
+    CHECK(!strcmp(b, "ac") && c == 0);
+    search_edit_move(b, &c, 1); search_edit_move(b, &c, 1); search_edit_move(b, &c, 1);
+    CHECK(c == 2);                                     // stops at the end
+    // Full: refused, and the terminator stands.
+    strcpy(b, "abcdefg"); c = 3;
+    search_edit_insert(b, sizeof b, &c, 'X');
+    CHECK(!strcmp(b, "abcdefg") && c == 3);
+    // A stale cursor comes back inside the text.
+    b[1] = '\0'; c = 7;
+    search_edit_clamp(b, &c);
+    CHECK(c == 1);
+    // A character of two bytes (a recent search) moves and deletes whole.
+    char u[8] = "a\xC3\xA9z";
+    c = 4;
+    search_edit_move(u, &c, -1); CHECK(c == 3);
+    search_edit_move(u, &c, -1); CHECK(c == 1);
+    search_edit_move(u, &c, 1);  CHECK(c == 3);
+    search_edit_backspace(u, &c);
+    CHECK(!strcmp(u, "az") && c == 1);
+    // A key's text: capitals, R2's lower case, L2's accents, and only letters that have one.
+    char k[3];
+    search_key_text('Q', 0, 0, k); CHECK(!strcmp(k, "Q"));
+    search_key_text('Q', 1, 0, k); CHECK(!strcmp(k, "q"));
+    search_key_text('Q', 1, 1, k); CHECK(!strcmp(k, "q"));
+    search_key_text('E', 1, 1, k); CHECK(!strcmp(k, "\xC3\xA9"));
+    search_key_text('E', 0, 1, k); CHECK(!strcmp(k, "\xC3\x89"));
+    search_key_text('N', 1, 1, k); CHECK(!strcmp(k, "\xC3\xB1"));
+    search_key_text('7', 1, 1, k); CHECK(!strcmp(k, "7"));
+    // Two bytes go in whole or not at all, and then move and delete as one.
+    char w[6] = "abc";
+    c = 3;
+    search_edit_insert_text(w, sizeof w, &c, "\xC3\xA9");
+    CHECK(!strcmp(w, "abc\xC3\xA9") && c == 5);
+    search_edit_insert_text(w, sizeof w, &c, "\xC3\xA9");          // no room for both
+    CHECK(!strcmp(w, "abc\xC3\xA9") && c == 5);
+    search_edit_backspace(w, &c);
+    CHECK(!strcmp(w, "abc") && c == 3);
+    // A cursor left inside a character steps back to its start.
+    char v[8] = "\xC3\xA9";
+    c = 1;
+    search_edit_clamp(v, &c);
+    CHECK(c == 0);
+}
+
 int main(void) {
+    test_edit();
     test_recent();
     test_file();
     test_filter();

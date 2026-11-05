@@ -114,15 +114,163 @@ static void cadd(int src, int shape, const char *title) {
     s_ncr++;
 }
 
+// ---- Home Order ------------------------------------------------------------------------------
+
+#define HOME_ORDER_FILE "jellyfin_home_order.txt"
+static char s_order_saved[1024];
+static bool s_order_loaded = false;
+
+static void order_key(int tab, char *out, size_t cap) {
+    // Live TV and the Media tab have no library id: their kind is what stays the same.
+    if (g_tabs[tab].library_id[0]) snprintf(out, cap, "%s", g_tabs[tab].library_id);
+    else                           snprintf(out, cap, "k%d", (int)g_tabs[tab].kind);
+}
+
+// s_lib_tab[0..s_nlib) as the saved order has them.
+static void order_apply(void) {
+    if (!s_order_loaded) {
+        s_order_loaded = true;
+        s_order_saved[0] = '\0';
+        FILE *f = fopen(jf_data_path(HOME_ORDER_FILE), "r");
+        if (f) {
+            if (fgets(s_order_saved, sizeof s_order_saved, f))
+                s_order_saved[strcspn(s_order_saved, "\r\n")] = '\0';
+            fclose(f);
+        }
+    }
+    if (!s_order_saved[0] || s_nlib < 2) return;
+    static char keys[XMB_TAB_COUNT][72];
+    const char *kp[XMB_TAB_COUNT];
+    int order[XMB_TAB_COUNT], tabs[XMB_TAB_COUNT];
+    for (int i = 0; i < s_nlib; i++) {
+        order_key(s_lib_tab[i], keys[i], sizeof keys[i]);
+        kp[i] = keys[i];
+        tabs[i] = s_lib_tab[i];
+    }
+    home_order_apply(s_order_saved, kp, s_nlib, order);
+    for (int i = 0; i < s_nlib; i++) s_lib_tab[i] = tabs[order[i]];
+}
+
+static void order_save(const int *tabs, int n) {
+    static char keys[XMB_TAB_COUNT][72];
+    const char *kp[XMB_TAB_COUNT];
+    int order[XMB_TAB_COUNT];
+    for (int i = 0; i < n; i++) {
+        order_key(tabs[i], keys[i], sizeof keys[i]);
+        kp[i] = keys[i];
+        order[i] = i;
+    }
+    if (!home_order_format(kp, order, n, s_order_saved, sizeof s_order_saved)) return;
+    FILE *f = fopen(jf_data_path(HOME_ORDER_FILE), "w");
+    if (f) { fprintf(f, "%s\n", s_order_saved); fclose(f); }
+}
+
+// X picks a library up, Up / Down carry it, X puts it down; Square goes back to
+// the server's order; O is done.
+void xmb_home_order_screen(void) {
+    int tabs[XMB_TAB_COUNT], n = 0;
+    for (int t = 0; t < XMB_TAB_COUNT; t++)
+        if (g_tabs[t].enabled && ((g_tabs[t].library_id[0] && lib_kind(g_tabs[t].kind)) || g_tabs[t].kind == TABKIND_LOCAL || g_tabs[t].kind == TABKIND_LIVETV))
+            tabs[n++] = t;
+    {
+        const int was = s_nlib;
+        int kept[XMB_TAB_COUNT];
+        memcpy(kept, s_lib_tab, sizeof kept);
+        s_nlib = n;
+        memcpy(s_lib_tab, tabs, (size_t)n * sizeof(int));
+        order_apply();
+        memcpy(tabs, s_lib_tab, (size_t)n * sizeof(int));
+        memcpy(s_lib_tab, kept, sizeof kept);
+        s_nlib = was;
+    }
+    bool changed = false, reset = false, grabbed = false, armed = false;
+    int sel = 0, top = 0;
+    rsxSync();
+    flip();
+    init_btns();
+    while (running) {
+        waitflip();
+        sysUtilCheckCallback();
+        poll_buttons();
+        if (!armed) {
+            if (!btn_cur.cross && !btn_cur.circle) armed = true;
+        } else {
+            if (BTN_PRESSED(circle)) { ui_sfx_play(SFX_CANCEL); break; }
+            if (BTN_PRESSED(cross) && n > 0) { grabbed = !grabbed; ui_sfx_play(SFX_DECIDE); }
+            if (BTN_PRESSED(square)) {
+                n = 0;
+                for (int t = 0; t < XMB_TAB_COUNT; t++)
+                    if (g_tabs[t].enabled && ((g_tabs[t].library_id[0] && lib_kind(g_tabs[t].kind)) || g_tabs[t].kind == TABKIND_LOCAL || g_tabs[t].kind == TABKIND_LIVETV))
+                        tabs[n++] = t;
+                grabbed = false;
+                reset = true;
+                changed = false;
+                ui_sfx_play(SFX_OPTION);
+            }
+            const int dir = BTN_REPEAT(up) ? -1 : BTN_REPEAT(down) ? +1 : 0;
+            if (dir && sel + dir >= 0 && sel + dir < n) {
+                if (grabbed) {
+                    const int t = tabs[sel];
+                    tabs[sel] = tabs[sel + dir];
+                    tabs[sel + dir] = t;
+                    changed = true;
+                    reset = false;
+                }
+                sel += dir;
+                ui_sfx_play(SFX_CURSOR);
+            }
+        }
+        const int VIS = 8;
+        if (sel < top) top = sel;
+        if (sel >= top + VIS) top = sel - VIS + 1;
+
+        clearScreen(XMB_BG);
+        wave_draw();
+        rsxSync();
+        const int pw = UIS_W(640), rh = UIS_H(40), ph = UIS_H(104) + VIS * rh + UIS_H(14);
+        const int px = ((int)display_width - pw) / 2, py = ((int)display_height - ph) / 2;
+        drawRect((u32)px, (u32)py, (u32)pw, (u32)ph, XMB_PANEL);
+        drawRect((u32)px, (u32)py, (u32)pw, 1, XMB_HAIRLINE);
+        drawRect((u32)px, (u32)(py + ph - 1), (u32)pw, 1, XMB_HAIRLINE);
+        drawRect((u32)px, (u32)py, 1, (u32)ph, XMB_HAIRLINE);
+        drawRect((u32)(px + pw - 1), (u32)py, 1, (u32)ph, XMB_HAIRLINE);
+        const int cx = px + UIS_W(30);
+        drawTTF((u32)cx, (u32)(py + UIS_H(20)), TR("Home Order"), UIS_TF(24), XMB_WHITE, true);
+        for (int r = 0; r < VIS && top + r < n; r++) {
+            const int i = top + r, y = py + UIS_H(70) + r * rh, h = rh - UIS_H(4);
+            if (i == sel) {
+                drawRect((u32)(px + UIS_W(12)), (u32)y, (u32)(pw - UIS_W(24)), (u32)h,
+                         grabbed ? XMB_ACCENT : XMB_PANEL_HI);
+                drawRect((u32)(px + UIS_W(8)), (u32)y, UIS_W(3), (u32)h, XMB_ACCENT);
+            }
+            drawTTF((u32)cx, (u32)(y + (h - UIS_H(18)) / 2 - UIS_H(1)), g_tabs[tabs[i]].label, UIS_TF(18),
+                    i == sel ? XMB_WHITE : XMB_TEXT);
+        }
+        { static const Hint hh[] = {{'X', TRN("Move")}, {'S', TRN("Reset")}, {'C', TRN("Done")}};
+          draw_hints_bar(hh, 3); }
+        flip();
+    }
+    init_btns();
+    if (reset) {
+        s_order_saved[0] = '\0';
+        FILE *f = fopen(jf_data_path(HOME_ORDER_FILE), "w");
+        if (f) fclose(f);
+    } else if (changed) {
+        order_save(tabs, n);
+    }
+}
+
 static void crows_build(void) {
     s_nlib = 0;
     for (int t = 0; t < XMB_TAB_COUNT; t++)
         if (g_tabs[t].enabled && ((g_tabs[t].library_id[0] && lib_kind(g_tabs[t].kind)) || g_tabs[t].kind == TABKIND_LOCAL || g_tabs[t].kind == TABKIND_LIVETV))
             s_lib_tab[s_nlib++] = t;
+    order_apply();
     s_ncr = 0;
     if (s_nlib) cadd(CR_LIB, CS_LIB, TR("My Media"));
     cadd(HR_CONTINUE, CS_LAND, TR("Continue Watching"));
     cadd(HR_NEXTUP, CS_LAND, TR("Next Up"));
+    cadd(HR_ONNOW, CS_LAND, TR("On Now"));
     cadd(HR_DOWNLOADED, CS_PORT, TR("Downloaded"));
     // "Latest <library>" in library order; Home samples one library per kind.
     bool movies = false, shows = false, music = false;
@@ -376,7 +524,9 @@ static void clabel(const CRow *r, int c, char *a, size_t ac, char *b, size_t bc)
     const XMBItem *it = &s_rows[r->src].items[c];
     snprintf(a, ac, "%s", q_title(r->src, c));
     const HomeExtra *x = &s_extra[r->src][c];
-    if (strcmp(it->type, "Episode") == 0 && x->episode)
+    if (strcmp(it->type, "TvChannel") == 0)
+        snprintf(b, bc, "%s  \xC2\xB7  %s", x->series_name, it->duration_str);
+    else if (strcmp(it->type, "Episode") == 0 && x->episode)
         snprintf(b, bc, "S%u:E%u - %s", (unsigned)x->season, (unsigned)x->episode, it->name);
     else if (strcmp(it->type, "MusicAlbum") == 0 && it->artist[0])
         snprintf(b, bc, "%s", it->artist);
@@ -423,14 +573,18 @@ void xmb_classic_text(void) {
 
 void xmb_classic_hints(void) {
     if (s_cfocus == -1) {
-        static const Hint h[] = {{'E', TRN("Nav")}, {'X', TRN("Select")}};
-        draw_hints_bar(h, 2);
+        static const Hint h[] = {{'E', TRN("Nav")}, {'X', TRN("Select")}, {'l', ""}, {'r', TRN("Tabs")}};
+        draw_hints_bar(h, 4);
     } else if (s_cfocus < s_ncr && s_cr[s_cfocus].src == CR_LIB) {
-        static const Hint h[] = {{'E', TRN("Nav")}, {'X', TRN("Open")}};
-        draw_hints_bar(h, 2);
+        static const Hint h[] = {{'E', TRN("Nav")}, {'X', TRN("Open")}, {'l', ""}, {'r', TRN("Tabs")}};
+        draw_hints_bar(h, 4);
+    } else if (s_cfocus < s_ncr && s_cr[s_cfocus].src == HR_ONNOW) {
+        static const Hint h[] = {{'E', TRN("Nav")}, {'X', TRN("Watch")}, {'l', ""}, {'r', TRN("Tabs")}};
+        draw_hints_bar(h, 4);
     } else {
-        static const Hint h[] = {{'E', TRN("Nav")}, {'X', TRN("Open")}, {'T', TRN("Details")}};
-        draw_hints_bar(h, 3);
+        static const Hint h[] = {{'E', TRN("Nav")}, {'X', TRN("Open")}, {'T', TRN("Details")},
+                                 {'l', ""}, {'r', TRN("Tabs")}};
+        draw_hints_bar(h, 5);
     }
 }
 
@@ -447,6 +601,8 @@ static void classic_open_tab(int tab) {
 // took the press.
 bool xmb_classic_switch_input(int tab) {
     if (!xmb_classic_chrome(tab)) return false;
+    // Search's keyboard has them for the text cursor while there is text.
+    if (tab == XMB_TAB_SEARCH && g_search_buf[0] && !g_search_focus_results) return false;
     const bool l = BTN_PRESSED(l1), r = BTN_PRESSED(r1);
     if (!l && !r) return false;
     if ((xmb_classic_library(tab) || xmb_classic_media(tab) || xmb_classic_livetv(tab)) && l) {

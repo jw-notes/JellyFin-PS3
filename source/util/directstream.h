@@ -8,3 +8,8 @@
 // Persisted in jellyfin_directstream.txt as "0" (off) / "1" (auto).
 bool directstream_enabled(void);
 void directstream_set_enabled(bool on);   // set + persist immediately
+
+// Settings > Direct Play: read the original file from the server, with no remux
+// (player_local.cpp).  Off by default.  Persisted in jellyfin_directplay.txt.
+bool directplay_enabled(void);
+void directplay_set_enabled(bool on);

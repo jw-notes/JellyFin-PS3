@@ -18,6 +18,7 @@
 #include "ui_sfx.h"          // the menu sounds
 #include "thumbnail_cache.h"
 #include "jellyfin_api.h"
+#include "ui_buffering.h"
 #include "player.h"
 #include "music_screen.h"
 #include "plog.h"
@@ -39,7 +40,7 @@ void xmb_switch_tab(int new_tab) {
     if (!g_tabs[new_tab].enabled) return;
     int old = g_active_tab;
     // Leaving Settings: this PS3 user's settings go into their save.
-    if (old == XMB_TAB_SETTINGS && new_tab != old) user_prefs_save();
+    if (old == XMB_TAB_SETTINGS && new_tab != old) user_prefs_save_async();
     // Under the spine each category remembers where it was (render/depth.h).
     // A tab whose paged window or name filter is dropped just below starts
     // from its top again, so its old position is forgotten, not restored.
@@ -128,9 +129,12 @@ static void xmb_play_list_with_next(const XMBItem *items, int count, int idx,
                                     const char *label, const char *hint) {
     for (;;) {
         if (idx + 1 < count) player_arm_next(label, hint);
+        if (idx > 0) player_arm_prev();
         xmb_play_item(&items[idx], 0);
-        if (idx + 1 >= count || !player_take_next_request()) break;
-        idx++;
+        if (!player_take_next_request()) break;
+        if (player_took_prev()) idx--;
+        else if (idx + 1 < count) idx++;
+        else break;
     }
 }
 
@@ -194,13 +198,22 @@ void xmb_play_episode_with_next(const XMBItem *first, u32 resume_secs,
     // the server's versions allow, the same version (2026-09-26).
     player_chain_begin();
     for (;;) {
-        XMBItem next;
-        bool have = xmb_fetch_next_episode(cur.id, &next);
+        // These ask the server, on this thread: the buffering screen goes up first,
+        // or the press looks ignored until they answer.
+        if (!buffering_active()) buffering_begin(cur.id, cur.name);
+        buffering_step(TR("Connecting to server..."), false, NULL);
+        buffering_frame();
+        XMBItem next, prev;
+        const bool have = xmb_fetch_next_episode(cur.id, &next);
+        const bool have_prev = xmb_fetch_prev_episode(cur.id, &prev);
         if (have)
             player_arm_next(TR("NEXT EPISODE"), TR("Press SELECT for next episode"));
+        if (have_prev) player_arm_prev();
         xmb_play_item(&cur, resume, media_source_id);
-        if (!have || !player_take_next_request()) break;
-        cur    = next;
+        if (!player_take_next_request()) break;
+        const bool back = player_took_prev();
+        if (back ? !have_prev : !have) break;
+        cur    = back ? prev : next;
         resume = 0;
         // The follower: the version most like what was just watched, else
         // the server's default.  (Copied: match_version returns a static

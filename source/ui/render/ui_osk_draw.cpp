@@ -8,6 +8,8 @@
 #include "ui_render_internal.h"
 #include "thumbnail_cache.h"
 #include "timing.h"
+#include "search_model.h"
+#include "api_facts.h"
 
 #define OSK_FIELD_H UIS_H(40)
 
@@ -107,6 +109,89 @@ int xmb_search_vis_rows(void) {
     return r < 0 ? 0 : r;
 }
 
+// The small box beside the highlighted result: what it is, from the same facts
+// worker the quick-peek uses.  Only where the list leaves room for it.
+static bool sr_info_rect(int *x, int *y, int *w, int *h) {
+    if (!g_search_focus_results || xmb_search_showing_recent()) return false;
+    if (g_search_sel < 0 || g_search_sel >= g_search_results_count) return false;
+    *x = ((int)display_width + XMB_LIST_W) / 2 + UIS_W(14);
+    *w = (int)display_width - XMB_ITEM_PAD - *x;
+    if (*w < UIS_W(170)) return false;
+    *y = xmb_search_results_y();
+    *h = (int)display_height - XMB_BOTTOM_PAD - *y - UIS_H(8);
+    if (*h > UIS_H(320)) *h = UIS_H(320);
+    return *h >= UIS_H(120);
+}
+
+// Lines of `s` that fit max_w, from *y down, until bottom.  A word wider than the
+// box is cut.  Breaks only at spaces, so a UTF-8 character stays whole.
+static void sr_wrap(int x, int *y, const char *s, float px, u32 colour, int max_w, int pitch,
+                    int bottom, bool bold) {
+    char line[128];
+    while (*s && *y + pitch <= bottom) {
+        while (*s == ' ' || *s == '\n') s++;
+        int n = 0, last_space = -1;
+        for (const char *p = s; *p && *p != '\n' && n < (int)sizeof(line) - 1; p++) {
+            line[n] = *p;
+            line[n + 1] = '\0';
+            if (ttf_text_width(line, px, bold) > max_w) break;
+            if (*p == ' ') last_space = n;
+            n++;
+        }
+        const bool more = s[n] && s[n] != '\n';
+        if (more && last_space > 0) n = last_space;
+        if (n == 0) break;
+        line[n] = '\0';
+        drawTTF((u32)x, (u32)*y, line, px, colour, bold);
+        *y += pitch;
+        s += n;
+    }
+}
+
+// The poster in the box's top corner: up to half its height, and never so wide
+// that it leaves no room for the words.
+static void sr_poster_rect(int bx, int by, int bw, int bh, int *x, int *y, int *w, int *h) {
+    *h = bh / 2;
+    if (*h > UIS_H(150)) *h = UIS_H(150);
+    *w = *h * 2 / 3;
+    if (*w > bw / 2) { *w = bw / 2; *h = *w * 3 / 2; }
+    *x = bx + UIS_W(12);
+    *y = by + UIS_H(14);
+}
+
+static void sr_info_text(void) {
+    int bx, by, bw, bh;
+    if (!sr_info_rect(&bx, &by, &bw, &bh)) return;
+    const XMBItem *it = &g_search_results[g_search_sel];
+    facts_request(it->id);
+    const int tx = bx + UIS_W(12), tw = bw - UIS_W(24), bottom = by + bh - UIS_H(8);
+    int px, py, pw, ph;
+    sr_poster_rect(bx, by, bw, bh, &px, &py, &pw, &ph);
+    // The title beside the poster when it fits there, else under it.  The rest
+    // starts below the poster either way.
+    const int side_x = px + pw + UIS_W(10), side_w = bx + bw - UIS_W(12) - side_x;
+    int y = py;
+    if (side_w >= UIS_W(70)) {
+        sr_wrap(side_x, &y, it->name, UIS_TF(15), XMB_TEXT, side_w, UIS_H(20), py + ph, true);
+        y = py + ph + UIS_H(8);
+    } else {
+        y = py + ph + UIS_H(8);
+        sr_wrap(tx, &y, it->name, UIS_TF(15), XMB_TEXT, tw, UIS_H(20), y + 2 * UIS_H(20), true);
+        y += UIS_H(4);
+    }
+    static ItemFacts fx;
+    if (!facts_get(it->id, &fx, NULL)) return;
+    char meta[48] = "";
+    if (fx.community_rating[0]) snprintf(meta, sizeof meta, "%s/10", fx.community_rating);
+    if (fx.rating[0]) {
+        const int m = (int)strlen(meta);
+        snprintf(meta + m, sizeof meta - (size_t)m, "%s%s", m ? "  \xC2\xB7  " : "", fx.rating);
+    }
+    if (meta[0]) sr_wrap(tx, &y, meta, UIS_TF(12.5f), XMB_ACCENT_ALT, tw, UIS_H(18), bottom, false);
+    y += UIS_H(4);
+    sr_wrap(tx, &y, fx.overview, UIS_TF(12.5f), XMB_TEXT_DIM, tw, UIS_H(17), bottom, false);
+}
+
 void xmb_cpu_draw_osk(void) {
     int W = (int)display_width;
     int total_w = 10 * OSK_STEP_X - OSK_GAP;
@@ -177,9 +262,16 @@ void xmb_rsx_draw_osk(void) {
         int tx = fx + UIS_W(30);
         int ty = fy + (OSK_FIELD_H - UIS_H(18)) / 2 - UIS_H(2);
         if (g_search_buf[0]) {
+            // The cursor where it is: under the next letter, or after the last.
             char disp[68];
-            snprintf(disp, sizeof(disp), "%s%s", g_search_buf, cursor ? "_" : "");
+            snprintf(disp, sizeof(disp), "%s", g_search_buf);
             drawTTF((u32)tx, (u32)ty, disp, UIS_TF(18), XMB_TEXT);
+            if (cursor) {
+                int at = g_search_cur;
+                search_edit_clamp(disp, &at);
+                disp[at] = '\0';
+                drawTTF((u32)(tx + ttf_text_width(disp, UIS_TF(18))), (u32)ty, "_", UIS_TF(18), XMB_TEXT);
+            }
         } else {
             if (cursor) drawTTF((u32)tx, (u32)ty, "_", UIS_TF(18), XMB_TEXT);
             drawTTF((u32)(tx + UIS_W(14)), (u32)ty, TR("Search your library"), UIS_TF(17),
@@ -212,7 +304,8 @@ void xmb_rsx_draw_osk(void) {
             int base_len = strlen(row);
 
             for (int c = 0; c < base_len; c++) {
-                char label[2] = { row[c], '\0' };
+                char label[3];
+                search_key_text(row[c], g_osk_lower && !g_osk_sym, g_osk_accent && !g_osk_sym, label);
                 osk_key_label(osk_x0 + c * OSK_STEP_X, OSK_KEY_W, ry, label,
                               r == g_osk_row && c == g_osk_col);
             }
@@ -259,6 +352,7 @@ void xmb_rsx_draw_osk(void) {
             xmb_draw_meta((u32)sr_tx, (u32)(iy + UIS_H(46)), it, UIS_TF(14));
         }
     }
+    sr_info_text();
     if (count == 0 && g_search_buf[0] && xmb_search_in_flight()) {
         // The query is out on its worker thread.  This server takes 2.5-8.4 s
         // to answer a search (HANDOFF.md), and saying "No results" for that
@@ -292,6 +386,16 @@ void xmb_rsx_draw_osk(void) {
 
 // CPU draws for search results list (selection highlight + scaled thumbs).
 void xmb_cpu_draw_search_results(void) {
+    {
+        int bx, by, bw, bh;
+        if (sr_info_rect(&bx, &by, &bw, &bh)) {
+            drawRect((u32)bx, (u32)by, (u32)bw, (u32)bh, XMB_PANEL);
+            drawRect((u32)bx, (u32)by, (u32)bw, UIS_H(3), XMB_ACCENT);
+            int px, py, pw, ph;
+            sr_poster_rect(bx, by, bw, bh, &px, &py, &pw, &ph);
+            xmb_cpu_blit_thumb_scaled(g_search_results[g_search_sel].id, px, py, pw, ph);
+        }
+    }
     int results_y = xmb_search_results_y();
     int count     = g_search_results_count;
     int vis_r     = xmb_search_vis_rows();

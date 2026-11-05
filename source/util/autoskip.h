@@ -1,12 +1,18 @@
 #pragma once
 // -------------------------------------------------------------------------
-//  Auto Skip toggle
+//  Skip Intros / Skip Credits
 // -------------------------------------------------------------------------
-//  Settings > Auto Skip: when on, intros and recaps are skipped the moment
-//  playback reaches them, without pressing X on the Skip badge.  Credits are
-//  NOT skipped: with a next episode queued they start its 25 s countdown
-//  instead (player.cpp).  Default OFF.  Persisted as "0"/"1".
+//  Settings > Playback, each one Off, Button (the default) or Auto.  Off: the
+//  segment is left alone.  Button: a badge offers it and X takes it.  Auto: it
+//  goes by itself.  Skip Intros covers recaps too.  Credits with a next episode
+//  go to that episode; without one, to the credits' end.  Credits set to Off
+//  also keep the next episode's countdown to the last 25 s.
 
-void autoskip_load(void);            // read the persisted value (once, at startup)
-bool autoskip_enabled(void);
-void autoskip_set_enabled(bool on);  // set + persist immediately
+typedef enum { SKIP_OFF = 0, SKIP_BUTTON, SKIP_AUTO, SKIP_MODES } SkipMode;
+
+void        autoskip_load(void);         // read the persisted values (once, at startup)
+SkipMode    skip_intro_mode(void);
+SkipMode    skip_credits_mode(void);
+void        skip_intro_step(int dir);    // set + persist immediately
+void        skip_credits_step(int dir);
+const char *skip_mode_label(SkipMode m); // English, for tr()

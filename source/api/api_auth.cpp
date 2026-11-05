@@ -143,6 +143,7 @@ static void shared_end(void) {
 // --- the save ------------------------------------------------------------------
 
 static bool store_write(bool signed_in, const char *dev) {
+    user_prefs_save_join();          // one writer: they share the save's buffers
     char text[1024], sub[128], detail[512];
     login_text(text, sizeof text, signed_in, dev);
     // A borrower's own save holds no sign-in, but it is using one: say whose.

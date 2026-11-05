@@ -59,6 +59,8 @@ static struct {
 	bool      module_loaded;
 	bool      vbfreq_changed;  // we set SCANOUT and must put 59.94 back
 	videoState orig;           // the output as the session found it
+	dm_clock  clock;           // while active: what was measured, and as a rate
+	u32       clock_num, clock_den;
 } S;
 
 // ------------------------------------------------------------------ files
@@ -90,6 +92,22 @@ static void write_text(const char *p, const char *s)
 // On unless the file says 0: automatic by default (2026-09-27).
 bool d24_enabled(void) { return read_int(F_ENABLE, 1) != 0; }
 void d24_set_enabled(bool on) { write_text(F_ENABLE, on ? "1\n" : "0\n"); }
+int d24_mode(void)
+{
+	const int m = read_int(F_ENABLE, D24_AUTO);
+	return m >= 0 && m < D24_MODES ? m : D24_AUTO;
+}
+void d24_mode_step(int dir)
+{
+	static const int order[D24_MODES] = { D24_AUTO, D24_FILMS_ONLY, D24_OFF };
+	const int m = d24_mode();
+	int at = 0;
+	for (int i = 0; i < D24_MODES; i++) if (order[i] == m) at = i;
+	at = (at + (dir < 0 ? D24_MODES - 1 : 1)) % D24_MODES;
+	char b[8];
+	snprintf(b, sizeof b, "%d\n", order[at]);
+	write_text(F_ENABLE, b);
+}
 
 // ---- the one-time TV check, remembered per TV --------------------------------
 // A TV is told apart by the 1080 modes it advertises (FNV-1a of every
@@ -334,11 +352,40 @@ static void phase(const d24_ui *ui, const char *what)
 	if (ui->lifecycle) ui->lifecycle(what);
 }
 
+// The output is still switched from the last episode (d24_session_end's
+// keep_for_next).  The same clock stays, with no switch for the TV to show;
+// anything else goes back to the original mode first.
+static bool held_keeps(u32 fnum, u32 fden, dm_fps_source src, bool known)
+{
+	if (known && dm_fps_confident(src)) {
+		const dm_film film = dm_classify_film(fnum, fden);
+		const dm_clock want = film == DM_FILM_25 ? DM_CLK_50
+		                    : film == DM_FILM_23976 ? DM_CLK_23976
+		                    : film == DM_FILM_24 ? DM_CLK_24 : DM_CLK_UNKNOWN;
+		if (want == S.clock) {
+			timing_set_display_override(S.clock_num, S.clock_den);
+			timing_init(fnum, fden);
+			plog("24p: output kept from the last episode");
+			return true;
+		}
+	}
+	rsxSync();
+	revert("the next item has another frame rate");
+	if (S.module_loaded) sysModuleUnload((sysModuleId)JF_SYSMODULE_AVCONF_EXT);
+	S.module_loaded = false;
+	if (known) timing_init(fnum, fden);
+	return false;
+}
+
 bool d24_session_begin(const d24_ui *ui)
 {
 	char b[160];
 	u32 fnum, fden, w, h;
 	dm_fps_source src;
+	if (S.active) {
+		const bool known = display_diag_last(&fnum, &fden, &src, &w, &h);
+		if (held_keeps(fnum, fden, src, known)) return true;
+	}
 	memset(&S, 0, sizeof(S));
 	if (!display_diag_last(&fnum, &fden, &src, &w, &h)) return false;
 
@@ -444,7 +491,7 @@ bool d24_session_begin(const d24_ui *ui)
 		                TR("When the picture returns, press X if you can read this. O or 15 s = no."));
 	else
 		ui->draw_prompt(f25 ? "Switching the TV to 1080p 50Hz for this video..."
-		                    : TR("Switching the TV to 1080p 24Hz for this film..."), "");
+		                    : ui->switching_24hz, "");
 	rsxSync();
 
 	// Baseline at the ORIGINAL rate.  Proves the measurement itself on this
@@ -593,12 +640,17 @@ bool d24_session_begin(const d24_ui *ui)
 	         (unsigned)used, (unsigned)num, (unsigned)den, dm_clock_name(got), cad);
 	plog(b);
 	phase(ui, "mode_switch_success timing_reinit");
+	S.clock = got;
+	S.clock_num = num;
+	S.clock_den = den;
 	return true;
 }
 
-void d24_session_end(void)
+void d24_session_end(bool keep_for_next)
 {
-	lc_logf("24p: session_end active=%d module=%d", (int)S.active, (int)S.module_loaded);
+	lc_logf("24p: session_end active=%d module=%d keep=%d", (int)S.active, (int)S.module_loaded,
+	        (int)keep_for_next);
+	if (keep_for_next && S.active) return;
 	if (S.active) {
 		rsxSync();
 		revert("playback ended");

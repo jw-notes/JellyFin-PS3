@@ -21,6 +21,11 @@ static bool    s_active = false;
 static bool    s_shift = false;           // the d-pad moves the picture instead of sizing it
 static u64     s_next_us = 0;             // 0 = no direction held
 static bool    s_dirty = false;           // changed since the last save
+// A reset is held, so a bump cannot undo the picture.  tri_used: this press has
+// already reset, or was down when the panel opened.
+#define PIC_RESET_HOLD_US 3000000ULL
+static u64     s_tri_since_us = 0;
+static bool    s_tri_used = false;
 
 PicSize picture_get(void) { return s_pic; }
 
@@ -82,12 +87,12 @@ static void show_readout(void) {
         snprintf(l1, sizeof l1, "%s  %s   %s   %s", TR("Picture position"), hx, hy,
                  aspect_label(s_pic.aspect));
         snprintf(l2, sizeof l2, "%s",
-                 TR("D-pad move  R1 size  Square fit / fill / stretch  Triangle reset  O done"));
+                 TR("D-pad move  R1 size  Square fit / fill / stretch  Hold Triangle reset  O done"));
     } else {
         snprintf(l1, sizeof l1, "%s  %s %d%%   %s %d%%   %s", TR("Picture size"),
                  TR("Width"), s_pic.w, TR("Height"), s_pic.h, aspect_label(s_pic.aspect));
         snprintf(l2, sizeof l2, "%s",
-                 TR("D-pad size  R1 move  Square fit / fill / stretch  Triangle reset  O done"));
+                 TR("D-pad size  R1 move  Square fit / fill / stretch  Hold Triangle reset  O done"));
     }
     hud_set_picture_banner(l1, l2);
 }
@@ -118,18 +123,20 @@ void picture_session_end(void) {
     picture_save();
 }
 
-bool picture_mode_input(void) {
-    if (!s_active) {
-        if (!BTN_PRESSED(l1)) return false;
-        s_active = true;
-        s_shift = false;
-        s_next_us = 0;
-        hud_hide();
-        show_readout();
-        return true;
-    }
+void picture_mode_open(void) {
+    s_active = true;
+    s_shift = false;
+    s_next_us = 0;
+    s_tri_since_us = 0;
+    s_tri_used = btn_cur.triangle != 0;
+    hud_hide();
+    show_readout();
+}
 
-    if (BTN_PRESSED(l1) || BTN_PRESSED(cross) || BTN_PRESSED(circle)) {
+bool picture_mode_input(void) {
+    if (!s_active) return false;
+
+    if (BTN_PRESSED(circle)) {
         leave();
         return true;
     }
@@ -144,12 +151,20 @@ bool picture_mode_input(void) {
         show_readout();
         return true;
     }
-    if (BTN_PRESSED(triangle)) {
-        s_pic.w = s_pic.h = PIC_DEFAULT;
-        s_pic.x = s_pic.y = 0;
-        s_dirty = true;
-        show_readout();
-        return true;
+    if (!btn_cur.triangle) {
+        s_tri_since_us = 0;
+        s_tri_used = false;
+    } else if (!s_tri_used) {
+        const u64 held_now = timing_get_us();
+        if (!s_tri_since_us) s_tri_since_us = held_now;
+        if (held_now - s_tri_since_us >= PIC_RESET_HOLD_US) {
+            s_tri_used = true;
+            s_pic.w = s_pic.h = PIC_DEFAULT;
+            s_pic.x = s_pic.y = 0;
+            s_dirty = true;
+            show_readout();
+            return true;
+        }
     }
 
     // Size: Right/Up grow, Left/Down shrink.  Position: the picture goes where

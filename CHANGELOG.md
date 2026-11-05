@@ -10,6 +10,29 @@ public: it froze on the Home screen on real hardware, ran out of memory at
 1080p, and had sign-in and update-check bugs (see 3.3.0 below). vortigauntlet's own release notes for 3.2.3
 and earlier are kept at the end, as he wrote them.
 
+## 3.5.0
+
+- **Fixed: seeking could jump to the next episode**, or send the picture racing out of sync with
+  the sound.
+- **Fixed: leaving Settings froze the menus** while the save was written.
+- **Smooth scrub bar.** The bar comes up highlighted: Left / Right (or `L2` / `R2`) tap for
+  10 seconds or hold to glide, faster the longer you hold. `Up` goes to the controls.
+- **`L1` / `R1`** skip episodes, and change channel in Live TV. Picture size moved to the bar's
+  PICTURE control.
+- **Live TV:** On Now on Home, the show on now and next in the bar, and channels whose picture
+  stops reconnect sooner. There is no pause on a live channel any more.
+- **Downloads** can save to FAT32 USB drives (4 GB a file) as well as NTFS, and show their size
+  against an estimate. Local playback reads NTFS, exFAT and FAT32.
+- **Direct Play** (Settings -> Playback, off by default) plays MKV and TS files without a server
+  remux, at the top quality setting.
+- **24 Hz** stays on between episodes with the same frame rate, the switching box says film, show
+  or video, and **Films only** leaves shows at 60 Hz.
+- **Search** uses the PS3 keyboard's buttons, with a text cursor, and shows a poster and details
+  for the highlighted result.
+- **New:** separate Skip Intros and Skip Credits settings, Home Order, actor filmographies, "Ends
+  at" in the player bar, a solid hint bar in Classic, and reorganised Settings with an Account &
+  Server category. A new app icon.
+
 ## 3.4.3
 
 - **Every PS3 user has their own sign-in and settings.** They are kept as PS3

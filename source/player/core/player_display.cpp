@@ -536,6 +536,7 @@ one_to_one_done: ;
     if (hud_is_visible() && ps->frame_count > 0) {
         // While a seek is armed, show where the accumulated skip will land so
         // the user can keep tapping toward the right spot before it fires.
+        hud_set_scrub_moving(ps->seek.state == SEEK_SCRUB || ps->seek.pending_secs != 0);
         u64 hud_elapsed = ps->play_base_us + audio_get_clock_us();
         if (ps->seek.pending_secs != 0) {   // tap armed or scrubbing: preview target
             s64 prev = (s64)hud_elapsed + (s64)ps->seek.pending_secs * 1000000LL;

@@ -21,6 +21,7 @@
 #include "player_internal.h"
 #include "player_stats.h"
 #include "jellyfin_api.h"
+#include "api_livetv.h"
 #include "lclog.h"
 #include "../core/live_buffer.h"
 
@@ -441,7 +442,7 @@ void audio_thread_fn(void *arg) {
 
     bool was_paused = false;
     while (running && *playing) {
-        const bool p = *paused;
+        const bool p = *paused || *ctx->hold;
         if (p != was_paused) { audio_pause_output(p); was_paused = p; }
         if (p || !audio_write_pcm())
             usleep(1000);
@@ -457,6 +458,33 @@ void audio_thread_fn(void *arg) {
 
 ProgressShared g_prog;
 
+#define LIVE_GUIDE_PROGRAMMES 8
+#define LIVE_GUIDE_AHEAD_TICKS (6ULL * 36000000000ULL)   // six hours
+#define LIVE_GUIDE_EVERY_TICKS 240                       // ~60 s of 250 ms ticks
+
+// What is on `channel` now and next, for the player bar.  A server with no
+// guide for it publishes nothing and the bar keeps what the channel list said.
+static void live_guide_fetch(const char *channel, u32 gen) {
+    JFProgram *p = (JFProgram *)malloc(LIVE_GUIDE_PROGRAMMES * sizeof(JFProgram));
+    if (!p) return;
+    const uint64_t now = jf_now_ticks();
+    const char *ids[1] = { channel };
+    const int n = jf_fetch_programs(ids, 1, now, now + LIVE_GUIDE_AHEAD_TICKS,
+                                    p, LIVE_GUIDE_PROGRAMMES);
+    if (n > 0 && running && g_prog.gen == gen && g_prog.playing && !g_prog.guide_ready) {
+        const int on   = livetv_programme_at(p, n, now);
+        const int next = livetv_programme_after(p, n, now);
+        snprintf(g_prog.guide_channel, sizeof g_prog.guide_channel, "%s", channel);
+        snprintf(g_prog.guide_now,  sizeof g_prog.guide_now,  "%s", on   >= 0 ? p[on].name   : "");
+        snprintf(g_prog.guide_next, sizeof g_prog.guide_next, "%s", next >= 0 ? p[next].name : "");
+        g_prog.guide_now_start = on >= 0 ? p[on].start_ticks : 0;
+        g_prog.guide_now_end   = on >= 0 ? p[on].end_ticks   : 0;
+        __sync_synchronize();
+        g_prog.guide_ready = true;
+    }
+    free(p);
+}
+
 void progress_thread_fn(void *arg) {
     const u32 gen = (u32)(uintptr_t)arg;
     char item[64], sess[64];
@@ -470,6 +498,8 @@ void progress_thread_fn(void *arg) {
     if (PROG_LIVE()) jellyfin_report_playing(item, sess, g_prog.base_us * 10ULL, live_id);
 
     int tick = 0;
+    char guide_item[64] = "";
+    int  guide_wait = 0;
     u32 wd_iter = g_dec_iter;
     int wd_still = 0;
     while (PROG_LIVE()) {
@@ -487,6 +517,12 @@ void progress_thread_fn(void *arg) {
                     plog(b);
                 }
             } else { wd_iter = it; wd_still = 0; }
+        }
+        if (g_prog.live && g_prog.pos_valid && !g_prog.guide_ready &&
+            (++guide_wait >= LIVE_GUIDE_EVERY_TICKS || strcmp(guide_item, g_prog.item) != 0)) {
+            guide_wait = 0;
+            snprintf(guide_item, sizeof guide_item, "%s", g_prog.item);
+            live_guide_fetch(guide_item, gen);
         }
         if (++tick < 40) continue;   // report every ~10 s
         tick = 0;

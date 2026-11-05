@@ -23,6 +23,12 @@
 #include "dl_library.h"
 #include "jf_paths.h"
 #include "ui_sfx.h"
+#include "api_livetv.h"
+#include "livetv.h"
+#include "livetv_buffer.h"
+#include "home_order.h"
+#include <sysutil/sysutil.h>
+#include "ui_wave.h"
 
 // -------------------------------------------------------
 // Model
@@ -43,13 +49,13 @@ typedef struct {
 // Favourites and Downloaded appear only when they have something to show.
 // "Because you watched ..." (HR_BECAUSE) appears only when the server knows
 // something like the last thing finished.
-enum { HR_CONTINUE, HR_NEXTUP, HR_FAVOURITES, HR_DOWNLOADED, HR_BECAUSE, HR_MOVIES, HR_SHOWS,
-       HR_MUSIC, HOME_ROWS_N };
+enum { HR_CONTINUE, HR_NEXTUP, HR_ONNOW, HR_FAVOURITES, HR_DOWNLOADED, HR_BECAUSE, HR_MOVIES,
+       HR_SHOWS, HR_MUSIC, HOME_ROWS_N };
 
 // Rows that go stale when something is played or starred: refetched.
-static bool row_dynamic(int r)  { return r == HR_CONTINUE || r == HR_NEXTUP || r == HR_FAVOURITES || r == HR_BECAUSE; }
+static bool row_dynamic(int r)  { return r == HR_CONTINUE || r == HR_NEXTUP || r == HR_ONNOW || r == HR_FAVOURITES || r == HR_BECAUSE; }
 // Rows that are not shown while empty.
-static bool row_optional(int r) { return r == HR_FAVOURITES || r == HR_DOWNLOADED || r == HR_BECAUSE; }
+static bool row_optional(int r) { return r == HR_ONNOW || r == HR_FAVOURITES || r == HR_DOWNLOADED || r == HR_BECAUSE; }
 // Rows read from the offline library on this console, not asked of the server.
 static bool row_local(int r)    { return r == HR_DOWNLOADED; }
 
@@ -63,6 +69,11 @@ typedef struct {
     char series_name[64];
     char rating[12];      // OfficialRating, "PG-13"
     u8   season, episode;
+    // On Now: a programme, shown as its channel.  series_id / series_name then
+    // hold the channel's id and name.
+    bool has_primary;      // the programme has a picture of its own
+    char episode_title[48];
+    u64  now_start, now_end;   // ticks
 } HomeExtra;
 static HomeExtra s_extra[HOME_ROWS_N][HOME_ROW_MAX];
 
@@ -81,6 +92,7 @@ static void home_init_once(void) {
     memset(s_rows, 0, sizeof(s_rows));
     s_rows[HR_CONTINUE].title = TRN("Continue Watching");        s_rows[HR_CONTINUE].kind = HROW_LANDSCAPE;
     s_rows[HR_NEXTUP].title   = TRN("Next Up");                  s_rows[HR_NEXTUP].kind   = HROW_LANDSCAPE;
+    s_rows[HR_ONNOW].title    = TRN("On Now");                   s_rows[HR_ONNOW].kind    = HROW_LANDSCAPE;
     s_rows[HR_FAVOURITES].title = TRN("Favourites");             s_rows[HR_FAVOURITES].kind = HROW_PORTRAIT;
     s_rows[HR_DOWNLOADED].title = TRN("Downloaded");             s_rows[HR_DOWNLOADED].kind = HROW_PORTRAIT;
     s_rows[HR_BECAUSE].title  = s_because_title;                 s_rows[HR_BECAUSE].kind  = HROW_PORTRAIT;
@@ -99,6 +111,57 @@ static void home_each_extra(int i, const char *o, int n, void *ctx) {
     const int ep = xmb_json_int_range(o, n, "IndexNumber", 0);
     x->season  = (u8)(se > 0 && se < 256 ? se : 0);
     x->episode = (u8)(ep > 0 && ep < 256 ? ep : 0);
+    char channel[sizeof x->series_id] = "";
+    if (xmb_json_str_range(o, n, "ChannelId", channel, sizeof channel) && channel[0]) {
+        snprintf(x->series_id, sizeof x->series_id, "%s", channel);
+        x->series_name[0] = '\0';
+        xmb_json_str_range(o, n, "ChannelName",  x->series_name,   sizeof x->series_name);
+        xmb_json_str_range(o, n, "EpisodeTitle", x->episode_title, sizeof x->episode_title);
+        decode_unicode_escapes(x->series_name);
+        decode_unicode_escapes(x->episode_title);
+        char when[40] = "", tag[8];
+        xmb_json_str_range(o, n, "StartDate", when, sizeof when);
+        x->now_start = jf_ticks_from_iso8601(when);
+        when[0] = '\0';
+        xmb_json_str_range(o, n, "EndDate", when, sizeof when);
+        x->now_end = jf_ticks_from_iso8601(when);
+        x->has_primary = xmb_json_str_range(o, n, "Primary", tag, sizeof tag);
+    }
+}
+
+// The server's airing programmes become cards that play their channel: the
+// show's own picture when it has one, else the channel's logo; how far in it
+// is along the bottom; its times where a film has its runtime.  One card a
+// channel, and none for a programme with no channel or already over.
+static int home_onnow_cards(XMBItem *items, HomeExtra *extra, int n) {
+    const uint64_t now = jf_now_ticks();
+    const int utc = jf_utc_offset_secs();
+    int k = 0;
+    for (int i = 0; i < n; i++) {
+        XMBItem it = items[i];
+        HomeExtra x = extra[i];
+        if (!x.series_id[0] || (x.now_end && x.now_end <= now)) continue;
+        bool dup = false;
+        for (int d = 0; d < k; d++) if (strcmp(extra[d].series_id, x.series_id) == 0) dup = true;
+        if (dup) continue;
+        if (!x.has_primary && !it.has_thumb) snprintf(it.id, sizeof it.id, "%s", x.series_id);
+        snprintf(it.type, sizeof it.type, "TvChannel");
+        it.year_str[0] = it.genre[0] = it.duration_str[0] = '\0';
+        x.rating[0] = '\0';
+        x.season = x.episode = 0;
+        const int pm = livetv_progress_permille(now, x.now_start, x.now_end);
+        it.progress_pct = pm < 0 ? 0 : (u8)(pm < 10 ? 1 : pm / 10);
+        if (pm >= 0) {
+            char a[16], b[16];
+            livetv_format_hm(x.now_start, utc, a, sizeof a);
+            livetv_format_hm(x.now_end,   utc, b, sizeof b);
+            snprintf(it.duration_str, sizeof it.duration_str, "%s - %s", a, b);
+        }
+        items[k] = it;
+        extra[k] = x;
+        k++;
+    }
+    return k;
 }
 
 // Continue Watching and Next Up change with every playback: refetch them,
@@ -107,6 +170,7 @@ static void home_stage_dynamic_reset(void);
 static void home_mark_dynamic_stale(void) {
     s_rows[HR_CONTINUE].loaded = false;
     s_rows[HR_NEXTUP].loaded   = false;
+    s_rows[HR_ONNOW].loaded    = false;
     s_rows[HR_FAVOURITES].loaded = false;     // keeps its place: a star toggled
     s_rows[HR_BECAUSE].loaded  = false;       // what was just finished may change it
     s_seen_gen = g_play_gen;
@@ -127,6 +191,15 @@ static bool home_row_url(int r, char *url, size_t cap) {
         snprintf(url, cap,
             "%s/Shows/NextUp?userId=%s&Limit=%d&Fields=%s",
             g_server, g_userid, HOME_ROW_MAX, fields);
+    } else if (r == HR_ONNOW) {
+        if (!livetv_onnow_enabled() || xmb_tab_of_kind(TABKIND_LIVETV) < 0) {
+            row->count = 0; row->loaded = true; return false;
+        }
+        snprintf(url, cap,
+            "%s/LiveTv/Programs/Recommended?userId=%s&isAiring=true&limit=%d"
+            "&enableImageTypes=Primary,Thumb&imageTypeLimit=1&fields=ChannelInfo"
+            "&enableTotalRecordCount=false",
+            g_server, g_userid, HOME_ROW_MAX);
     } else if (r == HR_FAVOURITES) {
         snprintf(url, cap,
             "%s/Users/%s/Items?Filters=IsFavorite&Recursive=true"
@@ -218,6 +291,7 @@ static void home_fetch_row(int r) {
     row->count = (status == 200)
                ? parse_xmb_items_each(responseBuffer, row->items, HOME_ROW_MAX,
                                       home_each_extra, s_extra[r]) : 0;
+    if (r == HR_ONNOW) row->count = home_onnow_cards(row->items, s_extra[r], row->count);
     if (r == HR_BECAUSE) {
         const int n = home_because_fetch(responseBuffer, RESPONSE_SIZE, status, row->items,
                                          s_extra[r], s_because_title, sizeof s_because_title);
@@ -266,6 +340,7 @@ static void home_worker_fn(void *arg) {
         s_hw_count  = (status == 200)
                     ? parse_xmb_items_each(s_hw_buf, s_hw_items, HOME_ROW_MAX,
                                            home_each_extra, s_hw_extra) : 0;
+        if (s_hw_row == HR_ONNOW) s_hw_count = home_onnow_cards(s_hw_items, s_hw_extra, s_hw_count);
         if (s_hw_row == HR_BECAUSE) {
             const int n = home_because_fetch(s_hw_buf, HOME_WORK_BUF, status, s_hw_items,
                                              s_hw_extra, s_hw_title, sizeof s_hw_title);
@@ -403,9 +478,46 @@ static bool home_play_downloaded(const XMBItem *it) {
     return true;
 }
 
+// X on an On Now card plays its channel.  False for any other row.
+static bool home_play_channel(int row, int c) {
+    if (row != HR_ONNOW) return false;
+    const HomeExtra *x = &s_extra[row][c];
+    JFItem jf;
+    memset(&jf, 0, sizeof jf);
+    snprintf(jf.id,   sizeof jf.id,   "%s", x->series_id);
+    snprintf(jf.name, sizeof jf.name, "%s", x->series_name);
+    snprintf(jf.type, sizeof jf.type, "TvChannel");
+    show_player(&jf, 0, NULL);
+    init_btns();
+    return true;
+}
+
+// On Now moves on by itself: asked for again every few minutes while it has
+// anything to show (the old row stays up until the new one lands), and at
+// once when its setting changes.
+#define ONNOW_REFRESH_US (5ULL * 60ULL * 1000000ULL)
+
+static void home_onnow_tick(void) {
+    static int s_was_on = -1;
+    static u64 s_fetched_us = 0;
+    const u64 now = timing_get_us();
+    const int on = livetv_onnow_enabled() ? 1 : 0;
+    if (s_was_on != on) {
+        if (s_was_on >= 0) { s_rows[HR_ONNOW].loaded = false; s_fetched_us = now; }
+        s_was_on = on;
+    }
+    if (!s_fetched_us) s_fetched_us = now;
+    if (s_rows[HR_ONNOW].loaded && s_rows[HR_ONNOW].count > 0 &&
+        now - s_fetched_us >= ONNOW_REFRESH_US) {
+        s_rows[HR_ONNOW].loaded = false;
+        s_fetched_us = now;
+    }
+}
+
 // Once per frame (render thread): publish what has landed, then ask for the
 // next unloaded row.  Never blocks.
 static void home_step_load(void) {
+    home_onnow_tick();
     home_step_local();
     if (!home_worker_up()) {
         // No worker: the old way, one blocking row a frame.

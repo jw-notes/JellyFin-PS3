@@ -182,6 +182,16 @@ int livetv_programme_at(const JFProgram *progs, int n, uint64_t t) {
     return best;
 }
 
+int livetv_programme_after(const JFProgram *progs, int n, uint64_t t) {
+    int best = -1;
+    for (int i = 0; i < n; i++) {
+        if (progs[i].end_ticks <= progs[i].start_ticks) continue;     // never airs
+        if (progs[i].start_ticks <= t) continue;
+        if (best < 0 || progs[i].start_ticks < progs[best].start_ticks) best = i;
+    }
+    return best;
+}
+
 bool livetv_debounce_ready(uint64_t last_press_us, uint64_t now_us, uint64_t quiet_us) {
     return now_us >= last_press_us && now_us - last_press_us >= quiet_us;
 }

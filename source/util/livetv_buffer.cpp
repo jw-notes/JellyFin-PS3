@@ -32,3 +32,24 @@ void livetv_buffer_step(int direction) {
     FILE *f = fopen(jf_data_path("jellyfin_livetv_buffer.txt"), "w");
     if (f) { fprintf(f, "%d\n", s_step); fclose(f); }
 }
+
+static int s_onnow = -1;
+
+bool livetv_onnow_enabled(void) {
+    if (s_onnow < 0) {
+        s_onnow = 1;
+        FILE *f = fopen(jf_data_path("jellyfin_livetv_onnow.txt"), "r");
+        if (f) {
+            int value = 1;
+            if (fscanf(f, "%d", &value) == 1) s_onnow = value != 0;
+            fclose(f);
+        }
+    }
+    return s_onnow != 0;
+}
+
+void livetv_onnow_toggle(void) {
+    s_onnow = livetv_onnow_enabled() ? 0 : 1;
+    FILE *f = fopen(jf_data_path("jellyfin_livetv_onnow.txt"), "w");
+    if (f) { fprintf(f, "%d\n", s_onnow); fclose(f); }
+}

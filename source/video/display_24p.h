@@ -57,6 +57,8 @@ typedef struct {
 	bool (*draw_prompt)(const char *line1, const char *line2);
 	int  (*poll_answer)(void);
 	void (*lifecycle)(const char *phase);
+	// The line shown while the TV switches to 24Hz: the player knows what is playing.
+	const char *switching_24hz;
 } d24_ui;
 
 // Call after the prefill (frame rate known) and timing_register_vblank(),
@@ -67,8 +69,16 @@ bool d24_session_begin(const d24_ui *ui);
 
 // Call after every playback thread has been joined.  Restores the original
 // mode if d24_session_begin switched it.  Safe to call unconditionally.
-void d24_session_end(void);
+// keep_for_next: leave the output as it is for the session about to start.  Its
+// d24_session_begin keeps the mode if the content has the same clock and reverts
+// otherwise; the caller owes a later d24_session_end(false) if none starts.
+void d24_session_end(bool keep_for_next = false);
 
 // For the "24p:" diagnostic record, and Settings > 24Hz Output.
 bool d24_enabled(void);
 void d24_set_enabled(bool on);
+// Settings > 24Hz Output, as it is saved: Off, Auto, or Films only (a show stays
+// at the rate the menus use, so the TV switches less).
+enum { D24_OFF = 0, D24_AUTO = 1, D24_FILMS_ONLY = 2, D24_MODES };
+int  d24_mode(void);
+void d24_mode_step(int dir);

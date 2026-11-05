@@ -58,6 +58,7 @@ int  xmb_fetch_music_children(const char *id_param, const char *parent_id,
 int  xmb_fetch_playlist_items(const char *playlist_id, XMBItem *arr, int max,
                               int *out_total);
 bool xmb_fetch_next_episode(const char *episode_id, XMBItem *out);
+bool xmb_fetch_prev_episode(const char *episode_id, XMBItem *out);
 
 // Sliding-window pagination: drop the first page, fetch the next one.
 // Returns the index of the first newly-visible row, or -1 if nothing came back.
@@ -122,6 +123,8 @@ int xmb_resume_choice(const XMBItem *it);
 // (Continue Watching, Next Up, Recently Added Movies/Shows, Music stub).
 // -------------------------------------------------------
 void xmb_home_on_enter(void);     // reset focus + mark dynamic rows for refetch
+// Settings > Home Order: put My Media's libraries in the viewer's own order.
+void xmb_home_order_screen(void);
 // Spine gate: true when no row above the focus has anything in it, so Up
 // leaves for the base layer.  (Empty rows are stepped over.)
 bool xmb_home_at_top(void);

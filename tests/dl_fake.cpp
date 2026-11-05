@@ -411,6 +411,7 @@ int dl_plat_file_write(int fh, const void *buf, int len) {
 }
 
 bool dl_plat_file_sync(int fh) { (void)fh; return true; }
+uint64_t dl_plat_max_file_bytes(const char *path) { (void)path; return 0; }
 void dl_plat_file_close(int fh) { close(fh); }
 
 // -------------------------------------------------------------------------

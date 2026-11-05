@@ -466,6 +466,21 @@ static void draw_hints_vis(const Hint *h, int n) {
 }
 
 // Contextual hints bar for the current tab / mode.
+// Classic: the hints stand on a solid bar along the bottom, and the page stays
+// above it, so a poster scrolling past never runs under the words.
+static int classic_bar_top(int tab) {
+    return xmb_classic_chrome(tab) ? (int)display_height - XMB_BOTTOM_PAD : 0;
+}
+
+static void classic_bar_gpu(int tab) {
+    const int top = classic_bar_top(tab);
+    if (!top || !ui_card_gpu_ready()) return;
+    ui_card_gpu_clip(0, 0);
+    ui_rect_gpu_draw(0, top, (int)display_width, (int)display_height - top, XMB_BG, 255);
+    ui_rect_gpu_draw(0, top, (int)display_width, 1, XMB_HAIRLINE, 255);
+    ui_card_gpu_end();
+}
+
 static void xmb_draw_hints(int tab) {
     if (xmb_classic_active(tab)) { xmb_classic_hints(); return; }
     if ((xmb_classic_library(tab) || xmb_classic_media(tab) || xmb_classic_livetv(tab)) && !g_jumpbar_active) { xmb_classic_library_hints(); return; }
@@ -505,17 +520,29 @@ static void xmb_draw_hints(int tab) {
             static const Hint h[] = {{'X',TRN("Search")},{'S',TRN("Remove")},{'C',TRN("Back")}};
             draw_hints_bar(h, 3);
         } else if (g_search_focus_results && xmb_search_has_filters()) {
-            static const Hint h[] = {{'X',TRN("Open")},{'T',TRN("Details")},{'L',""},{'R',TRN("Filter")},{'C',TRN("Back")}};
+            static const Hint h[] = {{'X',TRN("Open")},{'T',TRN("Quick Peek")},{'L',""},{'R',TRN("Filter")},{'C',TRN("Back")}};
             draw_hints_bar(h, 5);
         } else if (g_search_focus_results) {
-            static const Hint h[] = {{'X',TRN("Open")},{'T',TRN("Details")},{'C',TRN("Back")}};
+            static const Hint h[] = {{'X',TRN("Open")},{'T',TRN("Quick Peek")},{'C',TRN("Back")}};
             draw_hints_bar(h, 3);
-        } else if (xmb_search_has_filters()) {
-            static const Hint h[] = {{'X',TRN("Type")},{'S',TRN("Delete")},{'L',""},{'R',TRN("Filter")},{'C',TRN("Clear")}};
-            draw_hints_bar(h, 5);
         } else {
-            static const Hint h[] = {{'X',TRN("Type")},{'S',TRN("Delete")},{'C',TRN("Clear")}};
-            draw_hints_bar(h, 3);
+            // What the keyboard's buttons do now.  L1 / R1 are the text cursor
+            // once there is text, the tabs before that.
+            Hint h[10]; int n = 0;
+            const bool text = g_search_buf[0] != '\0';
+            h[n].glyph = 'X'; h[n].label = TRN("Type"); n++;
+            if (text) {
+                h[n].glyph = 'S'; h[n].label = TRN("Delete"); n++;
+                h[n].glyph = 'T'; h[n].label = TRN("Space"); n++;
+            }
+            h[n].glyph = 'l'; h[n].label = ""; n++;
+            h[n].glyph = 'r'; h[n].label = text ? TRN("Cursor") : TRN("Tabs"); n++;
+            h[n].glyph = 'L'; h[n].label = TRN("Symbols"); n++;
+            h[n].glyph = 'B'; h[n].label = "a/\xC3\xA0"; n++;
+            h[n].glyph = 'R'; h[n].label = "a/A"; n++;
+            if (text) { h[n].glyph = 'A'; h[n].label = TRN("Enter"); n++; }
+            if (text) { h[n].glyph = 'C'; h[n].label = TRN("Clear"); n++; }
+            draw_hints_bar(h, n);
         }
     } else if (xmb_kind(tab) == TABKIND_MUSIC && g_music_header) {
         static const Hint h[] = {{'D',TRN("Switch")},{'X',TRN("Select")}};
@@ -730,7 +757,7 @@ void ui_run_xmb(void) {
         // Card images go into the FIFO with the wave, ahead of the fence.
         wd_stage("13.7d gpu_phase");
         if (!g_overscan_calib) {
-            if (draw_ui) xmb_draw_gpu_phase(tab);
+            if (draw_ui) { xmb_draw_gpu_phase(tab); classic_bar_gpu(tab); }
             else         ambient_gpu();
         }
 
@@ -755,11 +782,14 @@ void ui_run_xmb(void) {
             ambient_text();
         } else {
             wd_stage("13.8 cpu_phase"); if (first_iter) crash_log("13.8 cpu_phase");
+            g_cpu_clip_bot = classic_bar_top(tab);
             xmb_draw_cpu_phase(tab);
             u64 t_cards = timing_get_us();
             s_fc.cards += t_cards - t_sync1;
             wd_stage("13.8b text_phase"); if (first_iter) crash_log("13.8b text_phase");
+            g_cpu_clip_bot = classic_bar_top(tab);
             xmb_draw_text_phase(tab);
+            g_cpu_clip_bot = 0;
             u64 t_text = timing_get_us();
             s_fc.text += t_text - t_cards;
             wd_stage("13.8c hints"); if (first_iter) crash_log("13.8c hints");

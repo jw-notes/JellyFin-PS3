@@ -35,6 +35,14 @@ typedef struct {
     void (*lock)(int which);                                     // 0 = table lock, 1 = i/o lock
     void (*unlock)(int which);
     void (*log)(const char *line);                               // may be NULL
+
+    // --- writing to lv2's USB mounts (FAT32) ------------------------------------
+    int  (*fs_open_append)(const char *native);                  // creates when missing; a descriptor >= 0, or -1
+    int  (*fs_write)(int fd, const void *buf, uint32_t n);       // bytes, or -1
+    bool (*fs_sync)(int fd);
+    int  (*fs_unlink)(const char *native);                       // 0 or -1
+    int  (*fs_rmdir)(const char *native);                        // 0 or -1
+    int  (*fs_rename)(const char *from, const char *to);         // 0 or -1
 } LfsPort;
 
 // Installs the platform.  lfs_start() on the console installs its own; tests call this first.

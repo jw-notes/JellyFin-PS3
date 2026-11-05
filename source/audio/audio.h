@@ -50,18 +50,22 @@ typedef int (*audio_channels_fn)(void);
 void audio_set_source(audio_avail_fn avail, audio_read_fn read,
                       audio_channels_fn channels);
 
-// Total audio DMA blocks consumed since audio_open().
+// Total audio DMA blocks consumed since audio_open() or audio_clock_restart().
 // Each block = 256 sample FRAMES regardless of channel count;
 // at 48 kHz that is 5.333 ms per block.
 u64  audio_block_count(void);
 
-// Microseconds of audio played since audio_open().
+// Microseconds of the current stream played, relative to its start.
 // Uses PTS-based clock once the audio decoder has seen a valid PTS;
-// falls back to DMA block count at startup before the first PTS arrives.
+// falls back to DMA block count until the first PTS arrives.
 u64  audio_get_clock_us(void);
 
 // True once PTS tracking has started (first decoded PES with a valid PTS).
 bool audio_clock_valid(void);
+
+// A new stream is starting: the block count starts again from zero.  Call it
+// with adec_flush(), which is what puts the clock back on the block count.
+void audio_clock_restart(void);
 
 // Master output volume, 0..100 % (100 = unity, bit-exact).  Applied as a linear
 // gain to every PCM block.  audio_set_volume() clamps and persists the value;

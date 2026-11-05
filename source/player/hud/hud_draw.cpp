@@ -28,6 +28,8 @@
 #include "plog.h"
 #include "timing.h"   // timing_get_us(): the channel banner expires
 #include "audio.h"   // audio_get_volume() for the volume slider
+#include "ui_wave.h" // wave_draw_rrect_gpu: the moving seek bar
+#include "../core/scrub_motion.h"
 #include "audio_bitstream.h"   // audio_passthrough_active(): the receiver owns the volume
 #include "../core/player_picture.h"   // picture_get(): the picture-shape chip
 
@@ -47,6 +49,7 @@ static int  s_ovl_y0 = 0, s_ovl_y1 = 0;            // rows drawn by this compose
 // so padding compares clean.
 struct OvlKey {
     u32  elapsed_secs;
+    u32  scrub_moving;
     u32  total_secs;
     u32  menu_epoch;
     s32  focus, incr_idx;
@@ -253,12 +256,16 @@ static void hud_compose(u64 elapsed_us, bool paused, bool scrubbing) {
 // -------------------------------------------------------
 
 void hud_draw(u64 elapsed_us, bool paused, bool scrubbing) {
+    s_bar_target_ms = (s64)(elapsed_us / 1000ULL);
     if (!g_hud.visible && !g_hud.banner_solo) return;
     if (!s_ovl_stage || !s_ovl_tex) return;   // alloc failed: no HUD
 
     OvlKey key;
     memset(&key, 0, sizeof(key));
-    key.elapsed_secs = (u32)(elapsed_us / 1000000ULL);
+    // Moving, the times and the preview need only keep up: eight composes a second.
+    key.elapsed_secs = g_hud.scrub_moving ? (u32)(timing_get_us() / 125000ULL)
+                                          : (u32)(elapsed_us / 1000000ULL);
+    key.scrub_moving = g_hud.scrub_moving ? 1 : 0;
     key.total_secs   = g_hud.total_secs;
     key.menu_epoch   = g_hud.menu_epoch;
     key.focus        = g_hud.focus;

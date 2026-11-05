@@ -330,7 +330,11 @@ static void q_meta(int x, int y, int r, int c, float px, u32 col, u32 sep_col, i
     const char *part[6];
     char se[24] = "";
     int n = 0;
-    if (strcmp(it->type, "Episode") == 0) {
+    if (strcmp(it->type, "TvChannel") == 0) {
+        if (x2->series_name[0])   part[n++] = x2->series_name;
+        if (x2->episode_title[0]) part[n++] = x2->episode_title;
+        if (it->duration_str[0])  part[n++] = it->duration_str;
+    } else if (strcmp(it->type, "Episode") == 0) {
         if (x2->season || x2->episode) {
             snprintf(se, sizeof se, "S%d E%d", x2->season, x2->episode);
             part[n++] = se;
@@ -559,6 +563,7 @@ bool xmb_home_open_focused(void) {
     const int c = s_row_col[s_focus_row];
     if (row->count <= 0 || c < 0 || c >= row->count) return false;
     const XMBItem *it = &row->items[c];
+    if (home_play_channel(s_focus_row, c)) return true;
     if (home_play_downloaded(it)) return true;
     if (strcmp(it->type, "Series") == 0) {
         spine_set_level(SPINE_L2);          // its seasons live inside the TV tab
@@ -585,6 +590,7 @@ bool xmb_home_peek_focused(void) {
     if (row->count <= 0 || c < 0 || c >= row->count) return false;
     const XMBItem *it = &row->items[c];
     if (strncmp(it->id, "offp:", 5) == 0) return false;     // a download has no page to peek
+    if (s_focus_row == HR_ONNOW) return false;              // nor has a channel
     if (strcmp(it->type, "MusicAlbum") == 0) return xmb_home_open_focused();
     peek_open_item(it, 0, 0, home_peek_open);   // the stage notes the image
     return true;
@@ -600,6 +606,7 @@ static bool home_queue_input(void) {
     if (BTN_REPEAT(down)) s_focus_row = depth_step_visitable(v, HOME_ROWS_N, s_focus_row, +1);
     const int n = s_rows[s_focus_row].count;
     int *col = &s_row_col[s_focus_row];
+    if (n > 0 && *col >= n) *col = n - 1;      // a refetched row can come back shorter
     if (BTN_REPEAT(right) && *col + 1 < n) (*col)++;
     if (BTN_REPEAT(left)  && *col > 0)     (*col)--;
 

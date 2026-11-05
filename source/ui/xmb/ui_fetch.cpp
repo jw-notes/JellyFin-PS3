@@ -522,6 +522,37 @@ bool xmb_fetch_next_episode(const char *episode_id, XMBItem *out) {
     return true;
 }
 
+// The episode before episode_id in its series, across seasons: the series'
+// episode list around it (AdjacentTo), which leads with its predecessor when
+// it has one.
+bool xmb_fetch_prev_episode(const char *episode_id, XMBItem *out) {
+    char url[512];
+    snprintf(url, sizeof(url), "%s/Users/%s/Items/%s", g_server, g_userid, episode_id);
+    int status = http_request(0, url, NULL, g_token, responseBuffer, RESPONSE_SIZE);
+    if (status != 200) return false;
+
+    char series_id[64] = "";
+    json_get_string(responseBuffer, "SeriesId", series_id, sizeof(series_id));
+    if (!series_id[0]) return false;
+
+    snprintf(url, sizeof(url),
+        "%s/Shows/%s/Episodes?userId=%s&AdjacentTo=%s"
+        "&Fields=ProductionYear,RunTimeTicks,Genres,Container,Tags",
+        g_server, series_id, g_userid, episode_id);
+    status = http_request(0, url, NULL, g_token, responseBuffer, RESPONSE_SIZE);
+    if (status != 200) return false;
+
+    XMBItem three[3];
+    const int n = parse_xmb_items(responseBuffer, three, 3);
+    for (int i = 1; i < n; i++) {
+        if (strcmp(three[i].id, episode_id) != 0) continue;
+        *out = three[i - 1];
+        strncpy(out->type, "Episode", sizeof(out->type)-1);
+        return true;
+    }
+    return false;
+}
+
 // Albums belonging to one artist or genre (the music sub-screen).
 // id_param is the server-side filter key: "AlbumArtistIds" or "GenreIds".
 // Sorted oldest-first so an artist's grid reads as a discography.

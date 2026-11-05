@@ -43,6 +43,11 @@ u32 player_last_total_secs(void);
 // The armed state is consumed by the next show_player() call;
 // player_take_next_request() returns and clears the flag.
 void player_arm_next(const char *label, const char *hint);
+// The item has one before it: L1 ends playback with the next-request flag set
+// and player_took_prev() true.  Consumed by the next show_player() call too.
+void player_arm_prev(void);
+// After player_take_next_request() returned true: the viewer went back, not on.
+bool player_took_prev(void);
 
 // Episode chains (2026-09-26): what the last playback used, so the next
 // episode keeps the same audio LANGUAGE and a matching version.

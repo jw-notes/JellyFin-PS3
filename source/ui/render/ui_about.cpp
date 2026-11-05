@@ -14,6 +14,7 @@
 #include "ui_wave.h"
 #include "rsxutil.h"
 #include "update_check.h"
+#include "theme.h"
 
 namespace {
 
@@ -23,6 +24,18 @@ struct Line { Kind kind; const char *a; const char *b; };   // b: right column (
 // Updates: the last releases, newest first, from CHANGELOG.md in short.
 // Add the new release at the top with each one.
 const Line k_updates[] = {
+    { K_VER,  "3.5.0", NULL },
+    { K_ITEM, TRN("Fixed seeking jumping to the next episode or running out of sync."), NULL },
+    { K_ITEM, TRN("Fixed the menus freezing when leaving Settings."), NULL },
+    { K_ITEM, TRN("Smooth scrub bar: tap for 10 seconds, hold to glide."), NULL },
+    { K_ITEM, TRN("L1 / R1 skip episodes and change Live TV channels."), NULL },
+    { K_ITEM, TRN("Live TV: On Now on Home, next show in the bar, quicker reconnects."), NULL },
+    { K_ITEM, TRN("Downloads save to NTFS and now FAT32 USB drives (4 GB a file)."), NULL },
+    { K_ITEM, TRN("Direct Play for MKV and TS files (off by default)."), NULL },
+    { K_ITEM, TRN("24Hz stays on between episodes, plus a Films only option."), NULL },
+    { K_ITEM, TRN("Search uses the PS3 keyboard's buttons and shows a poster."), NULL },
+    { K_ITEM, TRN("Separate skip settings, Home Order, actor filmographies, Ends at in the bar."), NULL },
+    { K_ITEM, TRN("Settings reorganised, and a new app icon."), NULL },
     { K_VER,  "3.4.3", NULL },
     { K_ITEM, TRN("Each PS3 user keeps their own sign-in, as PS3 save data."), NULL },
     { K_ITEM, TRN("Share Sign-in lends your account to PS3 users with none of their own."), NULL },
@@ -53,6 +66,7 @@ const Line k_updates[] = {
 // Proper names are not translated; headings and sentences are.
 const Line k_credits[] = {
     { K_HEAD, TRN("Made by"), NULL },
+    { K_TEXT, "Copyright (C) 2026 jw-notes", NULL },
     { K_NAME, "jw-notes", "JellyFin [PS]" },
     { K_NAME, "vortigauntlet", "JellyFin-PS3-LosslessAudio" },
     { K_NAME, "MontyMcK", "JellyFin-PS3, the original" },

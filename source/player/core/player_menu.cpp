@@ -87,7 +87,7 @@ HudAction player_handle_menu_action(PlayerState *ps, HudAction act) {
         else if (st == JF_CHAPTERS_IDLE) { s_chap_pending = false; }     // another film started
     }
     if (act == HUD_ACTION_ASPECT) {
-        picture_cycle_aspect();          // the chip redraws itself from picture_get()
+        picture_mode_open();
         return HUD_ACTION_NONE;
     }
     if (act == HUD_ACTION_CHAPTERS) {

@@ -37,6 +37,73 @@ static inline int sr_same(const char *a, const char *b) {
     return *a == *b;
 }
 
+// ---- editing the term at a cursor ----------------------------------------------
+// The cursor is a byte offset that never lands inside a UTF-8 character (a term
+// brought back from the recent list can hold any).
+
+static inline void search_edit_clamp(const char *buf, int *cur) {
+    const int n = (int)strlen(buf);
+    if (*cur < 0) *cur = 0;
+    if (*cur > n) *cur = n;
+    while (*cur > 0 && ((unsigned char)buf[*cur] & 0xC0) == 0x80) (*cur)--;
+}
+
+static inline void search_edit_move(const char *buf, int *cur, int dir) {
+    search_edit_clamp(buf, cur);
+    if (dir < 0 && *cur > 0) {
+        (*cur)--;
+        while (*cur > 0 && ((unsigned char)buf[*cur] & 0xC0) == 0x80) (*cur)--;
+    } else if (dir > 0 && buf[*cur]) {
+        (*cur)++;
+        while (buf[*cur] && ((unsigned char)buf[*cur] & 0xC0) == 0x80) (*cur)++;
+    }
+}
+
+// One byte at the cursor, which moves on past it.  Nothing when the buffer is full.
+static inline void search_edit_insert(char *buf, int cap, int *cur, char ch) {
+    search_edit_clamp(buf, cur);
+    const int n = (int)strlen(buf);
+    if (n + 1 >= cap) return;
+    memmove(buf + *cur + 1, buf + *cur, (size_t)(n - *cur + 1));
+    buf[*cur] = ch;
+    (*cur)++;
+}
+
+// The whole character left of the cursor.
+static inline void search_edit_backspace(char *buf, int *cur) {
+    search_edit_clamp(buf, cur);
+    const int to = *cur;
+    if (to == 0) return;
+    int at = to;
+    search_edit_move(buf, &at, -1);
+    memmove(buf + at, buf + to, strlen(buf + to) + 1);
+    *cur = at;
+}
+
+// A whole key's text at the cursor: all of it, or nothing when it does not fit.
+static inline void search_edit_insert_text(char *buf, int cap, int *cur, const char *text) {
+    const int t = (int)strlen(text);
+    if ((int)strlen(buf) + t >= cap) return;
+    for (int i = 0; i < t; i++) search_edit_insert(buf, cap, cur, text[i]);
+}
+
+// What a key types (the keys are written in capitals): R2's lower case and L2's
+// accents, as on the PS3's keyboard.  out holds a character and its terminator.
+static inline void search_key_text(char base, int lower, int accent, char out[3]) {
+    static const char from[] = "AEIOUNC";
+    static const unsigned char low[] = { 0xA0, 0xA9, 0xAD, 0xB3, 0xBA, 0xB1, 0xA7 };
+    const char *at = accent && base ? strchr(from, base) : NULL;
+    if (at) {
+        const unsigned char l = low[at - from];
+        out[0] = (char)0xC3;
+        out[1] = (char)(lower ? l : l - 0x20);
+        out[2] = '\0';
+        return;
+    }
+    out[0] = lower ? (char)tolower((unsigned char)base) : base;
+    out[1] = '\0';
+}
+
 // Copy `term` without surrounding spaces into out (cap bytes); 0 when empty.
 static inline int sr_trim(const char *term, char *out, int cap) {
     if (!term || cap <= 0) return 0;

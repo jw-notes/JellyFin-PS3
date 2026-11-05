@@ -61,7 +61,7 @@
 #define MATERIAL_MUSIC_NOTE  ICON_MUSIC   // Tabler music glyph (icons.h)
 
 // Focus slot indices — screen order across the control row.
-#define FOCUS_REW    0
+#define FOCUS_REW    0          // the seek bar itself: below the controls, not one of them
 #define FOCUS_PP     1
 #define FOCUS_FF     2
 #define FOCUS_AUDIO  3
@@ -90,6 +90,9 @@ struct HudState {
     bool live;
     char live_title[96];
     char live_times[24];
+    char live_next[64];     // the channel R1 goes to
+    bool has_prev, has_next;// L1 / R1 have an item to go to
+    bool scrub_moving;      // see hud_set_scrub_moving
     int  live_permille;     // -1 = unknown
     u32  live_epoch;        // bumped when any live text changes (the compose key)
     char banner[160];

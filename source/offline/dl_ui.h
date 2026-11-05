@@ -54,7 +54,7 @@ void dl_ui_result_message(int dl_result, const DlSpaceReport *rep,
 typedef struct {
     char title[DL_TITLE_MAX];
     char status[96];        // "Downloading", "Waiting...", "Retrying in 8s -- Server unreachable"
-    char size[64];          // "1.2 GB of 3.4 GB", "340 MB", ""
+    char size[64];          // "1.2 GB of 3.4 GB", "11 MB of ~800 MB" (estimated), "340 MB", ""
     int  permille;          // progress 0..1000, or -1 = no bar (unknown/none)
     bool emphasis;          // draw in the accent colour (active transfer)
     bool warning;           // draw as a problem (failed / held)

@@ -124,13 +124,13 @@ All taken on a real PS3 at 1920×1080. More in the
   watching. Channels the server can't open are skipped, and a dropped
   connection is retried for about a minute.
 - **Downloads**: a film, an episode or a whole season saved to the PS3's hard
-  drive (or an NTFS USB drive, from Settings), played offline. They pause while
+  drive (or an NTFS or FAT32 USB drive, from Settings; FAT32 holds up to 4 GB a download), played offline. They pause while
   you stream, resume after a restart, and always leave 10 GB free on the hard
   drive.
 - **Favourites** on their own Home row.
 - **A Media tab that plays from USB drives and the hard drive, with no server**:
   MKV, .m2ts and .ts files from **NTFS, exFAT or FAT32** drives (playback
-  only reads; downloads are the one thing written, to NTFS), with audio-track switching and a resume point
+  only reads; downloads are the one thing written, to NTFS or FAT32), with audio-track switching and a resume point
   kept on the console. H.264 only, with Dolby Digital, DTS, TrueHD, MP3, AAC,
   FLAC or PCM audio; the file's page says what a file lacks. MKV files show their
   text and PGS subtitles; subtitles in .ts / .m2ts files are not supported yet.
@@ -148,8 +148,8 @@ All taken on a real PS3 at 1920×1080. More in the
   (see [Surround sound](#surround-sound)).
 - **Subtitles rendered by the console** (PGS and text) in 3 fonts and 3 colours,
   so turning them on no longer means a server-side burn-in.
-- **Skip intro / recap / credits** from Jellyfin's media segments, with an
-  **Auto Skip** setting. The next-episode countdown starts with the credits,
+- **Skip intro / recap / credits** from Jellyfin's media segments, with
+  **Skip Intros** and **Skip Credits** settings (Off, Button or Auto). The next-episode countdown starts with the credits,
   and the next episode keeps your audio language, quality and version.
 - **Resume and progress reporting**, so what you stop on the PS3 shows up as
   Continue Watching everywhere else.
@@ -279,7 +279,7 @@ the app and are kept.
 save data, shown in Game → Saved Data Utility as JellyFin [PS] with the account
 it is signed in to. Deleting that save signs the user out. Screen size, 1080p,
 Audio Output, 24 Hz, the download location and the server's MAC address are
-the console's, shared by everyone. **Settings → System → Share Sign-in** lends
+the console's, shared by everyone. **Settings → Account & Server → Share Sign-in** lends
 your account to the users who have none of their own (one account at a time);
 a user signed in to their own account keeps it. Coming from an older version,
 the first PS3 user to open the app keeps the existing sign-in.
@@ -333,11 +333,11 @@ past Shuffle drops you into the UP NEXT queue. `L1`/`R1` are previous/next track
 `R2`/`L2` seek, `△` toggles shuffle, `□` cycles the visualiser (hold for the next
 Canyon preset), and `O` or `Start` stops.
 
-**Search.** Type on the on-screen keyboard; `□` deletes and `O` clears. Press
+**Search.** Type on the on-screen keyboard. `□` deletes, `△` adds a space, `L1`/`R1` move the text cursor, `R2` changes case, `Select` adds accents, `□`+`L1` or `O` clears, `L2` changes to symbols and `Start` goes to the results. In the results, `L2`/`R2` filter, `△` opens the quick peek, and a small box beside the list says what the highlighted title is. Press
 `Down` to reach the results, then `X` to open one or `△` for its details.
 
-**Settings.** A list of seven categories (Playback, Live TV, Audio, Subtitles,
-Downloads, Display, System), each with its own icon; `X` opens one and shows its settings with
+**Settings.** A list of eight categories (Playback, Live TV, Audio, Subtitles,
+Downloads, Display, System, Account & Server), each with its own icon; `X` opens one and shows its settings with
 what the highlighted one does underneath. `O` goes back to the list, `L2`/`R2` move
 to the previous or next category, `Left`/`Right` change a value in either direction
 (`X` still steps forward), and `Up` from the first category returns to the tabs.
@@ -356,8 +356,15 @@ the tab you left it on. Classic shows the channels as a grid of cards; XMB as a
 list with the programme on now, its times and progress, and what's next. In Classic, `□` opens the guide; in XMB, `Right` does
 (`O` or `Left` at its first column comes back).
 
-While watching, the D-pad works like a TV remote: `Left`/`Right` change channel
-and `Up`/`Down` change the volume. The left stick moves around the player bar.
+**On Now** on Home lists what is airing, from the server's guide, with how far in
+each show is; `X` plays the channel. Settings → Live TV → **On Now on Home** turns
+it off. The player bar shows the show on now and the one after it. A channel whose
+picture stops is reconnected by itself: after 6 seconds, or 2.5 if the sound is
+still playing (an ad break), at most twice a minute.
+
+A live channel can't be paused, so the bar has no Play / Pause. While watching,
+`L1`/`R1` change channel and the bar names the next one; `Up`/`Down`
+change the volume, and `Left`/`Right` or the left stick move around the player bar.
 
 **Media.** `X` opens a drive or folder and then a file's page, where `X` plays or
 resumes it; `O` goes up a folder, `L2`/`R2` page through a long one.
@@ -385,14 +392,15 @@ resumes it; `O` goes up a folder, `L2`/`R2` page through a long one.
 |-----------------|-------------------------------------------------------------------|
 | O / Start       | Stop / exit player (O closes an open track menu first)            |
 | Square          | Hide the player bar before its timeout                            |
-| Left / Right    | Bar hidden: skip -10 s / +10 s. Bar showing: move focus across it (Play/Pause · Audio · Volume · Subtitles) |
+| Left / Right    | Seek bar highlighted (how the bar comes up): tap for 10 s, hold to glide, faster the longer you hold. On the controls: move between them |
+| Up / Down       | Up from the seek bar to the controls, Down back |
 | X               | Activate the focused control; skip an intro or recap when offered |
 | Triangle        | Audio and subtitle tracks                                         |
-| L1              | Picture size: Left/Right = width, Up/Down = height, Square = Fit / Fill / Stretch, Triangle resets, L1/X/O done |
-| R1              | Chapters: pick one to jump to it (for films whose server has chapters) |
+| X on PICTURE    | Picture size: Left/Right = width, Up/Down = height, Square = Fit / Fill / Stretch, R1 = move instead of size, hold Triangle 3 s = reset, O = done |
+| L1 / R1         | Previous / next episode (or title, when a collection is playing through) |
 | L3 / R3 (stick click) | Show / hide the player stats                                |
 | R2 / L2 (tap)   | Skip +10 s / -10 s (taps within 1 s batch into one seek)          |
-| R2 / L2 (hold)  | Pause and scrub the seek bar; seek fires once on release          |
+| R2 / L2 (hold)  | The same glide from anywhere on the bar; it seeks once on release |
 | Select          | Picture shape: Fit, Fill (crops the edges, for 16:9 films on a 4:3 TV), Stretch. During the NEXT prompt (last 90 s): jump to the next episode/movie |
 
 ### Music player

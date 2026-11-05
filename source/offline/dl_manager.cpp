@@ -409,6 +409,10 @@ DlResult dl_enqueue(const DlMeta *meta, const char *url, uint64_t size_hint,
     uint64_t need = estimate > have ? estimate - have : 0;
     if (need == 0) need = s_cfg.space_check_bytes;   // size unknown: at least a chunk
     {
+        const uint64_t most = dl_plat_max_file_bytes(dl_store_root());
+        if (most && estimate >= most) { UNLOCK(); return DL_E_TOO_BIG; }
+    }
+    {
         DlSpaceReport rep;
         space_eval(need, committed_locked(s), &rep);
         s_last_report = rep;

@@ -25,6 +25,7 @@ struct DecodeCtx {
 struct AudioCtx {
     volatile bool *playing;
     volatile bool *paused;
+    volatile bool *hold;     // the first picture is not up yet: the sound waits for it
 };
 
 struct UploadCtx {
@@ -53,6 +54,15 @@ struct ProgressShared {
     char          item[64];
     char          sess[64];
     char          live_id[128]; // Live TV: the opened stream, "" otherwise (98 chars)
+    // Live TV: what is on now and next, fetched by the reporter so the display
+    // never waits on the network.  It fills these only while guide_ready is
+    // false and sets it last; the display loop reads them and clears it.
+    volatile bool live;
+    volatile bool guide_ready;
+    char          guide_channel[40];
+    char          guide_now[128];
+    u64           guide_now_start, guide_now_end;
+    char          guide_next[96];
 };
 extern ProgressShared g_prog;
 void progress_thread_fn(void *arg);
@@ -79,6 +89,10 @@ struct PlayerSeekInput {
     bool commit_now;        // release -> commit the reopen now
     bool scrub_resume;      // was playing when this scrub began
     bool resume_after_seek; // unpause once the seek lands
+    bool pad;               // the d-pad on the scrub bar is driving this, not R2 / L2
+    s64  scrub_ms;          // the held scrub's offset from where it began
+    u64  scrub_t0_us;       // when it began or last changed direction
+    u64  scrub_last_us;     // when it last moved
 };
 
 // A local file instead of a server stream: a downloaded media.ts (Stage 4), or
@@ -100,7 +114,16 @@ struct PlayerLocal {
     int              start_audio;   // position in tracks.audio the session starts on
     LocalSubKind     sub_kind[JF_MAX_STREAMS];   // LS_SRT / LS_ASS / LS_PGS of each of tracks.subs
     int              start_sub;     // position in tracks.subs the session starts on (a forced one in the audio's language), -1 = off
+    // Direct play: the file is on the server, read over HTTP (net/http_file.h).  The
+    // session is still the server's, so it reports progress as any stream does.
+    bool             net;
+    char             session_id[64];
+    char             source_id[96];
 };
+
+// Direct play of an online item (player_local.cpp).  False, with nothing started,
+// when it is off or the file cannot be played this way: the server stream is next.
+bool player_direct_try(const JFItem *item, u32 resume_secs, const char *media_source_id);
 
 struct PlayerState {
     const PlayerLocal *local;    // NULL = online

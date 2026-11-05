@@ -409,6 +409,9 @@ extern bool    g_search_focus_results;
 extern int     g_search_sel;
 extern int     g_search_scroll;
 extern char    g_search_buf[64];
+extern int     g_search_cur;      // the text cursor: a byte offset into it
+extern bool    g_osk_lower;       // R2: the letter keys type lower case
+extern bool    g_osk_accent;      // Select: the letter keys that have an accent type it
 extern int     g_search_results_count;
 // True while a search is out on its worker thread (ui_search.cpp).  Declared
 // here beside the rest of the search state because BOTH sides need it: the

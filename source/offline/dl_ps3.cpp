@@ -263,8 +263,8 @@ int dl_plat_file_write(int fh, const void *buf, int len) {
     return len;
 }
 
-// (the NTFS writer writes through: nothing waits in a cache to be synced)
-bool dl_plat_file_sync(int fh) { return lfs_fh(fh) ? true : sysLv2FsFsync(fh) == 0; }
+bool dl_plat_file_sync(int fh) { return lfs_fh(fh) ? lfs_sync(fh - LFS_FH) : sysLv2FsFsync(fh) == 0; }
+uint64_t dl_plat_max_file_bytes(const char *path) { return on_usb(path) ? lfs_max_file_bytes(path) : 0; }
 void dl_plat_file_close(int fh) {
     if (lfs_fh(fh)) lfs_close(fh - LFS_FH);
     else if (fh >= 0) sysLv2FsClose(fh);
@@ -392,15 +392,15 @@ static const char *s_roots[2] = {
 
 // ---- where the store is ---------------------------------------------------
 //
-// jellyfin_dlloc.txt: "usb" puts the store on an NTFS USB drive, anything else (or no file) on the
+// jellyfin_dlloc.txt: "usb" puts the store on an NTFS or FAT32 USB drive, anything else (or no file) on the
 // internal disk.  With "usb" the store follows the drive: the hook below runs on lfs's polling
 // thread after every poll, and when the drive to use changes -- plugged in, pulled out, turned
 // read-only by a failed write -- it stops the service and starts it again on the other store.
 // While no drive takes writes the HDD store is shown (its downloads still play) and new downloads
 // are refused with the reason (dl_location_note), rather than quietly going to the HDD.
 //
-// The drive: the NTFS one that already holds a store (jellyfin_offline/layout.txt), else the
-// first writable NTFS drive.  The store is "usbN:/jellyfin_offline".
+// The drive: the NTFS or FAT32 one that already holds a store (jellyfin_offline/layout.txt), else
+// the first such drive.  The store is "usbN:/jellyfin_offline".
 
 static const char *k_loc_file = "jellyfin_dlloc.txt";
 static int  s_loc_usb = -1;                    // the setting; -1 = not read yet
@@ -455,7 +455,7 @@ static void choose(char *root, int cap, char *note, int ncap, char *label, int l
     int pick = -1;
     for (int pass = 0; pass < 2 && pick < 0; pass++) {
         for (int i = 0; i < n; i++) {
-            if (d[i].kind != LFS_USB_NTFS) continue;
+            if (d[i].kind != LFS_USB_NTFS && d[i].kind != LFS_USB_FAT) continue;
             char p[64];
             snprintf(p, sizeof(p), "%s:/jellyfin_offline/layout.txt", d[i].id);
             lfs_entry e;
@@ -463,7 +463,7 @@ static void choose(char *root, int cap, char *note, int ncap, char *label, int l
         }
     }
     if (pick < 0) {
-        snprintf(note, (size_t)ncap, "%s", TR("Download location is USB: plug in an NTFS drive"));
+        snprintf(note, (size_t)ncap, "%s", TR("Download location is USB: plug in an NTFS/FAT32 drive"));
         return;
     }
     char top[24];

@@ -76,6 +76,18 @@ int  lfs_list(const char *path, lfs_entry *out, int max, int offset);
 // One entry (a file or a folder).  False when it does not exist.
 bool lfs_stat(const char *path, lfs_entry *out);
 
+// A file that is not on a drive: direct play's file on the server (net/http_file.h).  lfs_open
+// of `path` opens it, and its handles read like any other.  The lfs locks are not held
+// around these calls, since a read can wait on the network.
+typedef struct {
+    const char *path;
+    int      (*open)(void);                                       // a handle >= 0, or < 0
+    uint64_t (*size)(int h);
+    void     (*close)(int h);
+    int      (*read)(int h, uint64_t off, void *buf, uint32_t n); // bytes, 0 at the end, or a LFS_E_ code
+} LfsNet;
+void lfs_set_net(const LfsNet *net);
+
 // Files.  lfs_open takes an lfs path, or an internal absolute path ("/dev_hdd0/...",
 // where downloads live).  Returns a handle >= 0 or a LFS_E_ code.
 int      lfs_open(const char *path);
@@ -93,8 +105,12 @@ void     lfs_close(int h);
 // is checked by Windows (chkdsk) the next time it is plugged into a PC.  A write that fails leaves
 // the flag up and the drive read-only until it is plugged in again: it is never cleared over
 // something that may be half done.
-#define LFS_E_READONLY  (-6)    // not a writable NTFS drive (or a write already failed on it)
+//
+// A FAT32 stick is written through lv2, which owns that file system: none of the above applies
+// to it, and a file stops at FAT32's limit of 4 GB less a byte (LFS_E_TOOBIG).  exFAT is read only.
+#define LFS_E_READONLY  (-6)    // not a writable drive (or a write already failed on it)
 #define LFS_E_EXISTS    (-7)    // rename: the destination is there
+#define LFS_E_TOOBIG    (-8)    // write: past the most a file on this drive can hold
 
 // True when the drive holding `path` takes writes now.
 bool lfs_drive_writable(const char *path);
@@ -106,7 +122,11 @@ int  lfs_rmdir(const char *path);                   // an empty folder; 0, also 
 int  lfs_rename(const char *from, const char *to);  // same drive; LFS_E_EXISTS when `to` is there
 // Opens a file for appending, creating it when missing; the handle reads too (lfs_read).
 int  lfs_open_append(const char *path);
-int  lfs_write(int h, const void *buf, uint32_t n); // n, or a LFS_E_ code (and the drive goes read-only)
+int  lfs_write(int h, const void *buf, uint32_t n); // n, or a LFS_E_ code (on NTFS the drive then goes read-only)
+// What is written so far reaches the drive.  False when it could not.
+bool lfs_sync(int h);
+// The most a file on the drive holding `path` can hold; 0 when it has no limit worth asking about.
+uint64_t lfs_max_file_bytes(const char *path);
 // Every entry of a folder, unfiltered and unsorted (lfs_list shows media only).  Returns the
 // number of entries reported, or a LFS_E_ code.  Works on any drive kind.
 int  lfs_list_names(const char *path, void (*cb)(const char *name, bool is_dir, void *ctx), void *ctx);

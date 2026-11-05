@@ -206,6 +206,13 @@ static int info_choose_version(const char *title,
 #include <sys/thread.h>
 #include "api_facts.h"
 #include "vremember.h"       // jellyfin_warm_playback()
+#include "ui_buffering.h"    // loading_run
+#include "ui_sfx.h"
+
+// X on a cast photo: who was asked for.  The detail page closes and
+// xmb_show_item_info opens their filmography.
+static char s_person_id[64];
+static char s_person_name[64];
 
 static int IX(int x) { return XMB_OX + UIS_W(x); }
 static int IY(int y) {
@@ -627,6 +634,14 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
                         break;
                     }
                 }
+                init_btns();
+                break;
+            }
+            if (frow == 3 && BTN_PRESSED(cross) && cast_sel >= 0 && cast_sel < cast_total &&
+                detail.people[cast_all[cast_sel]].id[0]) {
+                const JFPerson *pick = &detail.people[cast_all[cast_sel]];
+                snprintf(s_person_id, sizeof s_person_id, "%s", pick->id);
+                snprintf(s_person_name, sizeof s_person_name, "%s", pick->name);
                 init_btns();
                 break;
             }
@@ -1284,8 +1299,8 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
 
         // Hints: what X does on the focused control, and Back.
         if (frow == 3) {
-            static const Hint hc[] = {{'E', TRN("Browse cast")}, {'C', TRN("Back")}};
-            draw_hints_bar(hc, 2);
+            static const Hint hc[] = {{'E', TRN("Browse cast")}, {'X', TRN("Filmography")}, {'C', TRN("Back")}};
+            draw_hints_bar(hc, 3);
         } else {
             Hint h[2];
             h[0].glyph = 'X';
@@ -1317,7 +1332,146 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
     init_btns();
 }
 
-void xmb_show_item_info(const XMBItem *root) { xmb_show_item_info_v3(root); }
+// ---- an actor's filmography ---------------------------------------------------------------------
+
+#define FILM_MAX 60
+#define FILM_BUF (256 * 1024)
+static XMBItem s_film[FILM_MAX];
+static int     s_film_n = 0;
+
+struct FilmJob { char id[64]; bool ok; };
+
+static void film_work(void *arg) {
+    FilmJob *job = (FilmJob *)arg;
+    job->ok = false;
+    s_film_n = 0;
+    char *buf = (char *)malloc(FILM_BUF);
+    if (!buf) return;
+    char url[512];
+    snprintf(url, sizeof url,
+             "%s/Users/%s/Items?Recursive=true&PersonIds=%s&IncludeItemTypes=Movie,Series"
+             "&SortBy=ProductionYear,SortName&SortOrder=Descending&Limit=%d"
+             "&Fields=ProductionYear,RunTimeTicks,Genres,Container,Tags",
+             g_server, g_userid, job->id, FILM_MAX);
+    if (http_request(0, url, NULL, g_token, buf, FILM_BUF) == 200) {
+        s_film_n = parse_xmb_items(buf, s_film, FILM_MAX);
+        job->ok = true;
+    }
+    free(buf);
+}
+
+// Blocks until the viewer picks a title (true, *out) or backs out (false).  The
+// list is kept while it is the same person, so coming back finds the same row.
+static bool film_screen(const char *id, const char *name, XMBItem *out) {
+    static char s_film_id[64] = "";
+    static int  s_sel = 0, s_top = 0;
+    bool failed = false;
+    if (strcmp(s_film_id, id) != 0) {
+        static FilmJob job;
+        snprintf(job.id, sizeof job.id, "%s", id);
+        loading_run(film_work, &job, TR("Loading"), false);
+        failed = !job.ok;                       // said on the page; asked again next time
+        snprintf(s_film_id, sizeof s_film_id, "%s", failed ? "" : id);
+        s_sel = s_top = 0;
+    }
+    bool picked = false, armed = false;
+    rsxSync();
+    flip();
+    init_btns();
+    while (running) {
+        waitflip();
+        sysUtilCheckCallback();
+        poll_buttons();
+        if (!armed) {
+            if (!btn_cur.cross && !btn_cur.circle) armed = true;
+        } else {
+            if (BTN_PRESSED(circle)) { ui_sfx_play(SFX_CANCEL); break; }
+            if (BTN_REPEAT(up)   && s_sel > 0)            { s_sel--; ui_sfx_play(SFX_CURSOR); }
+            if (BTN_REPEAT(down) && s_sel < s_film_n - 1) { s_sel++; ui_sfx_play(SFX_CURSOR); }
+            if (BTN_PRESSED(cross) && s_film_n > 0) {
+                ui_sfx_play(SFX_DECIDE);
+                *out = s_film[s_sel];
+                picked = true;
+                break;
+            }
+        }
+        const int VIS = 10;
+        if (s_sel < s_top) s_top = s_sel;
+        if (s_sel >= s_top + VIS) s_top = s_sel - VIS + 1;
+
+        clearScreen(XMB_BG);
+        wave_draw();
+        rsxSync();
+        const int pw = UIS_W(760), rh = UIS_H(40), ph = UIS_H(96) + VIS * rh + UIS_H(14);
+        const int px = ((int)display_width - pw) / 2, py = ((int)display_height - ph) / 2;
+        drawRect((u32)px, (u32)py, (u32)pw, (u32)ph, XMB_PANEL);
+        drawRect((u32)px, (u32)py, (u32)pw, 1, XMB_HAIRLINE);
+        drawRect((u32)px, (u32)(py + ph - 1), (u32)pw, 1, XMB_HAIRLINE);
+        drawRect((u32)px, (u32)py, 1, (u32)ph, XMB_HAIRLINE);
+        drawRect((u32)(px + pw - 1), (u32)py, 1, (u32)ph, XMB_HAIRLINE);
+        const int cx = px + UIS_W(30);
+        drawTTF((u32)cx, (u32)(py + UIS_H(18)), name, UIS_TF(24), XMB_WHITE, true);
+        drawTTF((u32)cx, (u32)(py + UIS_H(54)), TR("Filmography"), UIS_TF(13), XMB_TEXT_DIM);
+        if (s_film_n == 0)
+            drawTTF((u32)cx, (u32)(py + UIS_H(96)),
+                    failed ? TR("Couldn't reach the server.") : TR("Nothing here yet"),
+                    UIS_TF(18), XMB_TEXT_DIM);
+        for (int r = 0; r < VIS && s_top + r < s_film_n; r++) {
+            const int i = s_top + r, y = py + UIS_H(82) + r * rh, h = rh - UIS_H(4);
+            const XMBItem *f = &s_film[i];
+            if (i == s_sel) {
+                drawRect((u32)(px + UIS_W(12)), (u32)y, (u32)(pw - UIS_W(24)), (u32)h, XMB_PANEL_HI);
+                drawRect((u32)(px + UIS_W(8)), (u32)y, UIS_W(3), (u32)h, XMB_ACCENT);
+            }
+            const int ty = y + (h - UIS_H(18)) / 2 - UIS_H(1);
+            const char *kind = strcmp(f->type, "Series") == 0 ? TR("Series") : TR("Movie");
+            char right[48];
+            snprintf(right, sizeof right, "%s%s%s", f->year_str, f->year_str[0] ? "  \xC2\xB7  " : "", kind);
+            const int rw = ttf_text_width(right, UIS_TF(14));
+            drawTTF((u32)(px + pw - UIS_W(30) - rw), (u32)(ty + UIS_H(2)), right, UIS_TF(14), XMB_TEXT_DIM);
+            info_clip_text(cx, ty, f->name, UIS_TF(18), i == s_sel ? XMB_WHITE : XMB_TEXT,
+                           pw - UIS_W(60) - rw - UIS_W(20), false);
+        }
+        { static const Hint hh[] = {{'D', TRN("Move")}, {'X', TRN("Open")}, {'C', TRN("Back")}};
+          draw_hints_bar(hh, 3); }
+        flip();
+    }
+    init_btns();
+    return picked;
+}
+
+// The detail page, and from it an actor's filmography and the titles in it.  O
+// from a title returns to the list, and O from the list to the first page.
+void xmb_show_item_info(const XMBItem *root) {
+    XMBItem first = *root;              // the rows may refetch under detail
+    XMBItem item  = first;
+    bool from_list = false;
+    char person[64] = "", person_name[64] = "";
+    for (;;) {
+        s_person_id[0] = '\0';
+        xmb_show_item_info_v3(&item);
+        if (s_person_id[0]) {
+            snprintf(person, sizeof person, "%s", s_person_id);
+            snprintf(person_name, sizeof person_name, "%s", s_person_name);
+        } else if (!from_list) {
+            return;
+        }
+        XMBItem picked;
+        if (!running) return;
+        if (!film_screen(person, person_name, &picked)) {
+            item = first;
+            from_list = false;
+            continue;
+        }
+        if (strcmp(picked.type, "Series") == 0) {
+            spine_set_level(SPINE_L2);          // its seasons live inside the TV tab
+            if (xmb_open_series(&picked)) init_btns();
+            return;
+        }
+        item = picked;
+        from_list = true;
+    }
+}
 
 // Resume-or-restart prompt for a partly-watched item.  Blocks with its own
 // draw/input loop over the wave background, exactly like xmb_show_item_info.

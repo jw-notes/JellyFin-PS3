@@ -19,44 +19,94 @@ static void pausing(void) {
     printf("- pause\n");
     LiveWatch w; live_watch_init(&w, S(100));
     // Playing: nothing.
-    CHECK(live_watch_step(&w, S(101), false, 10, false) == LIVE_EV_NONE);
+    CHECK(live_watch_step(&w, S(101), false, 10, false, 0) == LIVE_EV_NONE);
     // Paused for 10 s exactly is still a short pause; past it is stale.
-    CHECK(live_watch_step(&w, S(102), true, 10, false) == LIVE_EV_NONE);
-    CHECK(live_watch_step(&w, S(112), false, 10, false) == LIVE_EV_NONE);
-    CHECK(live_watch_step(&w, S(120), true, 10, false) == LIVE_EV_NONE);
-    CHECK(live_watch_step(&w, S(131), true, 10, false) == LIVE_EV_NONE);      // still paused
-    CHECK(live_watch_step(&w, S(131) + 1, false, 10, false) == LIVE_EV_RESUME_STALE);
-    CHECK(live_watch_step(&w, S(132), false, 10, false) == LIVE_EV_NONE);     // once
+    CHECK(live_watch_step(&w, S(102), true, 10, false, 0) == LIVE_EV_NONE);
+    CHECK(live_watch_step(&w, S(112), false, 10, false, 0) == LIVE_EV_NONE);
+    CHECK(live_watch_step(&w, S(120), true, 10, false, 0) == LIVE_EV_NONE);
+    CHECK(live_watch_step(&w, S(131), true, 10, false, 0) == LIVE_EV_NONE);      // still paused
+    CHECK(live_watch_step(&w, S(131) + 1, false, 10, false, 0) == LIVE_EV_RESUME_STALE);
+    CHECK(live_watch_step(&w, S(132), false, 10, false, 0) == LIVE_EV_NONE);     // once
 }
 
 static void stalls(void) {
     printf("- stall\n");
     LiveWatch w; live_watch_init(&w, S(0));
     // No picture yet is not a stall, however long.
-    CHECK(live_watch_step(&w, S(60), false, 0, false) == LIVE_EV_NONE);
+    CHECK(live_watch_step(&w, S(60), false, 0, false, 0) == LIVE_EV_NONE);
     // Pictures arriving: fine.
-    CHECK(live_watch_step(&w, S(61), false, 1, false) == LIVE_EV_NONE);
-    CHECK(live_watch_step(&w, S(70), false, 200, false) == LIVE_EV_NONE);
-    // Frozen count: 15 s, not before.
-    CHECK(live_watch_step(&w, S(85), false, 200, false) == LIVE_EV_NONE);
-    CHECK(live_watch_step(&w, S(85) + 1, false, 200, false) == LIVE_EV_STALLED);
+    CHECK(live_watch_step(&w, S(61), false, 1, false, 0) == LIVE_EV_NONE);
+    CHECK(live_watch_step(&w, S(70), false, 200, false, 0) == LIVE_EV_NONE);
+    // Frozen count: 6 s, not before.
+    CHECK(live_watch_step(&w, S(76), false, 200, false, 0) == LIVE_EV_NONE);
+    CHECK(live_watch_step(&w, S(76) + 1, false, 200, false, 0) == LIVE_EV_STALLED);
     // A pause is not a stall: the count stands still while paused.
     live_watch_opened(&w, S(100));
-    CHECK(live_watch_step(&w, S(101), false, 5, false) == LIVE_EV_NONE);
-    CHECK(live_watch_step(&w, S(102), true, 5, false) == LIVE_EV_NONE);
-    CHECK(live_watch_step(&w, S(112), false, 5, false) == LIVE_EV_NONE);      // 10 s pause, not stale
-    CHECK(live_watch_step(&w, S(120), false, 5, false) == LIVE_EV_NONE);      // 8 s since resuming
-    CHECK(live_watch_step(&w, S(127) + 1, false, 5, false) == LIVE_EV_STALLED);
+    CHECK(live_watch_step(&w, S(101), false, 5, false, 0) == LIVE_EV_NONE);
+    CHECK(live_watch_step(&w, S(102), true, 5, false, 0) == LIVE_EV_NONE);
+    CHECK(live_watch_step(&w, S(112), false, 5, false, 0) == LIVE_EV_NONE);      // 10 s pause, not stale
+    CHECK(live_watch_step(&w, S(118), false, 5, false, 0) == LIVE_EV_NONE);      // 6 s since resuming
+    CHECK(live_watch_step(&w, S(118) + 1, false, 5, false, 0) == LIVE_EV_STALLED);
+}
+
+// The picture stops while the sound plays on (a stitched ad break).
+static void sound_on(void) {
+    printf("- sound on\n");
+    LiveWatch w; live_watch_init(&w, S(0));
+    CHECK(live_watch_step(&w, S(1), false, 5, false, S(10)) == LIVE_EV_NONE);
+    // The sound exactly 2 s on is not yet past the last picture.
+    CHECK(live_watch_step(&w, S(3), false, 5, false, S(12)) == LIVE_EV_NONE);
+    // Past it, but the picture has been still for only 2 s.
+    CHECK(live_watch_step(&w, S(3), false, 5, false, S(12) + 1) == LIVE_EV_NONE);
+    CHECK(live_watch_step(&w, S(4), false, 5, false, S(13)) == LIVE_EV_STALLED);
+    // The sound stopped too (the network): the full 6 s.
+    live_watch_init(&w, S(0));
+    CHECK(live_watch_step(&w, S(1), false, 5, false, S(10)) == LIVE_EV_NONE);
+    CHECK(live_watch_step(&w, S(4), false, 5, false, S(10)) == LIVE_EV_NONE);
+    CHECK(live_watch_step(&w, S(7), false, 5, false, S(10)) == LIVE_EV_NONE);
+    CHECK(live_watch_step(&w, S(7) + 1, false, 5, false, S(10)) == LIVE_EV_STALLED);
+    // A clock that appears only after the last picture is no evidence of sound.
+    live_watch_init(&w, S(0));
+    CHECK(live_watch_step(&w, S(1), false, 5, false, 0) == LIVE_EV_NONE);
+    CHECK(live_watch_step(&w, S(2), false, 5, false, S(30)) == LIVE_EV_NONE);
+    CHECK(live_watch_step(&w, S(5), false, 5, false, S(30)) == LIVE_EV_NONE);
+    // A clock that went backwards (a new stream) starts again from there.
+    live_watch_init(&w, S(0));
+    CHECK(live_watch_step(&w, S(1), false, 5, false, S(30)) == LIVE_EV_NONE);
+    CHECK(live_watch_step(&w, S(2), false, 5, false, S(1)) == LIVE_EV_NONE);
+    CHECK(live_watch_step(&w, S(5), false, 5, false, S(2)) == LIVE_EV_NONE);
+}
+
+// A dead channel: two stall reopens a minute, 20 s apart, then it waits.
+static void reconnect_limit(void) {
+    printf("- reconnect limit\n");
+    LiveWatch w; live_watch_init(&w, S(0));
+    CHECK(live_watch_step(&w, S(1), false, 5, false, 0) == LIVE_EV_NONE);
+    CHECK(live_watch_step(&w, S(7) + 1, false, 5, false, 0) == LIVE_EV_STALLED);
+    live_watch_opened(&w, S(8));
+    CHECK(live_watch_step(&w, S(9), false, 5, false, 0) == LIVE_EV_NONE);
+    CHECK(live_watch_step(&w, S(15) + 1, false, 5, false, 0) == LIVE_EV_NONE);  // 8 s since the last
+    CHECK(live_watch_step(&w, S(27), false, 5, false, 0) == LIVE_EV_NONE);      // not yet 20 s
+    CHECK(live_watch_step(&w, S(28), false, 5, false, 0) == LIVE_EV_STALLED);
+    live_watch_opened(&w, S(29));
+    CHECK(live_watch_step(&w, S(30), false, 5, false, 0) == LIVE_EV_NONE);
+    CHECK(live_watch_step(&w, S(50), false, 5, false, 0) == LIVE_EV_NONE);      // two this minute
+    CHECK(live_watch_step(&w, S(67) + 2, false, 5, false, 0) == LIVE_EV_STALLED); // a new minute
+    // Another channel starts the count again.
+    live_watch_opened(&w, S(68));
+    live_watch_channel_changed(&w);
+    CHECK(live_watch_step(&w, S(69), false, 5, false, 0) == LIVE_EV_NONE);
+    CHECK(live_watch_step(&w, S(75) + 1, false, 5, false, 0) == LIVE_EV_STALLED);
 }
 
 static void ended(void) {
     printf("- ended\n");
     LiveWatch w; live_watch_init(&w, S(0));
-    CHECK(live_watch_step(&w, S(1), false, 3, true) == LIVE_EV_ENDED);
+    CHECK(live_watch_step(&w, S(1), false, 3, true, 0) == LIVE_EV_ENDED);
     // While paused the end waits for the resume.
     live_watch_opened(&w, S(2));
-    CHECK(live_watch_step(&w, S(3), true, 3, true) == LIVE_EV_NONE);
-    CHECK(live_watch_step(&w, S(4), false, 3, true) == LIVE_EV_ENDED);
+    CHECK(live_watch_step(&w, S(3), true, 3, true, 0) == LIVE_EV_NONE);
+    CHECK(live_watch_step(&w, S(4), false, 3, true, 0) == LIVE_EV_ENDED);
 }
 
 static void looping(void) {
@@ -147,6 +197,8 @@ int main(void) {
     pcr();
     pausing();
     stalls();
+    sound_on();
+    reconnect_limit();
     ended();
     looping();
     printf("live watch: %d checks, %d failed\n", s_checks, s_failed);

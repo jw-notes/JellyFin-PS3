@@ -84,6 +84,8 @@ int livetv_step_channel(int cur, int n, int dir);
 // (start <= t < end), or -1.  The programmes may be unordered or overlap; an
 // overlap resolves to the later start.  Zero-length programmes never air.
 int livetv_programme_at(const JFProgram *progs, int n, uint64_t t);
+// The next to start after `t`, or -1.  Zero-length programmes never air.
+int livetv_programme_after(const JFProgram *progs, int n, uint64_t t);
 
 // Debounce for channel changes: presses within `quiet_us` of the previous one
 // collapse to the last.  Returns true when a pending change should open now.

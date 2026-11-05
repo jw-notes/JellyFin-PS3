@@ -62,7 +62,7 @@ all: test_livetv_quality test_classic_library test_release_version test_login_os
      test_wave_cam test_wave_light test_wave_gel test_spine test_depth test_facts test_stream_budget \
      test_experience test_json_unescape test_boot_seq \
      test_wave_nav test_daynight test_canyon test_display_mode test_wave_look test_wave_drop test_offline test_stream_request test_jbuf_order \
-     test_settings_model test_settings_model_nostats test_userdata test_livetv test_server_discovery test_rx_gap test_livetv_prefs test_chapters test_wol test_icons test_live_watch test_picture_resume test_mohasi_fs test_lfs_path test_lfs test_h264_sps test_mkv_demux test_mkv_ts test_local_probe test_local_play test_local_names test_local_resume test_resample test_aac test_flac test_lossless test_sub_conv test_local_subs test_local_tags test_local_audio test_local_music test_music_engine test_i18n test_i18n_text test_line_break test_clock_fmt
+     test_settings_model test_settings_model_nostats test_userdata test_livetv test_server_discovery test_rx_gap test_home_order test_scrub_motion test_http_range test_livetv_prefs test_chapters test_wol test_icons test_live_watch test_picture_resume test_mohasi_fs test_lfs_path test_lfs test_h264_sps test_mkv_demux test_mkv_ts test_local_probe test_local_play test_local_names test_local_resume test_resample test_aac test_flac test_lossless test_sub_conv test_local_subs test_local_tags test_local_audio test_local_music test_music_engine test_i18n test_i18n_text test_line_break test_clock_fmt
 
 test_release_version: test_release_version.cpp ../source/net/release_version.h ../source/net/update_check.h
 	$(CXX) $(CXXFLAGS) -Wextra -o $@ test_release_version.cpp
@@ -220,6 +220,15 @@ test_livetv_prefs: test_livetv_prefs.cpp ../source/api/livetv_prefs.c ../source/
 
 # Server discovery: the UDP 7359 reply parser and the URL rules.
 # Sender backoff seen from the receiving end (the stream's receive window).
+test_scrub_motion: test_scrub_motion.c ../source/player/core/scrub_motion.h
+	$(CC) $(CFLAGS) -Wextra -I../source/player/core -o $@ test_scrub_motion.c
+
+test_home_order: test_home_order.c ../source/ui/home_order.h
+	$(CC) $(CFLAGS) -Wextra -I../source/ui -o $@ test_home_order.c
+
+test_http_range: test_http_range.c ../source/net/http_range.h
+	$(CC) $(CFLAGS) -Wextra -I../source/net -o $@ test_http_range.c
+
 test_rx_gap: test_rx_gap.cpp ../source/player/stream/rx_gap.h
 	$(CXX) $(CXXFLAGS) -Wextra -I../source/player/stream -o $@ test_rx_gap.cpp
 
@@ -594,6 +603,9 @@ check: all tones51.ac3 tones51.spdif tones51.dts tones51.thd tones51.thd.ref
 	./test_livetv
 	./test_server_discovery
 	./test_rx_gap
+	./test_home_order
+	./test_scrub_motion
+	./test_http_range
 	./test_livetv_prefs
 	./test_chapters
 	./test_wol
@@ -648,7 +660,7 @@ clean:
 	      test_wave_audio test_wave_motion test_wave_render_map \
 	      test_wave_cam test_wave_light test_wave_gel test_spine test_depth test_facts test_stream_budget test_experience test_json_unescape test_boot_seq test_display_mode \
 	      test_offline test_stream_request track_codec_host.o \
-	      test_settings_model test_settings_model_nostats test_userdata test_livetv test_server_discovery test_rx_gap test_livetv_prefs test_chapters test_wol test_icons test_live_watch test_picture_resume \
+	      test_settings_model test_settings_model_nostats test_userdata test_livetv test_server_discovery test_rx_gap test_home_order test_scrub_motion test_http_range test_livetv_prefs test_chapters test_wol test_icons test_live_watch test_picture_resume \
 	      test_mohasi_fs test_mohasi_fs_be test_lfs_path \
 	      tones51.ac3 tones51.dts tones51.thd tones51.thd.ref
 

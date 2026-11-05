@@ -17,14 +17,20 @@ static const setting_row k_rows[] = {
       TRN("Ask the server for full 1920x1080 video instead of 720p.\n"
       "Sharper, but needs more bandwidth. Still experimental.")},
     { SET_24HZ,      SEC_PLAYBACK, TRN("24Hz Output"),
-      TRN("Auto: 24fps films switch the TV to 24Hz for smooth motion.\n"
-      "Each TV is checked once first. Off keeps everything at 60Hz.")},
+      TRN("Auto: the TV switches to the best rate for each video.\n"
+      "Films only leaves shows at 60Hz, so it switches less. Off: always 60Hz.")},
+    { SET_SKIP_INTRO, SEC_PLAYBACK, TRN("Skip Intros"),
+      TRN("Intros and recaps. Button: X skips when the badge shows.\n"
+      "Auto: they go by themselves. Needs markers on the server.")},
+    { SET_SKIP_CREDITS, SEC_PLAYBACK, TRN("Skip Credits"),
+      TRN("Button: X skips when the badge shows. Auto: skips by itself.\n"
+      "With a next episode, skipping goes straight to it.")},
+    { SET_DIRECT_PLAY, SEC_PLAYBACK, TRN("Direct Play"),
+      TRN("At top quality, plays MKV and TS files as they are, with no remux.\n"
+      "Anything else still comes through the server.")},
     { SET_DIRECT_STREAM, SEC_PLAYBACK, TRN("Direct Stream"),
       TRN("Auto: the server may pass a compatible video through untouched.\n"
       "Off: always re-encode. Try Off if playback stutters at every quality.")},
-    { SET_AUTOSKIP,  SEC_PLAYBACK, TRN("Auto Skip"),
-      TRN("Skip intros and recaps automatically, without pressing X.\n"
-      "Credits start the next episode's 25 second countdown instead.")},
     // ---- Live TV
     { SET_LIVETV_QUALITY, SEC_LIVETV, TRN("Live TV Quality"),
       TRN("Auto is 720p at 4 Mbps, the best fit for most Wi-Fi.\n"
@@ -32,6 +38,9 @@ static const setting_row k_rows[] = {
     { SET_LIVETV_BUFFER, SEC_LIVETV, TRN("Live TV Buffer"),
       TRN("How much of a channel is saved before it plays.\n"
       "Shorter starts channels sooner; longer rides out Wi-Fi gaps.")},
+    { SET_ONNOW, SEC_LIVETV, TRN("On Now on Home"),
+      TRN("A Home row of what's on Live TV now, from the server's guide.\n"
+      "X plays the channel.")},
     // ---- Audio
     { SET_AUDIO_OUT, SEC_AUDIO, TRN("Audio Output"),
       TRN("Stereo, 5.1 or 7.1 over HDMI. Dolby Digital sends the film's Dolby\n"
@@ -51,7 +60,7 @@ static const setting_row k_rows[] = {
       "White is the broadcast default; the others are softer.")},
     // ---- Downloads
     { SET_DL_LOCATION, SEC_DOWNLOADS, TRN("Download Location"),
-      TRN("Where new downloads are saved: this PS3's HDD, or an NTFS USB drive.\n"
+      TRN("Where new downloads are saved: this HDD, or an NTFS/FAT32 USB drive.\n"
       "The lists show the downloads on the drive while it is plugged in.")},
     { SET_DOWNLOADS, SEC_DOWNLOADS, TRN("Downloads"),
       TRN("Downloads in progress, with pause and cancel.\n"
@@ -60,9 +69,6 @@ static const setting_row k_rows[] = {
       TRN("Films and episodes saved on this PS3, ready to play.\n"
       "They play without a connection to your server.")},
     // ---- Display
-    { SET_SCREEN_SIZE, SEC_DISPLAY, TRN("Screen Size"),
-      TRN("Shrink the picture to fit TVs that crop the edges (overscan).\n"
-      "Line the corners up with your screen's edges.")},
     { SET_LANGUAGE,  SEC_DISPLAY, TRN("Language"),
       TRN("The language the menus are shown in.\n"
       "Auto follows the PS3's own language setting.") },
@@ -72,21 +78,27 @@ static const setting_row k_rows[] = {
     { SET_THEME,     SEC_DISPLAY, TRN("Theme"),
       TRN("The interface colour theme.\n"
       "Jellywave is the default; extra .ini themes appear here too.")},
+    { SET_HOME_ORDER, SEC_DISPLAY, TRN("Home Order"),
+      TRN("The order of your libraries under My Media in the Classic layout.\n"
+      "X to put them in your own order.")},
+    { SET_SCREEN_SIZE, SEC_DISPLAY, TRN("Screen Size"),
+      TRN("Shrink the picture to fit TVs that crop the edges (overscan).\n"
+      "Line the corners up with your screen's edges.")},
     { SET_DAYNIGHT,  SEC_DISPLAY, TRN("Day / Night Palette"),
       TRN("Brighten the background by day, back to the night look after\n"
       "dark, with a glow at dawn and dusk. Follows the console clock.")},
     { SET_WAVE_INT,  SEC_DISPLAY, TRN("Wave Intensity"),
       TRN("How strongly the wave reacts to music.\n"
       "Off keeps it calm; Max makes every beat hit hard.")},
+    { SET_PARTICLES, SEC_DISPLAY, TRN("Menu Particles"),
+      TRN("Let the floating particles drift behind the menus too,\n"
+      "not only while music is playing.")},
     { SET_SCREENSAVER, SEC_DISPLAY, TRN("Screensaver"),
       TRN("After a few idle minutes: Classic drifts posters over the wave,\n"
       "Artwork fills the screen with backdrops. Off never starts it.")},
     { SET_SAVER_DELAY, SEC_DISPLAY, TRN("Screensaver Delay"),
       TRN("How long the menus wait, untouched, before the screensaver\n"
       "starts: 30 seconds to 5 minutes.")},
-    { SET_PARTICLES, SEC_DISPLAY, TRN("Menu Particles"),
-      TRN("Let the floating particles drift behind the menus too,\n"
-      "not only while music is playing.")},
     // ---- System
     { SET_UPDATE,    SEC_SYSTEM, TRN("Software Update"),
       TRN("Checked at every launch. X checks again, and offers to\n"
@@ -94,27 +106,28 @@ static const setting_row k_rows[] = {
     { SET_ABOUT,     SEC_SYSTEM, TRN("About"),
       TRN("The version, who made the app, and the licences of\n"
       "everything in it.")},
-    { SET_SEND_LOG,  SEC_SYSTEM, TRN("Send Log to Server"),
-      TRN("Send the diagnostic log to your Jellyfin server (X). It is saved\n"
-      "under Dashboard > Logs as upload_PS3_...log: share that file.")},
-    { SET_WOL_MAC,   SEC_SYSTEM, TRN("Server MAC Address"),
-      TRN("The server PC's MAC address, so this PS3 can wake it (X to enter).\n"
-      "On the PC: ipconfig /all, then Physical Address. Jellyfin can't say.")},
-    { SET_WAKE,      SEC_SYSTEM, TRN("Wake Server"),
-      TRN("Send a Wake-on-LAN signal to the server PC (X). It is also sent when\n"
-      "the server can't be reached. The PC must allow wake-up in its BIOS.")},
     { SET_DEBUG_LOG, SEC_SYSTEM, TRN("Debug Logging"),
       TRN("Write a diagnostic log to /dev_hdd0/tmp/player_log.txt (off by default).\n"
       "Use Send Log to Server when reporting a problem.")},
+    { SET_SEND_LOG,  SEC_SYSTEM, TRN("Send Log to Server"),
+      TRN("Send the diagnostic log to your Jellyfin server (X). It is saved\n"
+      "under Dashboard > Logs as upload_PS3_...log: share that file.")},
 #if ENABLE_PLAYER_STATS
     { SET_STATS,     SEC_SYSTEM, TRN("Player Stats Overlay"),
       TRN("Show playback statistics over the video:\n"
       "frame rate, bitrate, buffer and decoder figures.")},
 #endif
-    { SET_SHARE_LOGIN, SEC_SYSTEM, TRN("Share Sign-in"),
+    // ---- Account & Server
+    { SET_SHARE_LOGIN, SEC_ACCOUNT, TRN("Share Sign-in"),
       TRN("On: PS3 users with no sign-in of their own use this account.\n"
       "One account can be shared; users signed in to their own keep it.")},
-    { SET_LOGOUT,    SEC_SYSTEM, TRN("Log Out"),
+    { SET_WOL_MAC,   SEC_ACCOUNT, TRN("Server MAC Address"),
+      TRN("The server PC's MAC address, so this PS3 can wake it (X to enter).\n"
+      "On the PC: ipconfig /all, then Physical Address. Jellyfin can't say.")},
+    { SET_WAKE,      SEC_ACCOUNT, TRN("Wake Server"),
+      TRN("Send a Wake-on-LAN signal to the server PC (X). It is also sent when\n"
+      "the server can't be reached. The PC must allow wake-up in its BIOS.")},
+    { SET_LOGOUT,    SEC_ACCOUNT, TRN("Log Out"),
       TRN("Sign out of this Jellyfin account.\n"
       "You will need to log in again to browse your library.")},
 };
@@ -122,7 +135,7 @@ static const setting_row k_rows[] = {
 #define N_ROWS ((int)(sizeof(k_rows) / sizeof(k_rows[0])))
 
 static const char *const k_section_labels[SEC__COUNT] = {
-    TRN("Playback"), TRN("Live TV"), TRN("Audio"), TRN("Subtitles"), TRN("Downloads"), TRN("Display"), TRN("System"),
+    TRN("Playback"), TRN("Live TV"), TRN("Audio"), TRN("Subtitles"), TRN("Downloads"), TRN("Display"), TRN("System"), TRN("Account & Server"),
 };
 
 int settings_count(void) { return N_ROWS; }

@@ -13,6 +13,7 @@
 #include <string.h>
 
 #include <sys/file.h>
+#include <sys/thread.h>
 
 #include "user_prefs.h"
 #include "login_store.h"
@@ -26,6 +27,17 @@ extern void jf_login_resave(void);     // api_auth.cpp: the sign-in and these, s
 static bool s_active = false;
 
 bool user_prefs_active(void) { return s_active; }
+
+// The bundle last known to be in the save, so an unchanged one costs no write.
+static uint32_t s_saved_hash = 0;
+static bool     s_have_hash  = false;
+static char     s_bundle[16 * 1024];    // the save holds the same bundle (api_auth.cpp)
+
+static uint32_t bundle_hash(const char *p, size_t n) {
+    uint32_t h = 2166136261u;
+    for (size_t i = 0; i < n; i++) h = (h ^ (uint8_t)p[i]) * 16777619u;
+    return h ^ (uint32_t)n;
+}
 
 static bool known(const char *name) {
     for (int i = 0; i < jf_user_file_count(); i++)
@@ -108,6 +120,12 @@ void user_prefs_begin(void) {
     snprintf(line, sizeof line, "user prefs: %d settings for this PS3 user (%s)", n,
              login_store_prefs(&data, &len) ? "their own" : "from the console's");
     plog(line);
+    // A first run's copies are not in the save yet, so they stay "changed".
+    if (login_store_prefs(&data, &len)) {
+        const size_t have = user_prefs_bundle(s_bundle, sizeof s_bundle);
+        s_saved_hash = bundle_hash(s_bundle, have);
+        s_have_hash  = true;
+    }
 }
 
 size_t user_prefs_bundle(char *out, size_t cap) {
@@ -132,7 +150,57 @@ size_t user_prefs_bundle(char *out, size_t cap) {
     return used;
 }
 
+static void save_if_changed(void) {
+    const size_t have = user_prefs_bundle(s_bundle, sizeof s_bundle);
+    const uint32_t h = bundle_hash(s_bundle, have);
+    if (s_have_hash && h == s_saved_hash) return;
+    jf_login_resave();
+    s_saved_hash = h;
+    s_have_hash  = true;
+}
+
+static sys_ppu_thread_t s_save_tid = 0;
+static volatile bool    s_saving = false, s_save_again = false;
+
+static void save_thread_fn(void *) {
+    do {
+        s_save_again = false;
+        save_if_changed();
+    } while (s_save_again);
+    __sync_synchronize();
+    s_saving = false;
+    sysThreadExit(0);
+}
+
+void user_prefs_save_join(void) {
+    if (!s_save_tid) return;
+    sys_ppu_thread_t self = 0;
+    sysThreadGetId(&self);
+    if (self == s_save_tid) return;
+    u64 ret;
+    sysThreadJoin(s_save_tid, &ret);
+    s_save_tid = 0;
+}
+
+void user_prefs_save_async(void) {
+    if (!s_active) return;
+    if (s_save_tid && s_saving) {       // caught at its very end, the last save on exit has it
+        s_save_again = true;
+        return;
+    }
+    user_prefs_save_join();
+    s_saving = true;
+    static char name[] = "jf_prefsave";
+    if (sysThreadCreate(&s_save_tid, save_thread_fn, NULL, 1500, 128 * 1024,
+                        THREAD_JOINABLE, name) != 0) {
+        plog("user prefs: save thread FAILED -- saved on exit instead");
+        s_save_tid = 0;
+        s_saving = false;
+    }
+}
+
 void user_prefs_save(void) {
     if (!s_active) return;
-    jf_login_resave();
+    user_prefs_save_join();
+    save_if_changed();
 }

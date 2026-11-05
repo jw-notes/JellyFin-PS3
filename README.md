@@ -108,7 +108,7 @@ Each PS3 user signs in to their own account, and keeps their own theme,
 layout, language and other settings. Coming from an older version, the first
 PS3 user to open the app keeps the existing sign-in; the others sign in once
 (the server is filled in). To have everyone use one account, turn on
-**Settings → System → Share Sign-in**.
+**Settings → Account & Server → Share Sign-in**.
 
 ---
 
@@ -134,8 +134,8 @@ explains every setting and button.
 |---|---|
 | **Menus (Classic)** | D-pad / left stick move · `X` open · `△` quick-peek · `O` back · `L1` / `R1` Home, Search, Settings |
 | **Film page** | `X` play / resume · onto the cast with `Down` from the quality row (Classic) or `Up` from Play (XMB) · `Left` / `Right` scroll the cast |
-| **Playing a film** | Any button shows the bar · `L2` / `R2` skip (hold to scrub) · `△` audio and subtitles · `L1` picture size · `O` stop |
-| **Live TV** | `Left` / `Right` change channel · `Up` / `Down` volume · `L2` / `R2` change tab · `□` guide |
+| **Playing a film** | Any button shows the bar · `L2` / `R2` skip (hold to scrub) · `△` audio and subtitles · `L1` / `R1` previous / next episode · `X` on PICTURE for picture size · `O` stop |
+| **Live TV** | `L1` / `R1` change channel · `Up` / `Down` volume · `L2` / `R2` change tab · `□` guide |
 | **Music** | `L1` / `R1` previous / next track · `△` shuffle · `□` change visualiser |
 
 Works with the DualShock 3, the official Blu-ray remote, and USB or Bluetooth keyboards.

@@ -89,6 +89,27 @@ void hud_set_live_programme(const char *title, const char *times, int permille) 
     g_hud.live_epoch++;
 }
 
+void hud_set_live_next(const char *name) {
+    char n[sizeof g_hud.live_next];
+    snprintf(n, sizeof n, "%s", name ? name : "");
+    if (strcmp(n, g_hud.live_next) == 0) return;
+    memcpy(g_hud.live_next, n, sizeof n);
+    g_hud.live_epoch++;
+}
+
+bool hud_scrub_focused(void) {
+    return g_hud.visible && !g_hud.live && g_hud.focus == FOCUS_REW &&
+           !g_hud.menu_visible && !g_hud.vol_active;
+}
+
+void hud_set_scrub_moving(bool moving) { g_hud.scrub_moving = moving; }
+
+void hud_set_item_nav(bool has_prev, bool has_next) {
+    g_hud.has_prev = has_prev;
+    g_hud.has_next = has_next;
+    g_hud.live_epoch++;
+}
+
 void hud_set_banner(const char *line1, const char *line2, u64 until_us) {
     snprintf(g_hud.banner,     sizeof g_hud.banner,     "%s", line1 ? line1 : "");
     snprintf(g_hud.banner_sub, sizeof g_hud.banner_sub, "%s", line2 ? line2 : "");
@@ -155,34 +176,38 @@ HudAction hud_handle_input(bool l2_pressed, bool r2_pressed, bool paused) {
     // only pauses, so pressing either twice is harmless.  There are no
     // chapters for NEXT/PREV to skip between, so they jump by the largest HUD
     // increment; SCAN repeats while held.
-    if (BTN_PRESSED(playpause) || (BTN_PRESSED(play) && paused) ||
-        (BTN_PRESSED(pause) && !paused)) {
+    // A live channel has no pause: the keys do nothing, and the bar has no such control.
+    if (!g_hud.live && (BTN_PRESSED(playpause) || (BTN_PRESSED(play) && paused) ||
+                        (BTN_PRESSED(pause) && !paused))) {
         hud_show();
         return HUD_ACTION_TOGGLE_PAUSE;
     }
     if (BTN_PRESSED(stop))     return HUD_ACTION_STOP;
     if (BTN_PRESSED(audio))    return HUD_ACTION_AUDIO_TRACK;
     if (BTN_PRESSED(subtitle)) return HUD_ACTION_SUBTITLE;
-    // R1 asks for the chapter list (the player decides whether there is one).
-    if (!g_hud.live && !g_hud.vol_active && !g_hud.menu_visible && BTN_PRESSED(r1)) {
-        hud_show();
-        return HUD_ACTION_CHAPTERS;
+    // L1 / R1 go to the previous / next channel or episode, bar up or not.  A
+    // slider the live d-pad opened is only a readout, so it does not hold them
+    // back; one opened from the bar, or a menu, does.
+    if ((!g_hud.vol_active || s_vol_pad_us) && !g_hud.menu_visible) {
+        if (g_hud.live) {
+            if (BTN_PRESSED(r1)) return HUD_ACTION_CHANNEL_NEXT;
+            if (BTN_PRESSED(l1)) return HUD_ACTION_CHANNEL_PREV;
+        } else {
+            if (BTN_PRESSED(r1) && g_hud.has_next) return HUD_ACTION_NEXT_ITEM;
+            if (BTN_PRESSED(l1) && g_hud.has_prev) return HUD_ACTION_PREV_ITEM;
+        }
     }
-    // A live channel has nothing to seek in, so the d-pad works like a TV
-    // remote: Left/Right change channel, Up/Down change the volume, bar
-    // hidden or shown.  The left stick moves around the bar instead (it is
-    // ORed into up..right, which the code below reads).  An open menu keeps
-    // the d-pad for its list.  The remote's NEXT/PREV change channel too.
+    // A live channel has nothing to seek in, so Up/Down change the volume, bar
+    // hidden or shown, and Left/Right move around the bar.  The left stick
+    // moves around all of it (it is ORed into up..right, which the code below
+    // reads).  An open menu keeps the d-pad for its list.  The remote's
+    // NEXT/PREV change channel too.
     if (g_hud.live) {
         if (BTN_PRESSED(next)) return HUD_ACTION_CHANNEL_NEXT;
         if (BTN_PRESSED(prev)) return HUD_ACTION_CHANNEL_PREV;
         if (!g_hud.menu_visible) {
             const bool pad_up    = btn_cur.up    && !btn_cur.stk_up;
             const bool pad_down  = btn_cur.down  && !btn_cur.stk_down;
-            const bool pad_left  = btn_cur.left  && !btn_cur.stk_left;
-            const bool pad_right = btn_cur.right && !btn_cur.stk_right;
-            if (pad_right && !btn_prev.right) return HUD_ACTION_CHANNEL_NEXT;
-            if (pad_left  && !btn_prev.left)  return HUD_ACTION_CHANNEL_PREV;
             const bool vol_up   = btn_nav_repeat(pad_up,   NAV_up);
             const bool vol_down = btn_nav_repeat(pad_down, NAV_down);
             if (vol_up || vol_down) {
@@ -195,7 +220,7 @@ HudAction hud_handle_input(bool l2_pressed, bool r2_pressed, bool paused) {
                 return HUD_ACTION_NONE;
             }
             // A held d-pad direction must not also steer the bar below.
-            if (pad_up || pad_down || pad_left || pad_right) return HUD_ACTION_NONE;
+            if (pad_up || pad_down) return HUD_ACTION_NONE;
         }
     } else {
         const bool scan = btn_nav_repeat(btn_cur.ffwd || btn_cur.rew, NAV_media);
@@ -217,24 +242,6 @@ HudAction hud_handle_input(bool l2_pressed, bool r2_pressed, bool paused) {
         return HUD_ACTION_NONE;
     }
 
-    // D-pad left/right with the bar away skip 10 s back / ahead.  The bar
-    // comes up to show where it landed; until the next other button, further
-    // presses keep skipping instead of moving the focus cursor, so a run of
-    // taps is a run of skips.
-    static bool s_skip_reveal = false;
-    if (!g_hud.visible) s_skip_reveal = false;
-    else if (BTN_PRESSED(cross) || BTN_PRESSED(circle) || BTN_PRESSED(square) ||
-             BTN_PRESSED(triangle) || BTN_PRESSED(up) || BTN_PRESSED(down) ||
-             BTN_PRESSED(l1) || BTN_PRESSED(r1) || l2_pressed || r2_pressed)
-        s_skip_reveal = false;
-    if (!g_hud.live && (!g_hud.visible || s_skip_reveal) &&
-        (BTN_PRESSED(left) || BTN_PRESSED(right))) {
-        g_hud.seek_delta = BTN_PRESSED(left) ? -s_incr_vals[0] : s_incr_vals[0];
-        s_skip_reveal = true;
-        hud_show();
-        return HUD_ACTION_SEEK;
-    }
-
     // Any button press wakes the HUD, and a held one keeps it up.  A hold must
     // not WAKE it: Square puts the bar away, and the finger is still down on
     // the next frame, which used to bring it straight back.
@@ -250,9 +257,10 @@ HudAction hud_handle_input(bool l2_pressed, bool r2_pressed, bool paused) {
         btn_cur.up || btn_cur.down || btn_cur.left || btn_cur.right;
     if (pressed_any || (held_any && !was_hidden)) {
         hud_show();
-        // First button while the bar was hidden just reveals it, with the
-        // play/pause control focused by default.
-        if (was_hidden) g_hud.focus = FOCUS_PP;
+        // First button while the bar was hidden reveals it with the seek bar
+        // highlighted, so Left / Right scrub from the first press, and that
+        // same press counts (player_seek.cpp reads it this frame).
+        if (was_hidden) g_hud.focus = g_hud.live ? FOCUS_ASPECT : FOCUS_REW;
     }
 
     // Auto-hide after an idle timeout, a longer one while paused.
@@ -330,9 +338,15 @@ HudAction hud_handle_input(bool l2_pressed, bool r2_pressed, bool paused) {
     // The reveal press above is swallowed so the bar only navigates once it's
     // already showing.
     if (!was_hidden) {
+        // The seek bar sits below the control row: Down goes to it, Up comes back.
+        if (!g_hud.live) {
+            if (BTN_PRESSED(up) && g_hud.focus == FOCUS_REW) { g_hud.focus = FOCUS_PP; return HUD_ACTION_NONE; }
+            if (BTN_PRESSED(down) && g_hud.focus != FOCUS_REW) { g_hud.focus = FOCUS_REW; return HUD_ACTION_NONE; }
+        }
+        if (hud_scrub_focused() && (btn_cur.left || btn_cur.right)) return HUD_ACTION_NONE;
         if (BTN_PRESSED(left)) {
-            if (g_hud.focus < 0)      g_hud.focus = FOCUS_PP;
-            else if (g_hud.focus > 0) g_hud.focus--;
+            if (g_hud.focus < 0)      g_hud.focus = g_hud.live ? FOCUS_ASPECT : FOCUS_REW;
+            else if (g_hud.focus > (g_hud.live ? FOCUS_AUDIO : 0)) g_hud.focus--;
             // The redesigned HUD has no REW / FF buttons: those stops only
             // said "back 10s" / "ahead 10s" and confused (user, 09-27).
             // L2 / R2 seek.  Step over them.
@@ -341,7 +355,7 @@ HudAction hud_handle_input(bool l2_pressed, bool r2_pressed, bool paused) {
             return HUD_ACTION_NONE;
         }
         if (BTN_PRESSED(right)) {
-            if (g_hud.focus < 0)                   g_hud.focus = FOCUS_PP;
+            if (g_hud.focus < 0)                   g_hud.focus = g_hud.live ? FOCUS_ASPECT : FOCUS_REW;
             else if (g_hud.focus < FOCUS_COUNT - 1) g_hud.focus++;
             if (g_hud.focus == FOCUS_FF)  g_hud.focus = FOCUS_AUDIO;
             return HUD_ACTION_NONE;
@@ -354,13 +368,13 @@ HudAction hud_handle_input(bool l2_pressed, bool r2_pressed, bool paused) {
     // Settings.)
     if (!was_hidden && BTN_PRESSED(triangle)) return HUD_ACTION_AUDIO_TRACK;
 
-    // X (cross) activates the focused control.
+    // X (cross) activates the focused control.  On a live channel the press that
+    // brought the bar up only does that: its first control is not a pause to undo.
+    if (g_hud.live && was_hidden) return HUD_ACTION_NONE;
     if (BTN_PRESSED(cross)) {
+        if (g_hud.live && (g_hud.focus < FOCUS_AUDIO || g_hud.focus >= FOCUS_COUNT))
+            return HUD_ACTION_NONE;
         switch (g_hud.focus) {
-        case FOCUS_REW:    if (g_hud.live) return HUD_ACTION_NONE;
-                           g_hud.seek_delta = -s_incr_vals[g_hud.incr_idx]; return HUD_ACTION_SEEK;
-        case FOCUS_FF:     if (g_hud.live) return HUD_ACTION_NONE;
-                           g_hud.seek_delta = +s_incr_vals[g_hud.incr_idx]; return HUD_ACTION_SEEK;
         case FOCUS_AUDIO:  return HUD_ACTION_AUDIO_TRACK;
         case FOCUS_VOLUME: g_hud.vol_active = true; s_vol_pad_us = 0; return HUD_ACTION_NONE;
         case FOCUS_CC:     return HUD_ACTION_SUBTITLE;

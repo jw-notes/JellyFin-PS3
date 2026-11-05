@@ -36,8 +36,11 @@ static const char *const k_user_files[] = {
     "jellyfin_screensaver.txt", "jellyfin_screensaver_delay.txt", "jellyfin_ambient.txt",
     "jellyfin_subfont.txt", "jellyfin_subcolor.txt", "jellyfin_uisfx.txt",
     "jellyfin_centermix.txt", "jellyfin_vquality.txt", "jellyfin_vq_items.txt",
-    "jellyfin_autoskip.txt", "jellyfin_directstream.txt", "jellyfin_livetv.txt",
-    "jellyfin_livetv_quality.txt", "jellyfin_livetv_buffer.txt", "jellyfin_picsize.txt",
+    "jellyfin_autoskip.txt", "jellyfin_skip_intro.txt", "jellyfin_skip_credits.txt",
+    "jellyfin_directstream.txt", "jellyfin_directplay.txt", "jellyfin_home_order.txt",
+    "jellyfin_livetv.txt",
+    "jellyfin_livetv_quality.txt", "jellyfin_livetv_buffer.txt", "jellyfin_livetv_onnow.txt",
+    "jellyfin_picsize.txt",
     "jellyfin_aspect.txt", "jellyfin_volume.txt", "jellyfin_search_recent.txt",
     "jellyfin_local_resume.txt",
 };

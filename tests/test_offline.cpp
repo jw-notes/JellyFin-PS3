@@ -1378,6 +1378,35 @@ static void test_space_estimates_and_text(void) {
     st.rec.error = DL_ERR_NONE;                                 // a user pause is not a warning
     dl_ui_row(&st, &cx2, &row);
     CHECK(!row.warning && !strcmp(row.status, "Paused"));
+
+    // The size: against the real length when there is one, else the estimate.
+    st.rec.state = DL_DOWNLOADING;
+    st.rec.bytes_done = 100ull << 20; st.rec.bytes_total = 800ull << 20; st.rec.est_bytes = 700ull << 20;
+    dl_ui_row(&st, &cx2, &row);
+    CHECK(strstr(row.size, " of ") && !strchr(row.size, '~') && row.permille == 125);
+    // A transcode: no length, so the estimate, marked as one, and never a full bar.
+    st.rec.bytes_total = 0; st.rec.est_bytes = 800ull << 20;
+    dl_ui_row(&st, &cx2, &row);
+    CHECK(strstr(row.size, " of ~") != NULL);
+    CHECK(row.permille > 120 && row.permille < 130);
+    st.rec.bytes_done = (800ull << 20) - 1;
+    dl_ui_row(&st, &cx2, &row);
+    CHECK(strstr(row.size, " of ~") != NULL && row.permille == 990);
+    // Past the estimate it is no use: what has arrived, and no bar.
+    st.rec.bytes_done = 900ull << 20;
+    dl_ui_row(&st, &cx2, &row);
+    CHECK(!strchr(row.size, '~') && !strstr(row.size, " of ") && row.permille == -1);
+    // Nothing known at all, as before.
+    st.rec.bytes_done = 11ull << 20; st.rec.est_bytes = 0;
+    dl_ui_row(&st, &cx2, &row);
+    CHECK(!strstr(row.size, " of ") && row.size[0] && row.permille == -1);
+    // Waiting, nothing fetched: the size to expect.
+    st.rec.state = DL_QUEUED; st.rec.bytes_done = 0; st.rec.est_bytes = 800ull << 20;
+    dl_ui_row(&st, &cx2, &row);
+    CHECK(row.size[0] == '~');
+    st.rec.bytes_total = 900ull << 20;
+    dl_ui_row(&st, &cx2, &row);
+    CHECK(row.size[0] && !strchr(row.size, '~'));
 }
 
 // =========================================================================
