@@ -406,34 +406,41 @@ static void hud_body_v3(u64 elapsed_us, bool paused, bool scrubbing) {
     // ---- hints: what X does, then Tracks / Stop / Hide ----
     {
         Hint h[10]; int n = 0;
-        h[n].glyph = 'X';
-        h[n].label = g_hud.focus == FOCUS_AUDIO  ? TRN("Audio")
-                   : g_hud.focus == FOCUS_VOLUME ? TRN("Volume")
-                   : g_hud.focus == FOCUS_CC     ? TRN("Subtitles")
-                   : g_hud.focus == FOCUS_ASPECT ? TRN("Picture")
-                   : g_hud.live                  ? TRN("Picture")
-                   : paused                      ? TRN("Play") : TRN("Pause");
-        n++;
-        if (g_hud.live) {
-            h[n].glyph = 'D'; h[n].label = TRN("Volume");  n++;
-            h[n].glyph = 'l'; h[n].label = "";             n++;   // L1 R1: one cluster
-            h[n].glyph = 'r'; h[n].label = TRN("Channel"); n++;
+        if (g_hud.menu_visible) {
+            // A menu owns the pad: say what its buttons do, and where Triangle goes.
+            h[n].glyph = 'X'; h[n].label = TRN("Select"); n++;
+            if (g_hud.menu_switch) { h[n].glyph = 'T'; h[n].label = g_hud.menu_switch; n++; }
+            h[n].glyph = 'C'; h[n].label = TRN("Back");   n++;
         } else {
-            if (g_hud.focus == FOCUS_REW) { h[n].glyph = 'D'; h[n].label = TRN("Seek"); n++; }
-            h[n].glyph = 'L'; h[n].label = "";       n++;   // L2 R2: one cluster
-            h[n].glyph = 'R'; h[n].label = TRN("Rewind / Fast Forward"); n++;
-            if (g_hud.has_prev && g_hud.has_next) {
-                h[n].glyph = 'l'; h[n].label = "";                     n++;
-                h[n].glyph = 'r'; h[n].label = TRN("Previous / Next"); n++;
-            } else if (g_hud.has_next) {
-                h[n].glyph = 'r'; h[n].label = TRN("Next");            n++;
-            } else if (g_hud.has_prev) {
-                h[n].glyph = 'l'; h[n].label = TRN("Previous");        n++;
+            h[n].glyph = 'X';
+            h[n].label = g_hud.focus == FOCUS_AUDIO  ? TRN("Audio")
+                       : g_hud.focus == FOCUS_VOLUME ? TRN("Volume")
+                       : g_hud.focus == FOCUS_CC     ? TRN("Subtitles")
+                       : g_hud.focus == FOCUS_ASPECT ? TRN("Picture")
+                       : g_hud.live                  ? TRN("Picture")
+                       : paused                      ? TRN("Play") : TRN("Pause");
+            n++;
+            if (g_hud.live) {
+                h[n].glyph = 'D'; h[n].label = TRN("Volume");  n++;
+                h[n].glyph = 'l'; h[n].label = "";             n++;   // L1 R1: one cluster
+                h[n].glyph = 'r'; h[n].label = TRN("Channel"); n++;
+            } else {
+                if (g_hud.focus == FOCUS_REW) { h[n].glyph = 'D'; h[n].label = TRN("Seek"); n++; }
+                h[n].glyph = 'L'; h[n].label = "";       n++;   // L2 R2: one cluster
+                h[n].glyph = 'R'; h[n].label = TRN("Rewind / Fast Forward"); n++;
+                if (g_hud.has_prev && g_hud.has_next) {
+                    h[n].glyph = 'l'; h[n].label = "";                     n++;
+                    h[n].glyph = 'r'; h[n].label = TRN("Previous / Next"); n++;
+                } else if (g_hud.has_next) {
+                    h[n].glyph = 'r'; h[n].label = TRN("Next");            n++;
+                } else if (g_hud.has_prev) {
+                    h[n].glyph = 'l'; h[n].label = TRN("Previous");        n++;
+                }
             }
+            h[n].glyph = 'T'; h[n].label = TRN("Tracks"); n++;
+            h[n].glyph = 'C'; h[n].label = TRN("Stop");   n++;
+            h[n].glyph = 'S'; h[n].label = TRN("Hide");   n++;
         }
-        h[n].glyph = 'T'; h[n].label = TRN("Tracks"); n++;
-        h[n].glyph = 'C'; h[n].label = TRN("Stop");   n++;
-        h[n].glyph = 'S'; h[n].label = TRN("Hide");   n++;
         draw_hints_bar(h, n);
         ovl_span(v3y(660), (int)s_ovl_h);
     }

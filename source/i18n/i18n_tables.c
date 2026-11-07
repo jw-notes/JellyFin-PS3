@@ -9,9 +9,9 @@ extern const int i18n_n;
 extern const char *const i18n_keys[];
 extern const char *const *const i18n_text[LANG__COUNT];
 
-const int i18n_n = 676;
+const int i18n_n = 679;
 
-const char *const i18n_keys[676] = {
+const char *const i18n_keys[679] = {
     "  %s  %s free",
     "  (can't be decoded yet)",
     "%.1f MB",
@@ -78,6 +78,7 @@ const char *const i18n_keys[676] = {
     "Auto: the server may pass a compatible video through untouched.\nOff: always re-encode. Try Off if playback stutters at every quality.",
     "BUFFERING",
     "Back",
+    "Back to Season no longer overlaps the Home tab (Classic).",
     "Backing out of Quick Connect returns to the sign-in choice.",
     "Bad request - check your credentials.",
     "Because you watched %s",
@@ -338,6 +339,7 @@ const char *const i18n_keys[676] = {
     "No server answered at %s.",
     "No streams found",
     "No streams found for this title.",
+    "No subtitles",
     "No synopsis.",
     "No user ID - please log out and log in again.",
     "No video",
@@ -614,6 +616,7 @@ const char *const i18n_keys[676] = {
     "Ticked pages are shown. L2 / R2 skip the others.",
     "Track %d of %d",
     "Tracks",
+    "Triangle in the player now reaches the subtitles as well as the audio.",
     "Try again",
     "Type",
     "Type them on the keyboard",
@@ -690,7 +693,7 @@ const char *const i18n_keys[676] = {
     "\342\200\271  Back to Specials",
 };
 
-static const char *const i18n_text_ja[676] = {
+static const char *const i18n_text_ja[679] = {
     "  %s  %s \347\251\272\343\201\215",
     "  \357\274\210\343\201\276\343\201\240\343\203\207\343\202\263\343\203\274\343\203\211\343\201\247\343\201\215\343\201\276\343\201\233\343\202\223\357\274\211",
     "%.1f MB",
@@ -757,6 +760,7 @@ static const char *const i18n_text_ja[676] = {
     "\350\207\252\345\213\225\357\274\232\344\272\222\346\217\233\346\200\247\343\201\256\343\201\202\343\202\213\346\230\240\345\203\217\343\201\257\343\200\201\343\202\265\343\203\274\343\203\220\343\203\274\343\201\214\343\201\235\343\201\256\343\201\276\343\201\276\351\200\201\343\202\212\343\201\276\343\201\231\343\200\202\n\343\202\252\343\203\225\357\274\232\345\270\270\343\201\253\345\206\215\343\202\250\343\203\263\343\202\263\343\203\274\343\203\211\343\201\227\343\201\276\343\201\231\343\200\202\343\201\251\343\201\256\347\224\273\350\263\252\343\201\247\343\202\202\343\202\253\343\202\257\343\201\244\343\201\217\343\201\250\343\201\215\343\201\257\343\202\252\343\203\225\343\201\253\343\200\202",
     "\343\203\220\343\203\203\343\203\225\343\202\241\343\203\252\343\203\263\343\202\260\344\270\255",
     "\346\210\273\343\202\213",
+    "\343\200\214\343\202\267\343\203\274\343\202\272\343\203\263\343\201\253\346\210\273\343\202\213\343\200\215\343\201\214\343\203\233\343\203\274\343\203\240\343\202\277\343\203\226\343\201\250\351\207\215\343\201\252\343\202\211\343\201\252\343\201\217\343\201\252\343\202\212\343\201\276\343\201\227\343\201\237\357\274\210\343\202\257\343\203\251\343\202\267\343\203\203\343\202\257\357\274\211\343\200\202",
     "\343\202\257\343\202\244\343\203\203\343\202\257\346\216\245\347\266\232\343\201\213\343\202\211\346\210\273\343\202\213\343\201\250\343\202\265\343\202\244\343\203\263\343\202\244\343\203\263\346\226\271\346\263\225\343\201\256\351\201\270\346\212\236\343\201\253\346\210\273\343\202\212\343\201\276\343\201\231\343\200\202",
     "\344\270\215\346\255\243\343\201\252\343\203\252\343\202\257\343\202\250\343\202\271\343\203\210\343\201\247\343\201\231 - \350\252\215\350\250\274\346\203\205\345\240\261\343\202\222\347\242\272\350\252\215\343\201\227\343\201\246\343\201\217\343\201\240\343\201\225\343\201\204\343\200\202",
     "%s\343\202\222\350\246\213\343\201\237\346\226\271\343\201\270",
@@ -1017,6 +1021,7 @@ static const char *const i18n_text_ja[676] = {
     "%s \343\201\256\343\202\265\343\203\274\343\203\220\343\203\274\343\201\213\343\202\211\345\277\234\347\255\224\343\201\214\343\201\202\343\202\212\343\201\276\343\201\233\343\202\223\343\200\202",
     "\343\202\271\343\203\210\343\203\252\343\203\274\343\203\240\343\201\214\350\246\213\343\201\244\343\201\213\343\202\212\343\201\276\343\201\233\343\202\223",
     "\343\201\223\343\201\256\343\202\277\343\202\244\343\203\210\343\203\253\343\201\256\343\202\271\343\203\210\343\203\252\343\203\274\343\203\240\343\201\214\350\246\213\343\201\244\343\201\213\343\202\212\343\201\276\343\201\233\343\202\223\343\200\202",
+    "\345\255\227\345\271\225\343\201\252\343\201\227",
     "\343\201\202\343\202\211\343\201\231\343\201\230\343\201\257\343\201\202\343\202\212\343\201\276\343\201\233\343\202\223\343\200\202",
     "\343\203\246\343\203\274\343\202\266\343\203\274ID\343\201\214\343\201\202\343\202\212\343\201\276\343\201\233\343\202\223 - \343\203\255\343\202\260\343\202\242\343\202\246\343\203\210\343\201\227\343\201\246\343\200\201\343\202\202\343\201\206\344\270\200\345\272\246\343\203\255\343\202\260\343\202\244\343\203\263\343\201\227\343\201\246\343\201\217\343\201\240\343\201\225\343\201\204\343\200\202",
     "\346\230\240\345\203\217\343\201\252\343\201\227",
@@ -1293,6 +1298,7 @@ static const char *const i18n_text_ja[676] = {
     "\343\203\201\343\202\247\343\203\203\343\202\257\343\201\227\343\201\237\343\203\232\343\203\274\343\202\270\343\202\222\350\241\250\347\244\272\343\201\227\343\201\276\343\201\231\343\200\202L2 / R2 \343\201\247\344\273\226\343\201\257\351\243\233\343\201\260\343\201\227\343\201\276\343\201\231\343\200\202",
     "%d / %d\346\233\262\347\233\256",
     "\343\203\210\343\203\251\343\203\203\343\202\257",
+    "\343\203\227\343\203\254\343\203\274\343\203\244\343\203\274\343\201\256\342\226\263\343\201\247\351\237\263\345\243\260\343\201\253\345\212\240\343\201\210\343\201\246\345\255\227\345\271\225\343\202\202\351\201\270\343\201\271\343\202\213\343\202\210\343\201\206\343\201\253\343\201\252\343\202\212\343\201\276\343\201\227\343\201\237\343\200\202",
     "\345\206\215\350\251\246\350\241\214",
     "\345\205\245\345\212\233",
     "\343\202\255\343\203\274\343\203\234\343\203\274\343\203\211\343\201\247\345\205\245\345\212\233",
@@ -1369,7 +1375,7 @@ static const char *const i18n_text_ja[676] = {
     "\342\200\271  \343\202\271\343\203\232\343\202\267\343\203\243\343\203\253\343\201\253\346\210\273\343\202\213",
 };
 
-static const char *const i18n_text_pt_BR[676] = {
+static const char *const i18n_text_pt_BR[679] = {
     "  %s  %s livres",
     "  (ainda n\303\243o pode ser decodificado)",
     "%.1f MB",
@@ -1436,6 +1442,7 @@ static const char *const i18n_text_pt_BR[676] = {
     "Autom\303\241tico: o servidor pode enviar um v\303\255deo compat\303\255vel sem altera\303\247\303\265es.\nDesligado: sempre recodifica. Tente Desligado se travar em qualquer qualidade.",
     "CARREGANDO",
     "Voltar",
+    "Voltar \303\240 temporada n\303\243o sobrep\303\265e mais a aba In\303\255cio (Cl\303\241ssico).",
     "Sair do Quick Connect volta para a escolha de login.",
     "Solicita\303\247\303\243o inv\303\241lida - verifique suas credenciais.",
     "Porque voc\303\252 assistiu %s",
@@ -1696,6 +1703,7 @@ static const char *const i18n_text_pt_BR[676] = {
     "Nenhum servidor respondeu em %s.",
     "Nenhum stream encontrado",
     "Nenhum stream encontrado para este t\303\255tulo.",
+    "Sem legendas",
     "Sem sinopse.",
     "Sem ID de usu\303\241rio - saia e entre novamente.",
     "Sem v\303\255deo",
@@ -1972,6 +1980,7 @@ static const char *const i18n_text_pt_BR[676] = {
     "As p\303\241ginas marcadas aparecem. L2 / R2 pulam as outras.",
     "Faixa %d de %d",
     "Faixas",
+    "O Tri\303\242ngulo no player agora chega \303\240s legendas, al\303\251m do \303\241udio.",
     "Tentar novamente",
     "Digitar",
     "Digite no teclado",
@@ -2048,7 +2057,7 @@ static const char *const i18n_text_pt_BR[676] = {
     "\342\200\271  Voltar aos especiais",
 };
 
-static const char *const i18n_text_de[676] = {
+static const char *const i18n_text_de[679] = {
     "  %s  %s frei",
     "  (kann noch nicht decodiert werden)",
     "%.1f MB",
@@ -2115,6 +2124,7 @@ static const char *const i18n_text_de[676] = {
     "Automatisch: Der Server darf ein passendes Video unver\303\244ndert durchreichen.\nAus: immer neu kodieren. Aus probieren, wenn es bei jeder Qualit\303\244t ruckelt.",
     "PUFFERN",
     "Zur\303\274ck",
+    "\342\200\236Zur\303\274ck zur Staffel\342\200\234 \303\274berdeckt nicht mehr den Tab Startseite (Klassisch).",
     "Wer Quick Connect verl\303\244sst, kehrt zur Anmeldeauswahl zur\303\274ck.",
     "Ung\303\274ltige Anfrage - pr\303\274fen Sie Ihre Zugangsdaten.",
     "Weil du %s gesehen hast",
@@ -2375,6 +2385,7 @@ static const char *const i18n_text_de[676] = {
     "Unter %s hat kein Server geantwortet.",
     "Keine Streams gefunden",
     "F\303\274r diesen Titel wurden keine Streams gefunden.",
+    "Keine Untertitel",
     "Keine Inhaltsangabe.",
     "Keine Benutzer-ID - bitte ab- und wieder anmelden.",
     "Kein Video",
@@ -2651,6 +2662,7 @@ static const char *const i18n_text_de[676] = {
     "Markierte Seiten werden angezeigt. L2 / R2 \303\274berspringen die anderen.",
     "Titel %d von %d",
     "Titel",
+    "Dreieck im Player erreicht jetzt neben dem Ton auch die Untertitel.",
     "Erneut versuchen",
     "Eingeben",
     "\303\234ber die Tastatur eingeben",
@@ -2727,7 +2739,7 @@ static const char *const i18n_text_de[676] = {
     "\342\200\271  Zur\303\274ck zu Specials",
 };
 
-static const char *const i18n_text_fr[676] = {
+static const char *const i18n_text_fr[679] = {
     "  %s  %s libres",
     "  (ne peut pas encore \303\252tre d\303\251cod\303\251)",
     "%.1f Mo",
@@ -2794,6 +2806,7 @@ static const char *const i18n_text_fr[676] = {
     "Auto : le serveur peut transmettre tel quel une vid\303\251o compatible.\nD\303\251sactiv\303\251 : toujours r\303\251encoder. Essayez si la lecture saccade \303\240 toute qualit\303\251.",
     "MISE EN M\303\211MOIRE",
     "Retour",
+    "Retour \303\240 la saison ne chevauche plus l'onglet Accueil (Classique).",
     "Quitter Quick Connect ram\303\250ne au choix de connexion.",
     "Requ\303\252te invalide - v\303\251rifiez vos identifiants.",
     "Parce que vous avez regard\303\251 %s",
@@ -3054,6 +3067,7 @@ static const char *const i18n_text_fr[676] = {
     "Aucun serveur n'a r\303\251pondu \303\240 %s.",
     "Aucun flux trouv\303\251",
     "Aucun flux trouv\303\251 pour ce titre.",
+    "Aucun sous-titre",
     "Aucun synopsis.",
     "Aucun identifiant d'utilisateur - d\303\251connectez-vous puis reconnectez-vous.",
     "Aucune vid\303\251o",
@@ -3330,6 +3344,7 @@ static const char *const i18n_text_fr[676] = {
     "Les pages coch\303\251es sont affich\303\251es. L2 / R2 sautent les autres.",
     "Piste %d sur %d",
     "Pistes",
+    "Triangle dans le lecteur donne maintenant acc\303\250s aux sous-titres comme \303\240 l'audio.",
     "R\303\251essayer",
     "Saisir",
     "Les saisir au clavier",
@@ -3406,7 +3421,7 @@ static const char *const i18n_text_fr[676] = {
     "\342\200\271  Retour aux sp\303\251ciaux",
 };
 
-static const char *const i18n_text_es[676] = {
+static const char *const i18n_text_es[679] = {
     "  %s  %s libres",
     "  (a\303\272n no se puede decodificar)",
     "%.1f MB",
@@ -3473,6 +3488,7 @@ static const char *const i18n_text_es[676] = {
     "Autom\303\241tico: el servidor puede enviar sin cambios un v\303\255deo compatible.\nDesactivado: siempre recodifica. Pru\303\251balo si se entrecorta en cualquier calidad.",
     "CARGANDO",
     "Atr\303\241s",
+    "Volver a la temporada ya no se superpone a la pesta\303\261a Inicio (Cl\303\241sico).",
     "Salir de Quick Connect vuelve a la elecci\303\263n de inicio de sesi\303\263n.",
     "Solicitud no v\303\241lida - revisa tus credenciales.",
     "Porque viste %s",
@@ -3733,6 +3749,7 @@ static const char *const i18n_text_es[676] = {
     "Ning\303\272n servidor respondi\303\263 en %s.",
     "No se encontraron streams",
     "No se encontraron streams para este t\303\255tulo.",
+    "Sin subt\303\255tulos",
     "Sin sinopsis.",
     "Sin ID de usuario - cierra sesi\303\263n y vuelve a iniciarla.",
     "Sin v\303\255deo",
@@ -4009,6 +4026,7 @@ static const char *const i18n_text_es[676] = {
     "Se muestran las p\303\241ginas marcadas. L2 / R2 saltan las dem\303\241s.",
     "Pista %d de %d",
     "Pistas",
+    "Tri\303\241ngulo en el reproductor ahora llega a los subt\303\255tulos adem\303\241s del audio.",
     "Reintentar",
     "Escribir",
     "Escr\303\255belos con el teclado",

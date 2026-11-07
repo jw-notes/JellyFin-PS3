@@ -324,7 +324,8 @@ visualiser. On the Blu-ray remote, `|<<` `>>|` and `<<` `>>` also switch tabs.
 
 **Video player.** Press any button to bring up the player bar. `Left`/`Right`
 move across it and `X` activates the focused control. `R2`/`L2` tap to skip, or
-hold to scrub. `△` opens the audio and subtitle tracks, `□` puts the bar away,
+hold to scrub. `△` opens the audio tracks, and `△` again (or `Left`/`Right`) switches
+to the subtitles and back. `□` puts the bar away,
 and `O` or `Start` stops. When an intro or recap is playing, `X` skips it; during
 the next-episode prompt, `Select` starts the next episode.
 
@@ -395,7 +396,7 @@ resumes it; `O` goes up a folder, `L2`/`R2` page through a long one.
 | Left / Right    | Seek bar highlighted (how the bar comes up): tap for 10 s, hold to glide, faster the longer you hold. On the controls: move between them |
 | Up / Down       | Up from the seek bar to the controls, Down back |
 | X               | Activate the focused control; skip an intro or recap when offered |
-| Triangle        | Audio and subtitle tracks                                         |
+| Triangle        | Audio tracks; in the menu, Triangle or Left/Right switches to Subtitles and back |
 | X on PICTURE    | Picture size: Left/Right = width, Up/Down = height, Square = Fit / Fill / Stretch, R1 = move instead of size, hold Triangle 3 s = reset, O = done |
 | L1 / R1         | Previous / next episode (or title, when a collection is playing through) |
 | L3 / R3 (stick click) | Show / hide the player stats                                |

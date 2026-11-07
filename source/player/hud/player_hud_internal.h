@@ -110,6 +110,7 @@ struct HudState {
     int         menu_cur;      // active entry (accent dot)
     int         menu_choice;   // last X-selected row
     u32         menu_epoch;    // forces recompose when a different menu opens
+    const char *menu_switch;   // the sibling list Triangle goes to, NULL = none
 };
 
 extern HudState g_hud;

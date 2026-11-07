@@ -24,6 +24,9 @@ struct Line { Kind kind; const char *a; const char *b; };   // b: right column (
 // Updates: the last releases, newest first, from CHANGELOG.md in short.
 // Add the new release at the top with each one.
 const Line k_updates[] = {
+    { K_VER,  "3.5.1", NULL },
+    { K_ITEM, TRN("Triangle in the player now reaches the subtitles as well as the audio."), NULL },
+    { K_ITEM, TRN("Back to Season no longer overlaps the Home tab (Classic)."), NULL },
     { K_VER,  "3.5.0", NULL },
     { K_ITEM, TRN("Fixed seeking jumping to the next episode or running out of sync."), NULL },
     { K_ITEM, TRN("Fixed the menus freezing when leaving Settings."), NULL },

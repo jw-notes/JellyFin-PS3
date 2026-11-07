@@ -16,6 +16,8 @@ typedef enum {
     HUD_ACTION_ASPECT,        // X on the PICTURE chip: the picture-size panel
     HUD_ACTION_NEXT_ITEM,     // R1: the next episode (only when there is one)
     HUD_ACTION_PREV_ITEM,     // L1: the previous one
+    HUD_ACTION_MENU_SWITCH,   // Triangle / Left / Right in a menu that has a
+                              // switch (hud_set_menu_switch): Audio <-> Subtitles
 } HudAction;
 
 // A skippable segment is on screen.  While it is and the bar is hidden, X
@@ -101,6 +103,12 @@ void      hud_clear_picture_banner(void);
 // HUD_ACTION_MENU_SELECT from hud_handle_input, circle just closes.
 void      hud_open_menu(const char *title, const char *const *items,
                         int n_items, int current);
+
+// After hud_open_menu: the open menu has a sibling list (the track menu's
+// Audio / Subtitles).  Triangle, Left and Right then return
+// HUD_ACTION_MENU_SWITCH, and the hint bar names `label` (static string) on
+// Triangle.  hud_open_menu clears it, so a menu without one has none.
+void      hud_set_menu_switch(const char *label);
 
 // Entry chosen by the last HUD_ACTION_MENU_SELECT.
 int       hud_menu_choice(void);

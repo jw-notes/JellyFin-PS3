@@ -149,8 +149,14 @@ void hud_open_menu(const char *title, const char *const *items,
     g_hud.menu_cur = (current >= 0 && current < n_items) ? current : 0;
     g_hud.menu_sel = g_hud.menu_cur;
     g_hud.menu_visible = (n_items > 0);
+    g_hud.menu_switch  = NULL;
     g_hud.menu_epoch++;
     hud_show();
+}
+
+void hud_set_menu_switch(const char *label) {
+    g_hud.menu_switch = label;
+    g_hud.menu_epoch++;
 }
 
 int hud_menu_choice(void) { return g_hud.menu_choice; }
@@ -303,12 +309,18 @@ HudAction hud_handle_input(bool l2_pressed, bool r2_pressed, bool paused) {
     }
 
     // While a popup menu is open it owns the input: up/down move the cursor,
-    // X picks the entry, circle closes without picking.
+    // X picks the entry, circle closes without picking.  In the track menu
+    // Triangle (the button that opened it) and Left / Right flip between the
+    // Audio and Subtitles lists -- before this, Triangle only ever showed the
+    // audio and the subtitles hid behind the CC chip (issue #2).
     if (g_hud.menu_visible) {
         if (BTN_PRESSED(up)) {
             if (g_hud.menu_sel > 0) g_hud.menu_sel--;
         } else if (BTN_PRESSED(down)) {
             if (g_hud.menu_sel < g_hud.menu_n - 1) g_hud.menu_sel++;
+        } else if (g_hud.menu_switch &&
+                   (BTN_PRESSED(triangle) || BTN_PRESSED(left) || BTN_PRESSED(right))) {
+            return HUD_ACTION_MENU_SWITCH;
         } else if (BTN_PRESSED(cross)) {
             g_hud.menu_visible = false;
             g_hud.menu_choice  = g_hud.menu_sel;

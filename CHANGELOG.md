@@ -10,6 +10,14 @@ public: it froze on the Home screen on real hardware, ran out of memory at
 1080p, and had sign-in and update-check bugs (see 3.3.0 below). vortigauntlet's own release notes for 3.2.3
 and earlier are kept at the end, as he wrote them.
 
+## 3.5.1
+
+- **Fixed: `△` showed only the audio tracks** ([#2](https://github.com/jw-notes/JellyFin-PS3/issues/2)).
+  In the track menu, `△` again (or Left / Right) now switches to the subtitles and back, and
+  the hint bar says so. A film with no subtitle tracks says "No subtitles" instead of doing nothing.
+- **Fixed: "Back to Season" overlapped the Home tab** on an episode's page in the Classic layout. It
+  now sits under the poster, as in the XMB layout.
+
 ## 3.5.0
 
 - **Fixed: seeking could jump to the next episode**, or send the picture racing out of sync with

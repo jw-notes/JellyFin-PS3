@@ -79,7 +79,38 @@ static void chapters_open(PlayerState *ps) {
                   jf_chapter_index_at(c, chapters_pos_secs(ps)));
 }
 
+// ---- Audio / Subtitles track menu ---------------------------------------------
+// One menu with two lists: Triangle (and Left / Right) in it flips between them,
+// and the hint bar names the other one.  Only offered when that list has entries.
+static bool has_audio_menu(const PlayerState *ps) { return ps->have_tracks && ps->tracks.n_audio > 0; }
+static bool has_subs_menu(const PlayerState *ps)  { return ps->have_tracks && ps->tracks.n_subs  > 0; }
+
+static void open_audio_menu(PlayerState *ps) {
+    const char *items[JF_MAX_AUDIO];
+    for (int i = 0; i < ps->tracks.n_audio; i++)
+        items[i] = ps->tracks.audio[i].label;
+    ps->menu_kind = PLAYER_MENU_AUDIO;
+    hud_open_menu(TR("Audio"), items, ps->tracks.n_audio, ps->cur_audio);
+    if (has_subs_menu(ps)) hud_set_menu_switch(TRN("Subtitles"));
+}
+
+static void open_subs_menu(PlayerState *ps) {
+    const char *items[JF_MAX_STREAMS + 1];
+    items[0] = TR("Off");
+    for (int i = 0; i < ps->tracks.n_subs; i++)
+        items[1 + i] = ps->tracks.subs[i].label;
+    ps->menu_kind = PLAYER_MENU_SUBS;
+    hud_open_menu(TR("Subtitles"), items, ps->tracks.n_subs + 1, ps->cur_sub + 1);
+    if (has_audio_menu(ps)) hud_set_menu_switch(TRN("Audio"));
+}
+
 HudAction player_handle_menu_action(PlayerState *ps, HudAction act) {
+    if (act == HUD_ACTION_MENU_SWITCH) {
+        act = HUD_ACTION_NONE;
+        if (ps->menu_kind == PLAYER_MENU_AUDIO && has_subs_menu(ps))       open_subs_menu(ps);
+        else if (ps->menu_kind == PLAYER_MENU_SUBS && has_audio_menu(ps))  open_audio_menu(ps);
+        return act;
+    }
     if (s_chap_pending) {
         const int st = jf_chapters_state();
         if (st == JF_CHAPTERS_READY)     { s_chap_pending = false; chapters_open(ps); }
@@ -108,27 +139,20 @@ HudAction player_handle_menu_action(PlayerState *ps, HudAction act) {
     }
     if (act == HUD_ACTION_AUDIO_TRACK) {
         act = HUD_ACTION_NONE;
-        if (ps->have_tracks && ps->tracks.n_audio > 0) {
-            const char *items[JF_MAX_AUDIO];
-            for (int i = 0; i < ps->tracks.n_audio; i++)
-                items[i] = ps->tracks.audio[i].label;
-            ps->menu_kind = PLAYER_MENU_AUDIO;
-            hud_open_menu(TR("Audio"), items, ps->tracks.n_audio, ps->cur_audio);
+        if (has_audio_menu(ps)) {
+            open_audio_menu(ps);
+        } else if (has_subs_menu(ps)) {
+            open_subs_menu(ps);              // no audio list to show: Triangle still reaches the subtitles
         } else {
             plog("hud: audio - no tracks");
         }
     } else if (act == HUD_ACTION_SUBTITLE) {
         act = HUD_ACTION_NONE;
-        if (ps->have_tracks && ps->tracks.n_subs > 0) {
-            const char *items[JF_MAX_STREAMS + 1];
-            items[0] = TR("Off");
-            for (int i = 0; i < ps->tracks.n_subs; i++)
-                items[1 + i] = ps->tracks.subs[i].label;
-            ps->menu_kind = PLAYER_MENU_SUBS;
-            hud_open_menu(TR("Subtitles"), items, ps->tracks.n_subs + 1,
-                          ps->cur_sub + 1);
+        if (has_subs_menu(ps)) {
+            open_subs_menu(ps);
         } else {
             plog("hud: subs - none available");
+            chapters_banner(TR("No subtitles"));   // say so, rather than the press doing nothing
         }
     } else if (act == HUD_ACTION_MENU_SELECT) {
         act = HUD_ACTION_NONE;

@@ -1,4 +1,6 @@
 {
+  "Triangle in the player now reaches the subtitles as well as the audio.": {"ja": "プレーヤーの△で音声に加えて字幕も選べるようになりました。", "pt-BR": "O Triângulo no player agora chega às legendas, além do áudio.", "de": "Dreieck im Player erreicht jetzt neben dem Ton auch die Untertitel.", "fr": "Triangle dans le lecteur donne maintenant accès aux sous-titres comme à l'audio.", "es": "Triángulo en el reproductor ahora llega a los subtítulos además del audio."},
+  "Back to Season no longer overlaps the Home tab (Classic).": {"ja": "「シーズンに戻る」がホームタブと重ならなくなりました（クラシック）。", "pt-BR": "Voltar à temporada não sobrepõe mais a aba Início (Clássico).", "de": "„Zurück zur Staffel“ überdeckt nicht mehr den Tab Startseite (Klassisch).", "fr": "Retour à la saison ne chevauche plus l'onglet Accueil (Classique).", "es": "Volver a la temporada ya no se superpone a la pestaña Inicio (Clásico)."},
   "High": {"ja": "高", "pt-BR": "Alta", "de": "Hoch", "fr": "Élevée", "es": "Alta"},
   "Very High": {"ja": "非常に高い", "pt-BR": "Muito alta", "de": "Sehr hoch", "fr": "Très élevée", "es": "Muy alta"},
   "Original": {"ja": "オリジナル", "pt-BR": "Original", "de": "Original", "fr": "Original", "es": "Original"},

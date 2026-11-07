@@ -772,7 +772,9 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
             PX = IX(57); PY = IY(146);
             TX = PX + PWd + UIS_W(40);
             TW = W - TX - XMB_OX - UIS_W(57);
-            Y_SEASON = IY(104); Y_TITLE = IY(146); Y_META = IY(198); Y_SCORE = IY(224);
+            // "Back to Season" goes under the poster, as on the XMB layout: above the
+            // title (y 104) it ran into the header's tab names.  Left from Play reaches it.
+            Y_SEASON = PY + PHd + UIS_H(14); Y_TITLE = IY(146); Y_META = IY(198); Y_SCORE = IY(224);
             Y_CHIPS = IY(250);  Y_ACT = IY(300);   Y_SEL = IY(358);  Y_TOAST = IY(400);
             Y_OVER = IY(414);   Y_DIR = IY(484);   Y_CAST = IY(560);
             over_w = TW;
@@ -954,8 +956,8 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
             else if (detail.season_num > 0)  snprintf(season_lab, sizeof season_lab, TR("\xE2\x80\xB9  Back to Season %d"), detail.season_num);
             else                             snprintf(season_lab, sizeof season_lab, TR("\xE2\x80\xB9  Back to Season"));
         }
-        const int BSX = classic ? TX : PX;
-        const int BSW = classic ? ttf_text_width(season_lab, UIS_TF(13.0f), true) + UIS_W(32) : PW;
+        const int BSX = PX;
+        const int BSW = classic ? PWd : PW;
         if (season_btn) {
             wave_draw_rrect_outline_gpu(BSX, BSY, BSW, BSH, AR, 1, XMB_HAIRLINE, 255,
                                         XMB_PANEL, XMB_PANEL, 110);

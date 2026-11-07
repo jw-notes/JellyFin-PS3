@@ -108,6 +108,7 @@
   "Chapter %d": {"ja": "チャプター %d", "pt-BR": "Capítulo %d", "de": "Kapitel %d", "fr": "Chapitre %d", "es": "Capítulo %d"},
   "Chapters": {"ja": "チャプター", "pt-BR": "Capítulos", "de": "Kapitel", "fr": "Chapitres", "es": "Capítulos"},
   "No chapters": {"ja": "チャプターなし", "pt-BR": "Sem capítulos", "de": "Keine Kapitel", "fr": "Aucun chapitre", "es": "Sin capítulos"},
+  "No subtitles": {"ja": "字幕なし", "pt-BR": "Sem legendas", "de": "Keine Untertitel", "fr": "Aucun sous-titre", "es": "Sin subtítulos"},
   "Loading chapters...": {"ja": "チャプターを読み込み中...", "pt-BR": "Carregando capítulos...", "de": "Kapitel werden geladen...", "fr": "Chargement des chapitres...", "es": "Cargando capítulos..."},
   "PICTURE": {"ja": "画面", "pt-BR": "IMAGEM", "de": "BILD", "fr": "IMAGE", "es": "IMAGEN"},
   "Sign in to Jellyfin": {"ja": "Jellyfinにサインイン", "pt-BR": "Entrar no Jellyfin", "de": "Bei Jellyfin anmelden", "fr": "Se connecter à Jellyfin", "es": "Iniciar sesión en Jellyfin"},
