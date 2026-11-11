@@ -14,6 +14,15 @@ Every font compiled into the app is free to redistribute.
 | Noto Sans Bold | optional subtitle face | SIL OFL 1.1 | [OFL-NotoSans.txt](OFL-NotoSans.txt) |
 | Noto Sans JP Regular | kana and kanji: the last link of every face chain | SIL OFL 1.1 | [OFL-NotoSansJP.txt](OFL-NotoSansJP.txt) |
 | Roboto Condensed Bold | optional subtitle face | Apache 2.0 | [Apache-2.0-RobotoCondensed.txt](Apache-2.0-RobotoCondensed.txt) |
+| **SCE-PS3 YoonGothic Bold (KOR)** | Korean subtitles | Sony; **not shipped** | read from the console's own firmware when a Korean line is shown |
+| JFSub-CJK (Noto Sans SC Bold, subset) | Chinese subtitles, and kanji the Japanese face lacks | SIL OFL 1.1 | [subtitle-fonts/OFL-NotoSansCJK.txt](../../../subtitle-fonts/OFL-NotoSansCJK.txt) |
+| JFSub-Hebrew (Noto Sans Hebrew Bold) | Hebrew subtitles | SIL OFL 1.1 | [subtitle-fonts/OFL-NotoSans.txt](../../../subtitle-fonts/OFL-NotoSans.txt) |
+| JFSub-Arabic (Noto Sans Arabic Bold, with presentation forms) | Arabic and Persian subtitles | SIL OFL 1.1 | [subtitle-fonts/OFL-NotoSans.txt](../../../subtitle-fonts/OFL-NotoSans.txt) |
+
+The four subtitle-script faces are not compiled in.  The three Noto cuts ship as
+files in `USRDIR/fonts` (from `subtitle-fonts/`, made by
+`tools/make_subtitle_fonts.py`), and each is read only while a subtitle line
+needs it, then freed when playback ends.
 | Tabler Icons | UI glyphs | MIT | upstream |
 | Material Icons | UI glyphs | Apache 2.0 | upstream |
 

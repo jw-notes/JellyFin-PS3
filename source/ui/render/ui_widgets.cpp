@@ -498,9 +498,16 @@ void xmb_draw_music_subtabs(int x, int y, int active, bool focused) {
 #define PS_SHEET_DIM  1536
 #define PS_TILE       128
 
-// Hint glyph -> sheet tile.  All plain white solid variants — no coloured
-// face buttons, no red d-pad highlights.
+// Hint glyph -> sheet tile.  Plain white solid variants, no coloured face
+// buttons.  The d-pad has the sheet's lit variants too: where only some
+// directions do anything, the hint lights those ('H', 'V', '>').  'D' and 'E'
+// are the plain pad, for screens where all four move.
 static const struct { char glyph; int row, col; } PS_TILES[] = {
+    { 'H',  9, 7 },   // D-pad, Left and Right lit
+    { 'V',  8, 4 },   // D-pad, Up and Down lit
+    { '>',  8, 0 },   // D-pad, Right lit
+    { 'J', 10, 7 },   // L3
+    { 'K', 10, 9 },   // R3
     { 'X', 10, 5 },   // Cross (white solid)
     { 'C', 11, 7 },   // Circle (white solid)
     { 'S', 10, 11 },  // Square (white solid)
@@ -637,6 +644,91 @@ void draw_ps_button_vcentered(u32 x, int cy, char glyph, int h, u32 bright) {
     int mw = s_ps_w[i], mh = s_ps_h[i];
     int dw = mw * h / mh;
     blit_argb_scaled(s_ps_px[i], mw, mh, (int)x, cy - h / 2, dw, h, bright);
+}
+
+// -------------------------------------------------------
+// Button tokens in on-screen text
+// -------------------------------------------------------
+// A string names a button as "{X}", "{O}", "{START}" and so on, and the rich
+// text calls below draw the controller's own button from the sheet in its
+// place.  The tokens are in the translations too, so every language puts the
+// button where its sentence wants it.  Only these exact upper-case names are
+// tokens: anything else in braces is text.
+static const struct { const char *tok; char glyph; const char *word; } BTN_TOKENS[] = {
+    { "{X}",        'X', "X" },        { "{O}",        'C', "O" },
+    { "{TRIANGLE}", 'T', "Triangle" }, { "{SQUARE}",   'S', "Square" },
+    { "{START}",    'A', "START" },    { "{SELECT}",   'B', "SELECT" },
+    { "{L1}",       'l', "L1" },       { "{R1}",       'r', "R1" },
+    { "{L2}",       'L', "L2" },       { "{R2}",       'R', "R2" },
+    { "{L3}",       'J', "L3" },       { "{R3}",       'K', "R3" },
+    { "{DPAD}",     'D', "D-pad" },    { "{DPAD_LR}",  'H', "Left / Right" },
+    { "{DPAD_UD}",  'V', "Up / Down" },
+};
+#define BTN_NTOKENS ((int)(sizeof BTN_TOKENS / sizeof BTN_TOKENS[0]))
+
+static int btn_token_at(const char *p, int *which) {
+    if (*p != '{') return 0;
+    for (int i = 0; i < BTN_NTOKENS; i++) {
+        const size_t n = strlen(BTN_TOKENS[i].tok);
+        if (strncmp(p, BTN_TOKENS[i].tok, n) == 0) { *which = i; return (int)n; }
+    }
+    return 0;
+}
+
+// A button stands a little taller than the text's capitals, centred on them.
+static int rich_icon_h(float px) { const int h = (int)(px * 1.2f + 0.5f); return h < 8 ? 8 : h; }
+static int rich_icon_cy(u32 y, float px) { return (int)y + (int)(px * 0.55f); }
+
+// Walks `text`, measuring (draw == false) or drawing; returns the width.
+static int rich_walk(u32 x, u32 y, const char *text, float px, u32 color, bool bold, bool draw) {
+    if (!text) return 0;
+    char seg[256];
+    int  n = 0, w = 0;
+    const int ih = rich_icon_h(px);
+    for (const char *p = text; ; ) {
+        int which = -1;
+        const int k = *p ? btn_token_at(p, &which) : 0;
+        if (!*p || k) {
+            if (n) {
+                seg[n] = '\0';
+                if (draw) drawTTF(x + (u32)w, y, seg, px, color, bold);
+                w += ttf_text_width(seg, px, bold);
+                n = 0;
+            }
+            if (!*p) break;
+            const char g = BTN_TOKENS[which].glyph;
+            if (draw) draw_ps_button_vcentered(x + (u32)w, rich_icon_cy(y, px), g, ih, 255);
+            w += ps_btn_width(g, ih);
+            p += k;
+            continue;
+        }
+        if (n < (int)sizeof seg - 1) seg[n++] = *p;
+        p++;
+    }
+    return w;
+}
+
+int  ttf_rich_width(const char *text, float px, bool bold) {
+    return rich_walk(0, 0, text, px, 0, bold, false);
+}
+void drawTTF_rich(u32 x, u32 y, const char *text, float px, u32 color, bool bold) {
+    rich_walk(x, y, text, px, color, bold, true);
+}
+
+void btn_tokens_to_words(const char *in, char *out, int cap) {
+    if (!out || cap <= 0) return;
+    int o = 0;
+    for (const char *p = in ? in : ""; *p && o < cap - 1; ) {
+        int which = -1;
+        const int k = btn_token_at(p, &which);
+        if (k) {
+            for (const char *w = BTN_TOKENS[which].word; *w && o < cap - 1; w++) out[o++] = *w;
+            p += k;
+        } else {
+            out[o++] = *p++;
+        }
+    }
+    out[o] = '\0';
 }
 
 // -------------------------------------------------------

@@ -8,6 +8,7 @@
 #include "adec_aac.h"
 #include "adec_flac.h"
 #include "adec_pcm.h"
+#include "adec_eac3.h"
 #include "resample.h"
 #include "audio.h"           // audio_output_channels() — port width drives ring width
 #include "plog.h"
@@ -296,6 +297,7 @@ static void adec_decode_es(const u8 *es, int len, bool head) {
     if (s_codec == ADEC_CODEC_AAC) { adec_aac_decode_payload(es, len); return; }
     if (s_codec == ADEC_CODEC_FLAC) { adec_flac_decode_payload(es, len); return; }
     if (s_codec == ADEC_CODEC_PCM) { adec_pcm_decode_payload(es, len, head); return; }
+    if (s_codec == ADEC_CODEC_EAC3) { adec_eac3_decode_payload(es, len); return; }
     if (s_codec == ADEC_CODEC_DTS) { adec_dts_decode_payload(es, len); return; }
     if (s_codec == ADEC_CODEC_TRUEHD) {
         adec_truehd_decode_payload(es, len);
@@ -520,6 +522,7 @@ void adec_flush(void) {
     adec_aac_reset();   // ditto for AAC (the decoder's overlap and the resampler's history)
     adec_flac_reset();  // FLAC and PCM: the carry goes, and the next PES brings the header again
     adec_pcm_reset();
+    adec_eac3_reset();  // E-AC-3: the carry, the decoder's overlap and the resampler's history
     s_wr = s_rd = s_n = 0;
     s_next_pcm_pts_us = s_read_pts_us = 0;
     s_pts_valid = false;
@@ -549,6 +552,7 @@ void adec_stop(void) {
     adec_aac_close();
     adec_flac_close();
     adec_pcm_close();
+    adec_eac3_close();
     mp3_drop_resampler();
     s_codec   = ADEC_CODEC_MP3;
     s_ring_ch = 2;
@@ -577,6 +581,8 @@ bool adec_pes_queue_hungry(void) {
     return s_pes_q_n < (PES_QUEUE_SLOTS * 3) / 4;
 }
 
+int adec_pes_pending(void) { return s_pes_q_n; }
+
 int adec_output_channels(void) { return s_ring_ch; }
 
 adec_codec_t adec_get_codec(void) { return s_codec; }
@@ -589,6 +595,7 @@ static const char *adec_codec_name(adec_codec_t c) {
     case ADEC_CODEC_AAC:    return "aac";
     case ADEC_CODEC_FLAC:   return "flac";
     case ADEC_CODEC_PCM:    return "pcm";
+    case ADEC_CODEC_EAC3:   return "eac3";
     default:                return "mp3";
     }
 }
@@ -613,8 +620,8 @@ void adec_set_codec(adec_codec_t codec) {
     }
     adec_ac3_set_passthrough(codec == ADEC_CODEC_AC3 && audio_passthrough_active());
     if (codec == ADEC_CODEC_AC3 || codec == ADEC_CODEC_DTS || codec == ADEC_CODEC_AAC ||
-        codec == ADEC_CODEC_FLAC || codec == ADEC_CODEC_PCM)
-        want_ch = wide_port ? 6 : 2;
+        codec == ADEC_CODEC_FLAC || codec == ADEC_CODEC_PCM || codec == ADEC_CODEC_EAC3)
+        want_ch = wide_port ? 6 : 2;     // E-AC-3 7.1 is folded to 5.1 by chan_map, as AAC's is
     else if (codec == ADEC_CODEC_TRUEHD)
         // Never decode WIDER than the port actually is.  The port is now
         // opened 6-wide when it can be (see audio_open), and a 7.1 ring
@@ -635,6 +642,7 @@ void adec_set_codec(adec_codec_t codec) {
     if (codec != ADEC_CODEC_AAC)    adec_aac_close();
     if (codec != ADEC_CODEC_FLAC)   adec_flac_close();
     if (codec != ADEC_CODEC_PCM)    adec_pcm_close();
+    if (codec != ADEC_CODEC_EAC3)   adec_eac3_close();
 
     if (codec == ADEC_CODEC_AC3) {
         if (!adec_ac3_open(want_ch)) {
@@ -671,6 +679,12 @@ void adec_set_codec(adec_codec_t codec) {
     } else if (codec == ADEC_CODEC_PCM) {
         if (!adec_pcm_open(want_ch)) {
             plog("adec_set_codec: PCM open failed, staying on MP3");
+            codec   = ADEC_CODEC_MP3;
+            want_ch = 2;
+        }
+    } else if (codec == ADEC_CODEC_EAC3) {
+        if (!adec_eac3_open(want_ch)) {
+            plog("adec_set_codec: E-AC-3 open failed, staying on MP3");
             codec   = ADEC_CODEC_MP3;
             want_ch = 2;
         }

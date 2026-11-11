@@ -21,7 +21,7 @@
 // stream types the player's demuxer (ts_demux.cpp) selects an audio decoder by
 // ST_FLAC and ST_PCM are this player's own private types (ts_demux.cpp): no transport stream has one for them
 enum { ST_H264 = 0x1B, ST_MP3 = 0x03, ST_MP2 = 0x04, ST_AAC = 0x0F, ST_AC3 = 0x81, ST_DTS = 0x82, ST_TRUEHD = 0x83,
-       ST_FLAC = 0xE1, ST_PCM = 0xE2 };
+       ST_EAC3 = 0x87, ST_FLAC = 0xE1, ST_PCM = 0xE2 };
 
 static uint8_t *s_frame_buf = NULL;
 
@@ -30,8 +30,8 @@ static void set_err(char *err, int cap, const char *msg) {
 }
 
 bool mkv_ts_audio_supported(MkvAudioCodec c) {
-    return c == MKV_AC_AC3 || c == MKV_AC_DTS || c == MKV_AC_TRUEHD || c == MKV_AC_MP3 || c == MKV_AC_MP2 || c == MKV_AC_AAC ||
-           c == MKV_AC_FLAC || c == MKV_AC_PCM;
+    return c == MKV_AC_AC3 || c == MKV_AC_EAC3 || c == MKV_AC_DTS || c == MKV_AC_TRUEHD || c == MKV_AC_MP3 ||
+           c == MKV_AC_MP2 || c == MKV_AC_AAC || c == MKV_AC_FLAC || c == MKV_AC_PCM;
 }
 
 // The 8-byte header adec_pcm.h puts before every PES of a PCM track, from the track's own fields.  False (with a
@@ -126,8 +126,10 @@ static uint32_t crc32_mpeg(const uint8_t *p, int n) {
 enum Unit { UNIT_NONE = 0, UNIT_PAT, UNIT_PMT, UNIT_PES };
 
 struct MkvTs {
-    MkvFile  *f;
+    const MkvFile *f;
     MkvReader r;
+    bool      use_src;                              // frames come from `src`, not the Matroska reader
+    MkvTsSource src;
     int       vtrack, atrack;
     uint8_t   a_stream_type, a_stream_id;
     bool      aac;                                  // the audio is AAC: each frame gets an ADTS header
@@ -368,7 +370,7 @@ static bool prepare_frame(MkvTs *t, const MkvFrame *fr) {
 static bool next_pes(MkvTs *t) {
     MkvFrame fr;
     for (;;) {
-        const int rc = mkv_next_frame(&t->r, &fr);
+        const int rc = t->use_src ? t->src.next(t->src.ctx, &fr) : mkv_next_frame(&t->r, &fr);
         if (rc < 0) { t->error = true; return false; }
         if (rc == 0) { t->ended = true; return false; }
         if (fr.track == t->vtrack) {
@@ -386,8 +388,10 @@ static bool next_pes(MkvTs *t) {
         } else {
             continue;
         }
-        t->st.dropped_oversize = t->r.oversize;
-        t->st.dropped_damaged = t->r.damaged;
+        if (!t->use_src) {
+            t->st.dropped_oversize = t->r.oversize;
+            t->st.dropped_damaged = t->r.damaged;
+        }
         if (!prepare_frame(t, &fr)) continue;
         return true;
     }
@@ -400,8 +404,14 @@ MkvTs *mkv_ts_open(MkvFile *f, int video_track, int audio_track, uint64_t start_
     return mkv_ts_open_subs(f, video_track, audio_track, 0, NULL, NULL, start_ns, actual_start_ns, err, err_cap);
 }
 
-MkvTs *mkv_ts_open_subs(MkvFile *f, int video_track, int audio_track, int sub_track, MkvSubSink sink, void *sink_ctx,
-                        uint64_t start_ns, uint64_t *actual_start_ns, char *err, int err_cap) {
+uint8_t *mkv_ts_frame_buffer(uint32_t *cap) {
+    if (!s_frame_buf) s_frame_buf = (uint8_t *)malloc(FRAME_BUF_SIZE);
+    if (cap) *cap = s_frame_buf ? FRAME_BUF_SIZE : 0;
+    return s_frame_buf;
+}
+
+// Everything but where the frames come from: the tracks, the headers, the PSI.
+static MkvTs *ts_create(const MkvFile *f, int video_track, int audio_track, char *err, int err_cap) {
     char why[48];
     if (!mkv_ts_video_supported(f, video_track, why, sizeof why)) { set_err(err, err_cap, why); return NULL; }
     const MkvTrack *vt = mkv_track(f, video_track);
@@ -419,6 +429,7 @@ MkvTs *mkv_ts_open_subs(MkvFile *f, int video_track, int audio_track, int sub_tr
         if (at->unsupported_encoding) { set_err(err, err_cap, "encrypted audio"); return NULL; }
         switch (mkv_audio_codec(at)) {
         case MKV_AC_AC3:    stype = ST_AC3; break;
+        case MKV_AC_EAC3:   stype = ST_EAC3; break;      // the frames as stored, as AC-3's are
         case MKV_AC_DTS:    stype = ST_DTS; break;
         case MKV_AC_TRUEHD: stype = ST_TRUEHD; break;
         case MKV_AC_MP3:    stype = ST_MP3; sid = 0xC0; break;
@@ -446,7 +457,6 @@ MkvTs *mkv_ts_open_subs(MkvFile *f, int video_track, int audio_track, int sub_tr
     MkvTs *t = (MkvTs *)calloc(1, sizeof *t);
     if (!t) { set_err(err, err_cap, "out of memory"); return NULL; }
     t->f = f; t->vtrack = video_track; t->atrack = audio_track;
-    t->sub_track = sub_track; t->sub_sink = sink; t->sub_ctx = sink_ctx;
     t->a_stream_type = stype; t->a_stream_id = sid;
     t->aac = is_aac; t->aac_cfg = aac_cfg;
     t->flac = is_flac; t->flac_hdr_pending = is_flac; memcpy(t->flac_hdr, flac_hdr, sizeof flac_hdr);
@@ -467,12 +477,11 @@ MkvTs *mkv_ts_open_subs(MkvFile *f, int video_track, int audio_track, int sub_tr
     }
     t->pre_key_len = n;
     build_psi(t, audio_track != 0);
+    return t;
+}
 
-    mkv_reader_init(&t->r, f, s_frame_buf, FRAME_BUF_SIZE);
-    uint64_t cluster_time = 0;
-    if (start_ns > 0) {
-        if (!mkv_seek(f, &t->r, start_ns, &cluster_time)) { free(t); set_err(err, err_cap, "cannot seek"); return NULL; }
-    }
+// Reads up to the first key frame, so the caller knows where the stream really starts.
+static MkvTs *ts_prime(MkvTs *t, uint64_t *actual_start_ns, char *err, int err_cap) {
     t->psi_due = true;
     // read up to the first key frame so the caller knows where the stream really starts
     t->unit = UNIT_NONE;
@@ -486,6 +495,30 @@ MkvTs *mkv_ts_open_subs(MkvFile *f, int video_track, int audio_track, int sub_tr
     t->psi_due = false;
     if (actual_start_ns) *actual_start_ns = t->origin_ns > 0 ? (uint64_t)t->origin_ns : 0;
     return t;
+}
+
+MkvTs *mkv_ts_open_subs(MkvFile *f, int video_track, int audio_track, int sub_track, MkvSubSink sink, void *sink_ctx,
+                        uint64_t start_ns, uint64_t *actual_start_ns, char *err, int err_cap) {
+    MkvTs *t = ts_create(f, video_track, audio_track, err, err_cap);
+    if (!t) return NULL;
+    t->sub_track = sub_track; t->sub_sink = sink; t->sub_ctx = sink_ctx;
+    mkv_reader_init(&t->r, f, s_frame_buf, FRAME_BUF_SIZE);
+    uint64_t cluster_time = 0;
+    if (start_ns > 0) {
+        if (!mkv_seek(f, &t->r, start_ns, &cluster_time)) { free(t); set_err(err, err_cap, "cannot seek"); return NULL; }
+    }
+    return ts_prime(t, actual_start_ns, err, err_cap);
+}
+
+MkvTs *mkv_ts_open_source(const MkvFile *tracks, MkvTsSource src, int video_track, int audio_track,
+                          uint64_t start_ns, uint64_t *actual_start_ns, char *err, int err_cap) {
+    if (!src.next) { set_err(err, err_cap, "no source"); return NULL; }
+    MkvTs *t = ts_create(tracks, video_track, audio_track, err, err_cap);
+    if (!t) return NULL;
+    t->use_src = true;
+    t->src = src;
+    if (src.seek && !src.seek(src.ctx, start_ns)) { free(t); set_err(err, err_cap, "cannot seek"); return NULL; }
+    return ts_prime(t, actual_start_ns, err, err_cap);
 }
 
 int mkv_ts_read(MkvTs *t, uint8_t *out, int n) {

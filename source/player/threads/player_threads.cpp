@@ -135,6 +135,7 @@ bool player_spawn_decode(PlayerState *ps) {
     ps->dec_ctx.sock        = ps->sock;
     ps->dec_ctx.dec_run     = &ps->dec_run;
     ps->dec_ctx.ended       = ps->live ? &ps->stream_ended : NULL;
+    ps->dec_ctx.paused      = &ps->paused;
     ps->stream_ended = false;
     ps->dec_run = true;
     int trc = sysThreadCreate(&ps->dec_tid, decode_thread_fn,
@@ -175,6 +176,12 @@ void decode_thread_fn(void *arg) {
     bool lc_got_pkt            = false;
     u64  lc_zero_since_us      = 0;     // first rd==0 of the current quiet spell
     u64  lc_zero_next_us       = 0;
+    // The server has sent the whole stream.  It transcodes faster than real
+    // time, so the read-ahead ring, the decoded pictures and the queued sound
+    // can still hold minutes of the item: playback ends once they have played.
+    bool eof                   = false;
+    u64  drain_still_us        = 0;     // when the drain last moved
+    int  drain_mark[4]         = { -1, -1, -1, -1 };
 
     lc_logf("decode: thread running playing=%d", (int)*playing);
 
@@ -196,6 +203,33 @@ void decode_thread_fn(void *arg) {
             while (s_frames_ready > 0 && jbuf_count() < jbuf_cap()) {
                 if (!vdec_pull_frame()) break;
             }
+        }
+
+        if (eof) {
+            g_dec_stage = "drain";
+            while (s_frames_ready > 0 && jbuf_count() < jbuf_cap()) {
+                if (!vdec_pull_frame()) break;
+            }
+            const int now_mark[4] = { s_ring_n, jbuf_count(), adec_pes_pending(),
+                                      adec_pcm_available() };
+            const u64 now = timing_get_us();
+            if (memcmp(now_mark, drain_mark, sizeof now_mark) != 0 || *ctx->paused) {
+                memcpy(drain_mark, now_mark, sizeof drain_mark);
+                drain_still_us = now;
+            }
+            // Played out: nothing queued anywhere (the last picture may stay
+            // on screen).  Or stuck: the decoder can hold back its final
+            // pictures, and with the sound gone the clock no longer moves.
+            const bool empty = s_ring_n == 0 && jbuf_count() <= 1 &&
+                               adec_pes_pending() == 0 && adec_pcm_available() == 0;
+            if (empty || now - drain_still_us >= 3000000ULL) {
+                lc_logf("decode: end of stream played out (%s)", empty ? "empty" : "stalled");
+                plog("playing=0 reason=stream_eof");
+                *ctx->playing = false;
+                break;
+            }
+            usleep(2000);
+            continue;
         }
 
         // Keep reading until the RING is full, not just until the jitter
@@ -246,10 +280,10 @@ void decode_thread_fn(void *arg) {
                     *ctx->dec_run = false;
                     break;
                 }
-                plog("playing=0 reason=stream_eof");
-                lc_logf("decode: stream_read FAILED -> playing=0 (got_any_pkt=%d)",
-                        (int)lc_got_pkt);
-                *ctx->playing = false;
+                lc_logf("decode: stream ended (got_any_pkt=%d), playing out %d packets, %d pictures",
+                        (int)lc_got_pkt, s_ring_n, jbuf_count());
+                eof            = true;
+                drain_still_us = timing_get_us();
                 break;
             }
             if (rd == 0) {

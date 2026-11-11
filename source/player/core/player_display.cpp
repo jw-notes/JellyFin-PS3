@@ -20,6 +20,7 @@
 #include "subfont.h"
 #include "subcolor.h"
 #include "vblend.h"
+#include "rtl_text.h"    // right-to-left subtitle lines
 #include <string.h>
 
 // Longest single rendered line. Cues are capped well below this in
@@ -464,6 +465,14 @@ one_to_one_done: ;
         const u64 now_ms = (ps->play_base_us + audio_get_clock_us()) / 1000ULL;
         const char *line = subs_text_at(now_ms);
         if (line && *line) {
+            // A line in a script no loaded face covers (Korean, Chinese, Hebrew,
+            // Arabic) reads that face in, once; checked once per new line.
+            {
+                static u32 s_seen = 0;
+                u32 h = 2166136261u;
+                for (const char *q = line; *q; q++) h = (h ^ (u8)*q) * 16777619u;
+                if (h != s_seen) { s_seen = h; ttf_need_text(line); }
+            }
             // Bottom-centred, one line above the other, inside the title-safe
             // area so an overscanning CRT or plasma does not clip the text.
             // TYPEFACE AND WEIGHT.
@@ -502,8 +511,12 @@ one_to_one_done: ;
                 if (len > SUB_ROW_MAX - 1) len = SUB_ROW_MAX - 1;
                 memcpy(row, p2, len); row[len] = '\0';
 
+                // Hebrew, Arabic, Persian: shaped and put in the order it is drawn.
+                char vis[SUB_ROW_MAX * 2];
+                const char *draw = rtl_visual_line(row, vis, (int)sizeof vis) ? vis : row;
+
                 const int face = subfont_face();
-                const int tw   = ttf_text_width_face(row, (float)px, face);
+                const int tw   = ttf_text_width_face(draw, (float)px, face);
                 const int x  = (W - tw) / 2;
                 // Outline in every direction.  Film subtitles sit over
                 // whatever happens to be on screen, and white on a bright
@@ -514,9 +527,9 @@ one_to_one_done: ;
                 for (int dy = -ow; dy <= ow; dy++)
                     for (int dx = -ow; dx <= ow; dx++)
                         if (dx || dy)
-                            drawTTF_face((u32)(x + dx), (u32)(y + dy), row,
+                            drawTTF_face((u32)(x + dx), (u32)(y + dy), draw,
                                          (float)px, outline, face);
-                drawTTF_face((u32)x, (u32)y, row, (float)px, fill, face);
+                drawTTF_face((u32)x, (u32)y, draw, (float)px, fill, face);
 
                 y += lh;
                 if (!nl) break;

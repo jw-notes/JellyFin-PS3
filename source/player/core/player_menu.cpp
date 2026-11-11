@@ -17,6 +17,9 @@
 #include "player_picture.h"   // picture_cycle_aspect
 #include "timing.h"
 #include "audio.h"           // audio_get_clock_us
+#include "autoskip.h"        // Skip Intros / Skip Credits
+#include "statsovl.h"        // Playback Statistics
+#include "../../build_config.h"   // ENABLE_PLAYER_STATS (relative: source/ is not on the -I path)
 
 // ---- Remembered track preference (see player_internal.h) ------------------
 static char s_pref_audio_label[64] = "";
@@ -104,6 +107,115 @@ static void open_subs_menu(PlayerState *ps) {
     if (has_audio_menu(ps)) hud_set_menu_switch(TRN("Audio"));
 }
 
+// ---- Options (START) --------------------------------------------------------
+// One menu over the player, as on the console's own player: each row with what
+// it is set to now.  A row that opens something (Chapters, Audio / Subtitles,
+// Picture) hands over to it; a setting (Statistics, the skips) changes in place
+// and the menu stays open on it; Next / Previous end this playback.
+enum { OPT_CHAPTERS, OPT_TRACKS, OPT_PICTURE, OPT_STATS, OPT_NEXT, OPT_PREV,
+       OPT_SKIP_INTRO, OPT_SKIP_CREDITS, OPT_MAX };
+static int         s_opt_kind[OPT_MAX];
+static const char *s_opt_items[OPT_MAX];
+static const char *s_opt_vals[OPT_MAX];
+static char        s_opt_valbuf[OPT_MAX][96];
+static int         s_opt_n;
+
+static bool is_episode(const PlayerState *ps) {
+    return ps->item && strcmp(ps->item->type, "Episode") == 0;
+}
+
+static void opt_chapters_value(const PlayerState *ps, char *out, int cap) {
+    const int st = jf_chapters_state();
+    if (st == JF_CHAPTERS_READY) {
+        const JFChapters *c = jf_chapters();
+        const int i = jf_chapter_index_at(c, chapters_pos_secs(ps));
+        if (i < 0)               snprintf(out, cap, "%s", "");
+        else if (c->ch[i].name[0]) snprintf(out, cap, "%s", c->ch[i].name);
+        else                     snprintf(out, cap, TR("Chapter %d"), i + 1);
+    } else if (st == JF_CHAPTERS_NONE) {
+        snprintf(out, cap, "%s", TR("No chapters"));
+    } else {
+        snprintf(out, cap, "%s", TR("Loading chapters..."));
+    }
+}
+
+static void opt_tracks_value(const PlayerState *ps, char *out, int cap) {
+    char a[64] = "";
+    if (ps->cur_audio >= 0 && ps->cur_audio < ps->tracks.n_audio)
+        vpick_audio_words(ps->tracks.audio[ps->cur_audio].label, a, sizeof a);
+    const char *s = (ps->cur_sub >= 0 && ps->cur_sub < ps->tracks.n_subs)
+                  ? ps->tracks.subs[ps->cur_sub].label : TR("Off");
+    snprintf(out, cap, "%s / %s", a[0] ? a : TR("Default"), s);
+}
+
+void player_open_options(PlayerState *ps, int row) {
+    int n = 0;
+    const bool chapters = player_has_chapters(ps);
+    const bool tracks   = !ps->live && (has_audio_menu(ps) || has_subs_menu(ps));
+    const bool ep       = is_episode(ps);
+    if (chapters) {
+        s_opt_kind[n] = OPT_CHAPTERS; s_opt_items[n] = TR("Chapters");
+        opt_chapters_value(ps, s_opt_valbuf[n], sizeof s_opt_valbuf[n]); n++;
+    }
+    if (tracks) {
+        s_opt_kind[n] = OPT_TRACKS; s_opt_items[n] = TR("Audio / Subtitles");
+        opt_tracks_value(ps, s_opt_valbuf[n], sizeof s_opt_valbuf[n]); n++;
+    }
+    {
+        const int a = picture_get().aspect;
+        s_opt_kind[n] = OPT_PICTURE; s_opt_items[n] = TR("Picture");
+        snprintf(s_opt_valbuf[n], sizeof s_opt_valbuf[n], "%s",
+                 a == PIC_FILL ? TR("Fill") : a == PIC_STRETCH ? TR("Stretch") : TR("Fit"));
+        n++;
+    }
+#if ENABLE_PLAYER_STATS
+    s_opt_kind[n] = OPT_STATS; s_opt_items[n] = TR("Playback Statistics");
+    snprintf(s_opt_valbuf[n], sizeof s_opt_valbuf[n], "%s", statsovl_shown() ? TR("On") : TR("Off"));
+    n++;
+#endif
+    if (!ps->live && ps->has_next) {
+        s_opt_kind[n] = OPT_NEXT; s_opt_items[n] = ep ? TR("Next Episode") : TR("Next");
+        snprintf(s_opt_valbuf[n], sizeof s_opt_valbuf[n], "%s", ps->next_name); n++;
+    }
+    if (!ps->live && ps->has_prev) {
+        s_opt_kind[n] = OPT_PREV; s_opt_items[n] = ep ? TR("Previous Episode") : TR("Previous");
+        snprintf(s_opt_valbuf[n], sizeof s_opt_valbuf[n], "%s", ps->prev_name); n++;
+    }
+    if (!ps->live && ep) {
+        s_opt_kind[n] = OPT_SKIP_INTRO; s_opt_items[n] = TR("Skip Intros");
+        snprintf(s_opt_valbuf[n], sizeof s_opt_valbuf[n], "%s", tr(skip_mode_label(skip_intro_mode()))); n++;
+        s_opt_kind[n] = OPT_SKIP_CREDITS; s_opt_items[n] = TR("Skip Credits");
+        snprintf(s_opt_valbuf[n], sizeof s_opt_valbuf[n], "%s", tr(skip_mode_label(skip_credits_mode()))); n++;
+    }
+    for (int i = 0; i < n; i++) s_opt_vals[i] = s_opt_valbuf[i];
+    s_opt_n = n;
+    ps->menu_kind = PLAYER_MENU_OPTIONS;
+    hud_open_menu(TR("Options"), s_opt_items, n, -1);
+    hud_set_menu_values(s_opt_vals);
+    hud_set_menu_cursor(row);
+}
+
+// X on an Options row.  Returns the action still to perform.
+static HudAction options_select(PlayerState *ps, int sel) {
+    ps->menu_kind = PLAYER_MENU_NONE;
+    if (sel < 0 || sel >= s_opt_n) return HUD_ACTION_NONE;
+    switch (s_opt_kind[sel]) {
+    case OPT_CHAPTERS:  return player_handle_menu_action(ps, HUD_ACTION_CHAPTERS);
+    case OPT_TRACKS:    return player_handle_menu_action(ps, HUD_ACTION_AUDIO_TRACK);
+    case OPT_PICTURE:   picture_mode_open(); return HUD_ACTION_NONE;
+    case OPT_NEXT:      return HUD_ACTION_NEXT_ITEM;
+    case OPT_PREV:      return HUD_ACTION_PREV_ITEM;
+#if ENABLE_PLAYER_STATS
+    case OPT_STATS:     statsovl_toggle_shown(); break;          // this playback, as R3 does
+#endif
+    case OPT_SKIP_INTRO:   skip_intro_step(+1);   break;
+    case OPT_SKIP_CREDITS: skip_credits_step(+1); break;
+    default: return HUD_ACTION_NONE;
+    }
+    player_open_options(ps, sel);          // a setting: stay, on the same row
+    return HUD_ACTION_NONE;
+}
+
 HudAction player_handle_menu_action(PlayerState *ps, HudAction act) {
     if (act == HUD_ACTION_MENU_SWITCH) {
         act = HUD_ACTION_NONE;
@@ -124,7 +236,7 @@ HudAction player_handle_menu_action(PlayerState *ps, HudAction act) {
     if (act == HUD_ACTION_CHAPTERS) {
         act = HUD_ACTION_NONE;
         const int st = jf_chapters_state();
-        if (ps->local || !ps->item) {
+        if (!player_has_chapters(ps)) {
             chapters_banner(TR("No chapters"));          // a file on a drive: not read from the file yet
         } else if (st == JF_CHAPTERS_READY) {
             chapters_open(ps);
@@ -157,6 +269,7 @@ HudAction player_handle_menu_action(PlayerState *ps, HudAction act) {
     } else if (act == HUD_ACTION_MENU_SELECT) {
         act = HUD_ACTION_NONE;
         int sel = hud_menu_choice();
+        if (ps->menu_kind == PLAYER_MENU_OPTIONS) return options_select(ps, sel);
         if (ps->menu_kind == PLAYER_MENU_CHAPTERS) {
             const JFChapters *c = jf_chapters();
             if (jf_chapters_state() == JF_CHAPTERS_READY && sel >= 0 && sel < c->n) {
@@ -199,6 +312,15 @@ HudAction player_handle_menu_action(PlayerState *ps, HudAction act) {
             // reopen (player_local_open starts collecting the new track); Off needs none, the cues just stop being kept.
             if (ps->local) {
                 ps->sub_is_text = ps->sub_is_pgs = false;
+                if (ps->cur_sub >= 0 && local_is_sidecar(ps->tracks.subs[ps->cur_sub].index)) {
+                    // A file beside the video: read whole, no reopen needed for it.  A Matroska file reading an
+                    // embedded track is reopened without it, or its cues would join the file's.
+                    ps->sub_is_text = player_local_load_sidecar(ps, ps->cur_sub);
+                    if (!ps->sub_is_text) { ps->cur_sub = -1; hud_set_cc_active(false); chapters_banner(TR("No subtitles")); }
+                    if (ps->local->container == LM_MKV) act = HUD_ACTION_SEEK;
+                    ps->menu_kind = PLAYER_MENU_NONE;
+                    return act;
+                }
                 if (ps->cur_sub >= 0) {
                     const JFStream *st = &ps->tracks.subs[ps->cur_sub];
                     ps->sub_is_text = jf_sub_is_text(st->codec);

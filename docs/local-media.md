@@ -12,10 +12,16 @@ How the pieces fit, now:
 | | Where |
 |---|---|
 | Drives and files, read-only | `source/local/lfs*`, `third_party/mohasi_fs` (NTFS, exFAT) |
-| What a video file holds, and whether the PS3 can play it | `source/local/local_probe`, `source/video/mkv_demux`, `h264_sps` |
-| Matroska and m2ts played as MPEG-TS | `source/video/mkv_ts`, `source/player/stream/stream_local`, `player/core/player_local` |
+| What a video file holds, and whether the PS3 can play it | `source/local/local_probe`, `source/video/mkv_demux`, `mp4_demux`, `h264_sps` |
+| Matroska, MP4 / QuickTime and m2ts played as MPEG-TS | `source/video/mkv_ts` (an MP4 feeds it through `mkv_ts_open_source`), `source/player/stream/stream_local`, `player/core/player_local` |
 | Audio of files: AAC, FLAC, PCM (video) | `source/audio/adec_aac`, `flac_dec`, `adec_flac`, `adec_pcm`, `chan_map`, `resample` |
 | Subtitles of Matroska files | `source/local/sub_conv`, `local_subs`, `player/subtitles` |
+| `.srt` files beside a video | `source/local/local_sidecar` (matching, labels, text to UTF-8), `player/core/player_local` (`add_sidecars`, `player_local_load_sidecar`) |
+
+An MP4's tracks are described as Matroska tracks (`mp4_view`: the same codec IDs and CodecPrivate), so the probe, the
+codec checks and the TS writer serve both containers. Its sample tables are read from the file through a small window
+per table, never loaded whole, so a long film costs no more memory than a short one. Fragmented MP4 is refused; an MP4's
+own timed-text subtitles are not read.
 | Music: tags, decoding, albums | `source/local/local_tags`, `local_audio`, `local_music`, `local_music_fs`; engine in `source/music/music_player` |
 | The browser | `source/ui/xmb/ui_media` |
 

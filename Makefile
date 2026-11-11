@@ -63,6 +63,17 @@ imdct.o: CFLAGS += -Wno-array-bounds
 # include path, which is why it needs no -I of its own here.
 mlp_api.o: CFLAGS += -Wno-dangling-else
 
+# Vendored FFmpeg AC-3 / E-AC-3 decoder (source/audio/eac3, see eac3/PROVENANCE.md):
+# eac3_api.c compiles it as one translation unit, and libavutil's transforms and
+# float DSP are eac3_tx.c / eac3_txf.c / eac3_util.c.  Upstream eac3dec.c and
+# md5.c draw parenthesis and signedness warnings; silenced for those objects only,
+# as above.  The vendored directory is not in SOURCES.
+eac3_api.o:    CFLAGS += -Wno-parentheses -Wno-dangling-else -O3
+eac3_util.o:   CFLAGS += -Wno-pointer-sign -O3
+eac3_tx.o:     CFLAGS += -O3
+eac3_txf.o:    CFLAGS += -O3
+adec_eac3.o:   CXXFLAGS += -O3
+
 # The audio decoders get -O3 where the rest of the app stays at -O2.
 #
 # Measured reason, not a hunch: the heartbeat showed playback collapsing
@@ -183,8 +194,9 @@ run:
 # setting lists them; ppu_rules copies PKGFILES into the package.
 pkg: $(BUILD)
 	@rm -rf $(CURDIR)/$(BUILD)/pkgfiles
-	@mkdir -p $(CURDIR)/$(BUILD)/pkgfiles/USRDIR/themes
+	@mkdir -p $(CURDIR)/$(BUILD)/pkgfiles/USRDIR/themes $(CURDIR)/$(BUILD)/pkgfiles/USRDIR/fonts
 	@cp $(CURDIR)/themes/jw-notes/*.ini $(CURDIR)/$(BUILD)/pkgfiles/USRDIR/themes/
+	@cp $(CURDIR)/subtitle-fonts/JFSub-* $(CURDIR)/subtitle-fonts/OFL-*.txt $(CURDIR)/$(BUILD)/pkgfiles/USRDIR/fonts/
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile $(OUTPUT).pkg 		PKGFILES=$(CURDIR)/$(BUILD)/pkgfiles
 
 else
@@ -193,7 +205,8 @@ DEPENDS := $(OFILES:.o=.d)
 
 $(OUTPUT).self: $(OUTPUT).elf
 $(OUTPUT).elf:  $(OFILES)
-$(OUTPUT).pkg:  $(SFOXML) $(ICON0) $(wildcard $(CURDIR)/../themes/jw-notes/*.ini)
+$(OUTPUT).pkg:  $(SFOXML) $(ICON0) $(wildcard $(CURDIR)/../themes/jw-notes/*.ini) \
+                $(wildcard $(CURDIR)/../subtitle-fonts/JFSub-*)
 
 %.bin.o : %.bin
 	@echo $(notdir $<)

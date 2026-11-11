@@ -26,7 +26,7 @@ Every commit, and who made it, is in the git history.
 
 | What | Used for | Licence |
 |---|---|---|
-| [FFmpeg](https://ffmpeg.org) (MLP and DCA decoder files) | TrueHD / Atmos and DTS-HD MA | LGPL 2.1+ |
+| [FFmpeg](https://ffmpeg.org) (MLP, DCA and AC-3 / E-AC-3 decoder files, libavutil's MDCT) | TrueHD / Atmos, DTS-HD MA and Dolby Digital Plus | LGPL 2.1+ |
 | [liba52](https://liba52.sourceforge.io) (Aaron Holtzman, Michel Lespinasse) | Dolby Digital | GPL 2+ |
 | [libdca](https://www.videolan.org/developers/libdca.html) (Gildas Bazin and others) | DTS core | GPL 2+ |
 | [minimp3](https://github.com/lieff/minimp3) (lieff) | MP3 | public domain (CC0) |
@@ -41,6 +41,7 @@ Every commit, and who made it, is in the git history.
 |---|---|
 | Open Sans, Roboto Condensed, Material Icons | Apache 2.0 |
 | Archivo, Noto Sans, Noto Sans JP, Michroma | SIL OFL 1.1 |
+| Noto Sans SC, Noto Sans Hebrew, Noto Sans Arabic (subtitle cuts) | SIL OFL 1.1 |
 | Tabler Icons | MIT |
 | Satoshi (Fontshare) | ITF Free Font License |
 | PlayStation button sprites ([Kenney](https://kenney.nl)) | CC0 |

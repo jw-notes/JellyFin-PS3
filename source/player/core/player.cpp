@@ -5,6 +5,7 @@
 #include "segments.h"
 #include "chapters.h"
 #include "autoskip.h"
+#include "statsovl.h"        // R3's show / hide lasts one playback
 #include "audio_bitstream.h"
 #include <stdio.h>
 #include <string.h>
@@ -112,11 +113,12 @@ static inline void player_status_screen(const char *name, const char *msg) {
 }
 
 // One startup step: the buffering presentation's label when it is running,
-// the old status line otherwise.
+// the old status line otherwise.  circle_hint: the label beside the Circle
+// button in the presentation's hint bar (TRN, NULL = no hint).
 static void player_startup_step(const char *name, const char *label,
-                                const char *old_msg) {
+                                const char *old_msg, const char *circle_hint = NULL) {
     if (buffering_active()) {
-        buffering_step(label, false, NULL);
+        buffering_step(label, false, circle_hint);
         buffering_frame();
     } else {
         player_status_screen(name, old_msg);
@@ -136,11 +138,12 @@ static void player_startup_abort(void) {
 // -------------------------------------------------------
 static const char *s_d24_title = "";
 
-// One centred line, shrunk to fit `maxw` if it has to be.
+// One centred line, shrunk to fit `maxw` if it has to be.  "{X}" and "{O}"
+// in it are drawn as the buttons.
 static int d24_line(const char *s, float px, int cx, int y, int maxw, u32 colour, bool bold) {
-    int w = ttf_text_width(s, px, bold);
-    if (w > maxw && w > 0) { px = px * (float)maxw / (float)w; w = ttf_text_width(s, px, bold); }
-    drawTTF((u32)(cx - w / 2), (u32)y, s, px, colour, bold);
+    int w = ttf_rich_width(s, px, bold);
+    if (w > maxw && w > 0) { px = px * (float)maxw / (float)w; w = ttf_rich_width(s, px, bold); }
+    drawTTF_rich((u32)(cx - w / 2), (u32)y, s, px, colour, bold);
     return (int)(px * 1.6f);
 }
 
@@ -222,7 +225,7 @@ static void d24_lifecycle(const char *phase) {
 static bool s_next_armed     = false;
 static bool s_next_requested = false;
 static char s_next_label[32] = "NEXT EPISODE";
-static char s_next_hint[64]  = "Press SELECT for next episode";
+static char s_next_hint[64]  = "Press {SELECT} for next episode";
 
 void player_arm_next(const char *label, const char *hint) {
     s_next_armed     = true;
@@ -242,6 +245,14 @@ bool player_take_next_request(void) {
 static bool s_prev_armed = false;
 static bool s_went_back  = false;
 void player_arm_prev(void) { s_prev_armed = true; }
+
+// The names Options shows for Next / Previous Episode; one playback's worth.
+static char s_nav_next_name[96] = "";
+static char s_nav_prev_name[96] = "";
+void player_set_nav_names(const char *next_name, const char *prev_name) {
+    snprintf(s_nav_next_name, sizeof s_nav_next_name, "%s", next_name ? next_name : "");
+    snprintf(s_nav_prev_name, sizeof s_nav_prev_name, "%s", prev_name ? prev_name : "");
+}
 bool player_took_prev(void) {
     const bool r = s_went_back;
     s_went_back = false;
@@ -268,7 +279,7 @@ static void player_draw_next_popup_cpu(int auto_secs) {
                  s_next_hint, auto_secs);
     else
         snprintf(hint, sizeof(hint), "%s", s_next_hint);
-    const int hw = ttf_text_width(hint, hint_px);
+    const int hw = ttf_rich_width(hint, hint_px, false);      // {SELECT} is the button
 
     int tw = ttf_text_width(s_next_label, label_px);
     int bw = tw + 2 * pad_x;
@@ -282,8 +293,8 @@ static void player_draw_next_popup_cpu(int auto_secs) {
     drawRect((u32)bx, (u32)by, 3, (u32)bh, XMB_ACCENT);
     drawTTF((u32)(bx + pad_x), (u32)(by + pad_y), s_next_label, label_px,
             XMB_TEXT, true);
-    drawTTF((u32)(right - hw), (u32)(by + bh + UIS_H(14)), hint, hint_px,
-            XMB_TEXT_DIM);
+    drawTTF_rich((u32)(right - hw), (u32)(by + bh + UIS_H(14)), hint, hint_px,
+                 XMB_TEXT_DIM, false);
 }
 
 // "Skip Intro" badge, bottom right, above where the control bar sits: the X
@@ -324,12 +335,15 @@ static void player_draw_next_popup_gpu(int auto_secs) {
     const int   pad_x = UIS_W(24), pad_y = UIS_H(14), gap = UIS_H(8);
     const int   right = (int)display_width - XMB_OX - UIS_W(40);
 
-    char hint[96];
+    // This panel is drawn on the GPU, where the button sprites cannot go: the
+    // hint names SELECT in words here.
+    char words[96], hint[128];
+    btn_tokens_to_words(s_next_hint, words, sizeof words);
     if (auto_secs >= 0)
         snprintf(hint, sizeof(hint), TR("%s \xC2\xB7 starting in %ds"),
-                 s_next_hint, auto_secs);
+                 words, auto_secs);
     else
-        snprintf(hint, sizeof(hint), "%s", s_next_hint);
+        snprintf(hint, sizeof(hint), "%s", words);
     const int tw = ttf_text_width(s_next_label, label_px, true);
     const int hw = ttf_text_width(hint, hint_px);
     const int bw = (tw > hw ? tw : hw) + 2 * pad_x;
@@ -460,10 +474,10 @@ bool player_seek_wait(unsigned elapsed_ms)
     const int y = (int)display_height / 2 + UIS_H(58);
     drawTTF((u32)(((int)display_width - w) / 2), (u32)y, msg, px, 0x00FFFFFF);
     {
-        const char *c = TR("O  Cancel");
-        const int cw = ttf_text_width(c, UIS_TF(13.0f));
-        drawTTF((u32)(((int)display_width - cw) / 2), (u32)(y + UIS_H(26)), c,
-                UIS_TF(13.0f), 0x00B8BCD0);
+        const char *c = TR("{O} Cancel");
+        const int cw = ttf_rich_width(c, UIS_TF(13.0f), false);
+        drawTTF_rich((u32)(((int)display_width - cw) / 2), (u32)(y + UIS_H(26)), c,
+                     UIS_TF(13.0f), 0x00B8BCD0, false);
     }
     gcmResetFlipStatus();
     flip();
@@ -492,11 +506,14 @@ static bool player_stream_wait(unsigned elapsed_ms)
         buffering_frame();
         return true;
     }
-    char msg[96];
+    // The old status screen draws in the bitmap font, which has no buttons:
+    // it names Circle in words.
+    char msg[128], words[128];
     snprintf(msg, sizeof(msg),
-             TR("Waiting for the server... %us   (Circle to cancel)"),
+             TR("Waiting for the server... %us   ({O} to cancel)"),
              elapsed_ms / 1000u);
-    player_status_screen(s_wait_title, msg);
+    btn_tokens_to_words(msg, words, sizeof words);
+    player_status_screen(s_wait_title, words);
     return true;
 }
 
@@ -899,6 +916,15 @@ void show_player_run(const JFItem *item, u32 resume_secs,
     jf_chapters_reset();                // the last film's chapters are not this one's
     ps.local     = local;
     ps.live      = live;
+    ps.has_next  = have_next;
+    ps.has_prev  = have_prev;
+    snprintf(ps.next_name, sizeof ps.next_name, "%s", have_next ? s_nav_next_name : "");
+    snprintf(ps.prev_name, sizeof ps.prev_name, "%s", have_prev ? s_nav_prev_name : "");
+    s_nav_next_name[0] = s_nav_prev_name[0] = '\0';   // one-shot, like the arming
+    // Asked for now, on a worker, so the bar can mark them; Options > Chapters
+    // lists them.  The server knows them for anything it serves, direct play
+    // included; a file on a drive has none here.
+    if (player_has_chapters(&ps)) jf_chapters_request(item->id);
 
     // Baseline H.264 level 3.1 caps at 1280×720 @ 30fps.  1080p (Alpha) asks
     // the server for a full 1920×1080 High-profile transcode instead — flat,
@@ -1244,7 +1270,9 @@ void show_player_run(const JFItem *item, u32 resume_secs,
     lc_logf("stream CONNECTED sock=%d", ps.sock);
     crash_log("p7 stream_open OK");
 
-    player_startup_step(item->name, TR("Buffering"), TR("Streaming... START=stop"));
+    // From here the player loop reads the pad, and Circle stops: the hint bar
+    // says so with the Circle button itself.
+    player_startup_step(item->name, TR("Buffering"), TR("Streaming..."), TRN("Stop"));
 
     video_reset();
     display_diag_reset();   // this session's frame rate, not the last one's
@@ -1574,10 +1602,15 @@ void show_player_run(const JFItem *item, u32 resume_secs,
         poll_buttons();
         bool l2_pressed = BTN_PRESSED(l2);
         bool r2_pressed = BTN_PRESSED(r2);
-        if (BTN_PRESSED(start)) {
-            plog("playing=0 reason=user_stop");
-            user_stopped = true;
-            ps.playing = false;
+        // START: the Options menu, as on the console's own player; START again
+        // (or O) closes it.  O stops playback (hud_handle_input), picture or not.
+        if (BTN_PRESSED(start) && ps.frame_count > 0) {
+            if (hud_menu_open()) {
+                hud_close_menu();
+                ps.menu_kind = PLAYER_MENU_NONE;
+            } else {
+                player_open_options(&ps, 0);
+            }
         }
 
         // End-of-item auto-advance: within the last 75 s of a followed item
@@ -1656,15 +1689,6 @@ void show_player_run(const JFItem *item, u32 resume_secs,
             player_seek_queue_tap(&ps, (int)(skip_seg->end_secs - seg_pos + 0.999));
             act = HUD_ACTION_NONE;
         }
-        // L1 / R1: the item before or after this one.  The bar only offers
-        // what was armed.  Going back ends the session the way going on does.
-        if (act == HUD_ACTION_NEXT_ITEM || act == HUD_ACTION_PREV_ITEM) {
-            s_went_back = act == HUD_ACTION_PREV_ITEM;
-            plog(s_went_back ? "playing=0 reason=prev_item_l1" : "playing=0 reason=next_item_r1");
-            s_next_requested = true;
-            ps.playing = false;
-            break;
-        }
         if (act == HUD_ACTION_STOP) {          // O on the redesigned HUD
             plog("playing=0 reason=user_stop_circle");
             user_stopped = true;
@@ -1683,6 +1707,17 @@ void show_player_run(const JFItem *item, u32 resume_secs,
         // AUDIO / CC popup menus; a track change comes back as a 0-delta
         // HUD_ACTION_SEEK — the reopen applies the new track.
         act = player_handle_menu_action(&ps, act);
+
+        // L1 / R1, or Options' Next / Previous: the item before or after this
+        // one.  Only what was armed is offered.  Going back ends the session
+        // the way going on does.
+        if (act == HUD_ACTION_NEXT_ITEM || act == HUD_ACTION_PREV_ITEM) {
+            s_went_back = act == HUD_ACTION_PREV_ITEM;
+            plog(s_went_back ? "playing=0 reason=prev_item" : "playing=0 reason=next_item_nav");
+            s_next_requested = true;
+            ps.playing = false;
+            break;
+        }
 
         // HD mode, undecodable copied track: either a DTS-HD MA / DTS:X track
         // with no backward-compatible core (legal, and nothing on this
@@ -1971,6 +2006,8 @@ void show_player_run(const JFItem *item, u32 resume_secs,
     timing_shutdown();
     segments_stop();
     picture_session_end();
+    ttf_extra_fonts_release();   // the subtitle-script faces go back to the menus
+    statsovl_session_end();      // R3's show / hide was for this playback
     hud_shutdown();
 
     // Final position for the server's resume bookmark — read before the

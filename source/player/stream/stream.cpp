@@ -23,6 +23,7 @@
 #include "lfs.h"        // local files: the internal disk and USB drives
 #include "local_probe.h" // local_m2ts_compact
 #include "mkv_ts.h"      // a Matroska file as MPEG-TS
+#include "mp4_demux.h"   // and an MP4 / QuickTime file, through the same writer
 
 extern u32 running;
 
@@ -165,6 +166,15 @@ static bool    s_mkv_open = false;
 static int     s_mkv_h    = -1;
 static char    s_mkv_path[256];
 static MkvTs  *s_mkv_ts   = NULL;
+// An MP4 / QuickTime source: the same, with its frames read by mp4_demux into the same TS writer.  It
+// shares the handle and the path with the Matroska source (one file is open at a time).
+static Mp4File   *s_mp4   = NULL;
+static Mp4Reader *s_mp4_r = NULL;
+struct Mp4Src { Mp4Reader *r; int video; };
+static Mp4Src     s_mp4_src;
+
+static int  mp4_src_next(void *ctx, MkvFrame *out) { return mp4_reader_next(((Mp4Src *)ctx)->r, out); }
+static bool mp4_src_seek(void *ctx, uint64_t ns) { const Mp4Src *s = (const Mp4Src *)ctx; return mp4_reader_seek(s->r, s->video, ns); }
 
 static bool file_active(void) { return s_file_h >= 0 || s_mkv_ts != NULL; }
 
@@ -178,6 +188,7 @@ static int mkv_lfs_read(void *ctx, uint64_t off, uint8_t *buf, int len) {
 // What the open source holds, closed: the stream of a file, not the parsed Matroska file.
 static void file_close_stream(void) {
     if (s_mkv_ts) { mkv_ts_close(s_mkv_ts); s_mkv_ts = NULL; }
+    if (s_mp4_r)  { mp4_reader_close(s_mp4_r); s_mp4_r = NULL; }
     if (s_file_h >= 0) { lfs_close(s_file_h); s_file_h = -1; }
 }
 
@@ -663,7 +674,7 @@ int stream_open_m2ts(const char *path, u64 ts_offset) { return file_open_at(path
 int stream_open_mkv(const char *path, int video_track, int audio_track, int sub_track, MkvSubSink sub_sink,
                     void *sub_ctx, u64 start_ns, u64 *actual_start_ns) {
     file_close_stream();
-    if (s_mkv_open && strcmp(path, s_mkv_path) != 0) stream_local_release();
+    if (s_mp4 || (s_mkv_open && strcmp(path, s_mkv_path) != 0)) stream_local_release();
     if (!s_mkv_open) {
         const int fd = lfs_open(path);
         if (fd < 0) {
@@ -700,12 +711,62 @@ int stream_open_mkv(const char *path, int video_track, int audio_track, int sub_
     return (int)(STREAM_FILE_TAG | (u32)s_mkv_h);
 }
 
+int stream_open_mp4(const char *path, int video_track, int audio_track, u64 start_ns, u64 *actual_start_ns) {
+    file_close_stream();
+    if (s_mkv_open || (s_mp4 && strcmp(path, s_mkv_path) != 0)) stream_local_release();
+    if (!s_mp4) {
+        const int fd = lfs_open(path);
+        if (fd < 0) {
+            set_err(fd == LFS_E_REMOVED ? TRN("The drive was removed") : TRN("Could not open the file"));
+            return -1;
+        }
+        s_file_err = 0;
+        s_mkv_h = fd;
+        char why[64] = "";
+        s_mp4 = mp4_open(mkv_lfs_read, &s_mkv_h, lfs_size(fd), why, sizeof why);
+        if (!s_mp4) {
+            if (s_file_err == LFS_E_REMOVED) set_err(TRN("The drive was removed"));
+            else if (why[0])                 set_err("%s", why);
+            else                             set_err(TRN("Could not open the file"));
+            lfs_close(fd);
+            s_mkv_h = -1;
+            return -1;
+        }
+        snprintf(s_mkv_path, sizeof(s_mkv_path), "%s", path);
+    }
+    file_stream_reset(FILE_MKV);
+    uint32_t cap = 0;
+    uint8_t *buf = mkv_ts_frame_buffer(&cap);
+    const int tracks[2] = { video_track, audio_track };
+    s_mp4_r = buf ? mp4_reader_open(s_mp4, tracks, 2, buf, cap) : NULL;
+    if (!s_mp4_r) { set_err(TRN("Could not open the file")); return -1; }
+    s_mp4_src.r = s_mp4_r;
+    s_mp4_src.video = video_track;
+    const MkvTsSource src = { mp4_src_next, mp4_src_seek, &s_mp4_src };
+    char why[64] = "";
+    s_mkv_ts = mkv_ts_open_source(mp4_view(s_mp4), src, video_track, audio_track, start_ns, actual_start_ns,
+                                  why, sizeof why);
+    if (!s_mkv_ts) {
+        if (s_file_err == LFS_E_REMOVED) set_err(TRN("The drive was removed"));
+        else if (why[0])                 set_err("%s", why);
+        else                             set_err(TRN("Could not open the file"));
+        file_close_stream();
+        return -1;
+    }
+    char b[96];
+    snprintf(b, sizeof(b), "stream_open_mp4: v=%d a=%d start=%llums", video_track, audio_track,
+             (unsigned long long)(actual_start_ns ? *actual_start_ns / 1000000ULL : 0));
+    plog(b);
+    return (int)(STREAM_FILE_TAG | (u32)s_mkv_h);
+}
+
 void stream_local_release(void) {
     file_close_stream();
     if (s_mkv_open) {
         mkv_close(&s_mkv);
         s_mkv_open = false;
     }
+    if (s_mp4) { mp4_close(s_mp4); s_mp4 = NULL; }
     if (s_mkv_h >= 0) { lfs_close(s_mkv_h); s_mkv_h = -1; }
     s_mkv_path[0] = '\0';
     mkv_ts_release();

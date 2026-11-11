@@ -8,6 +8,11 @@
 #include "stream_local.h"
 #include "dl_library.h"
 #include "local_probe.h"
+#include "local_sidecar.h"
+
+// A subtitle track that is a file beside the video, not a track of it (PlayerLocal.sidecar).
+#define LOCAL_SIDECAR_BASE 0x10000
+static inline bool local_is_sidecar(int index) { return index >= LOCAL_SIDECAR_BASE; }
 
 // -------------------------------------------------------
 // Thread context structs (core/player.cpp spawns, threads/player_threads.cpp runs)
@@ -19,7 +24,9 @@ struct DecodeCtx {
     int            sock;
     volatile bool *dec_run;      // seek-only stop flag; cleared to pause just this thread
     volatile bool *ended;        // live: set when the stream ends, and playback
-                                 // goes on; NULL = the end stops playback
+                                 // goes on; NULL = the end stops playback once
+                                 // what is buffered has played
+    volatile bool *paused;       // the drain at the end waits while paused
 };
 
 struct AudioCtx {
@@ -74,7 +81,8 @@ void progress_thread_fn(void *arg);
 
 // Which popup menu the HUD is showing — decides what a
 // HUD_ACTION_MENU_SELECT applies to.
-enum { PLAYER_MENU_NONE, PLAYER_MENU_AUDIO, PLAYER_MENU_SUBS, PLAYER_MENU_CHAPTERS };
+enum { PLAYER_MENU_NONE, PLAYER_MENU_AUDIO, PLAYER_MENU_SUBS, PLAYER_MENU_CHAPTERS,
+       PLAYER_MENU_OPTIONS };
 
 // R2/L2 tap/hold seek input state (core/player_seek.cpp).
 enum { SEEK_IDLE, SEEK_PRESS, SEEK_SCRUB };
@@ -114,6 +122,10 @@ struct PlayerLocal {
     int              start_audio;   // position in tracks.audio the session starts on
     LocalSubKind     sub_kind[JF_MAX_STREAMS];   // LS_SRT / LS_ASS / LS_PGS of each of tracks.subs
     int              start_sub;     // position in tracks.subs the session starts on (a forced one in the audio's language), -1 = off
+    // SubRip files beside the video (local_sidecar.h): tracks.subs entries whose index is
+    // LOCAL_SIDECAR_BASE + k read sidecar[k] whole, with no reopen.
+    char             sidecar[SIDECAR_MAX][256];
+    int              n_sidecar;
     // Direct play: the file is on the server, read over HTTP (net/http_file.h).  The
     // session is still the server's, so it reports progress as any stream does.
     bool             net;
@@ -182,7 +194,18 @@ struct PlayerState {
     sys_ppu_thread_t dec_tid;
 
     PlayerSeekInput seek;
+
+    // What L1 / R1 (and Options' Next / Previous Episode) can go to, and the
+    // names Options shows for them ("" when the chain gave none).
+    bool     has_next, has_prev;
+    char     next_name[96], prev_name[96];
 };
+
+// The server can list this item's chapters: anything it serves, direct play
+// included.  Not a live channel, nor a file on a drive.
+static inline bool player_has_chapters(const PlayerState *ps) {
+    return ps->item && !ps->live && (!ps->local || ps->local->net);
+}
 
 // The player body; show_player() is the online entry (local == NULL).
 void show_player_run(const JFItem *item, u32 resume_secs,
@@ -191,6 +214,9 @@ void show_player_run(const JFItem *item, u32 resume_secs,
 // core/player_local.cpp -- (re)open ps->local's file at the entry nearest
 // target_us, setting ps->sock and ps->play_base_us (where it really landed).
 bool player_local_open(PlayerState *ps, u64 target_us);
+// Loads the sidecar subtitle file of tracks.subs[sub] (local_is_sidecar(index)) as the cues.  False, with the
+// subtitles off, when it cannot be read.
+bool player_local_load_sidecar(PlayerState *ps, int sub);
 
 // -------------------------------------------------------
 // core/player_session.cpp — session helpers
@@ -225,6 +251,12 @@ void player_prefill(PlayerState *ps, bool fatal_on_eof, int guard_max);
 // still to perform: HUD_ACTION_SEEK when a track change needs a 0-delta
 // reopen, otherwise HUD_ACTION_NONE (or act unchanged if not menu-related).
 HudAction player_handle_menu_action(PlayerState *ps, HudAction act);
+
+// START: the Options menu over the player (Chapters, Audio / Subtitles,
+// Picture, Playback Statistics, Next / Previous Episode, Skip Intros / Credits;
+// Picture and Statistics on a live channel).  START again closes it.  row: the
+// row the cursor starts on.
+void player_open_options(PlayerState *ps, int row);
 
 // Remembered audio/subtitle track choice, for the rest of this app run (not
 // persisted to disk -- a binge session is the whole point; surviving a

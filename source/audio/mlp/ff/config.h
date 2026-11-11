@@ -41,6 +41,7 @@
  * vendors only the portable C decoder (ff_mlpdsp_init's ARCH_* branches are
  * compiled out, so no ppc/x86 DSP files are needed). */
 #define HAVE_INLINE_ASM    0
+#define HAVE_X86ASM        0
 #define HAVE_MMX           0
 #define HAVE_SIMD_ALIGN_16 0
 #define HAVE_SIMD_ALIGN_32 0

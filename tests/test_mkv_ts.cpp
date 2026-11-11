@@ -252,7 +252,7 @@ static void real_file() {
           mkv_ts_audio_supported(MKV_AC_TRUEHD) && mkv_ts_audio_supported(MKV_AC_MP3) &&
           mkv_ts_audio_supported(MKV_AC_AAC) && mkv_ts_audio_supported(MKV_AC_MP2) &&
           mkv_ts_audio_supported(MKV_AC_FLAC) && mkv_ts_audio_supported(MKV_AC_PCM) &&
-          !mkv_ts_audio_supported(MKV_AC_EAC3) && !mkv_ts_audio_supported(MKV_AC_VORBIS) && !mkv_ts_audio_supported(MKV_AC_OPUS) &&
+          mkv_ts_audio_supported(MKV_AC_EAC3) && !mkv_ts_audio_supported(MKV_AC_VORBIS) && !mkv_ts_audio_supported(MKV_AC_OPUS) &&
           !mkv_ts_audio_supported(MKV_AC_OTHER));
 
     for (int audio : { 2, 3, 0 }) {

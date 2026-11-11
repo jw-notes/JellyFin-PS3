@@ -21,6 +21,10 @@
 #define AV_CODEC_CAP_CHANNEL_CONF  (1 << 10)
 
 #define AV_FRAME_FLAG_KEY (1 << 1)
+#define AV_NUM_DATA_POINTERS 8
+#ifndef FF_DECODE_ERROR_INVALID_BITSTREAM
+#define FF_DECODE_ERROR_INVALID_BITSTREAM 1
+#endif
 
 typedef struct AVFrame {
     uint8_t *data[8];
@@ -28,6 +32,7 @@ typedef struct AVFrame {
     int      nb_samples;
     int      format;
     int      flags;
+    int      decode_error_flags;   /* the AC-3 decoder marks a frame it concealed */
 } AVFrame;
 
 typedef struct AVPacket {
@@ -48,6 +53,7 @@ typedef struct AVCodecContext {
     int                 err_recognition;
     int64_t             bit_rate;
     int                 flags;
+    enum AVAudioServiceType audio_service_type;
 
 /* Only the one flag the DCA core tests (upstream value). */
 #define AV_CODEC_FLAG_BITEXACT (1 << 23)

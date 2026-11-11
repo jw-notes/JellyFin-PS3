@@ -119,7 +119,8 @@ bool jellyfin_fetch_item_detail(const char *item_id, XMBItemDetail *out);
 // -------------------------------------------------------
 // Selectable media streams (audio tracks + subtitles)
 // -------------------------------------------------------
-#define JF_MAX_STREAMS 8        // subtitles
+#define JF_MAX_STREAMS 24       // subtitles: a film can carry a dozen, and a drive's folder two dozen .srt files
+                                //   (each slot is 104 bytes in every JFTracks: ~250 KB across the version lists)
 #define JF_MAX_AUDIO   16       // audio: a dubbed remux lists 9 Russian tracks before the English
 #define JF_MAX_SOURCES 48
 

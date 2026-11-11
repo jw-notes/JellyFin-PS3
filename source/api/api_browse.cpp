@@ -9,10 +9,17 @@
 
 #include "jellyfin_api.h"
 #include "ui.h"
+#include "ui_visuals.h"   // draw_hints_bar
 #include "player.h"
 
 // Defined in jellyfin_api.cpp
 int json_get_int(const char *json, const char *key, int def);
+
+// What Circle does on these screens, with the Circle button itself.
+static void draw_back_hint(void) {
+    static const Hint h[] = { { 'C', TRN("Back") } };
+    draw_hints_bar(h, 1);
+}
 
 // Returns: >=0 selected, -1 back, -2 prev page, -3 next page
 static int show_list(JFItem *arr, int count, const char *title,
@@ -44,12 +51,18 @@ static int show_list(JFItem *arr, int count, const char *title,
             y += LINE_HEIGHT;
         }
 
-        char footer[128];
-        snprintf(footer, sizeof(footer), "X:open  O:back  %d/%d%s%s",
-                 count ? sel+1 : 0, count,
-                 has_prev ? "  L1:prev" : "",
-                 has_next ? "  R1:next" : "");
+        char footer[32];
+        snprintf(footer, sizeof(footer), "%d/%d", count ? sel+1 : 0, count);
         drawText(40, 660, footer);
+        {
+            // The buttons, drawn as the buttons.
+            Hint h[4]; int n = 0;
+            h[n].glyph = 'X'; h[n].label = TRN("Open"); n++;
+            if (has_prev) { h[n].glyph = 'l'; h[n].label = TRN("Previous"); n++; }
+            if (has_next) { h[n].glyph = 'r'; h[n].label = TRN("Next");     n++; }
+            h[n].glyph = 'C'; h[n].label = TRN("Back"); n++;
+            draw_hints_bar(h, n);
+        }
         flip();
     }
     return -1;
@@ -87,7 +100,7 @@ static void browse_level(const char *parent_id, const char *title, int depth) {
             } else {
                 drawHeader();
                 drawTextf(40, 100, TR("Error loading items: %d"), status);
-                drawText(40, 130, TR("O: back"));
+                draw_back_hint();
                 flip();
                 init_btns();
                 while (running) {
@@ -127,7 +140,7 @@ void show_library_browser(void) {
     if (!g_userid[0]) {
         drawHeader();
         drawText(40, 100, TR("No user ID - please log out and log in again."));
-        drawText(40, 130, TR("O: back"));
+        draw_back_hint();
         flip();
         init_btns();
         while (running) {
@@ -166,7 +179,7 @@ void show_search(void) {
     } else {
         drawHeader();
         drawTextf(40, 100, TR("Search failed: %d"), status);
-        drawText(40, 130, TR("O: back"));
+        draw_back_hint();
         flip();
         init_btns();
         while (running) {

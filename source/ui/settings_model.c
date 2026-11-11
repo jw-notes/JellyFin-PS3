@@ -20,10 +20,10 @@ static const setting_row k_rows[] = {
       TRN("Auto: the TV switches to the best rate for each video.\n"
       "Films only leaves shows at 60Hz, so it switches less. Off: always 60Hz.")},
     { SET_SKIP_INTRO, SEC_PLAYBACK, TRN("Skip Intros"),
-      TRN("Intros and recaps. Button: X skips when the badge shows.\n"
+      TRN("Intros and recaps. Button: {X} skips when the badge shows.\n"
       "Auto: they go by themselves. Needs markers on the server.")},
     { SET_SKIP_CREDITS, SEC_PLAYBACK, TRN("Skip Credits"),
-      TRN("Button: X skips when the badge shows. Auto: skips by itself.\n"
+      TRN("Button: {X} skips when the badge shows. Auto: skips by itself.\n"
       "With a next episode, skipping goes straight to it.")},
     { SET_DIRECT_PLAY, SEC_PLAYBACK, TRN("Direct Play"),
       TRN("At top quality, plays MKV and TS files as they are, with no remux.\n"
@@ -31,6 +31,11 @@ static const setting_row k_rows[] = {
     { SET_DIRECT_STREAM, SEC_PLAYBACK, TRN("Direct Stream"),
       TRN("Auto: the server may pass a compatible video through untouched.\n"
       "Off: always re-encode. Try Off if playback stutters at every quality.")},
+#if ENABLE_PLAYER_STATS
+    { SET_STATS,     SEC_PLAYBACK, TRN("Playback Statistics"),
+      TRN("Keeps playback statistics over the video: frame rate,\n"
+      "bitrate, buffer and decoder. {R3} shows or hides them for now.")},
+#endif
     // ---- Live TV
     { SET_LIVETV_QUALITY, SEC_LIVETV, TRN("Live TV Quality"),
       TRN("Auto is 720p at 4 Mbps, the best fit for most Wi-Fi.\n"
@@ -40,7 +45,7 @@ static const setting_row k_rows[] = {
       "Shorter starts channels sooner; longer rides out Wi-Fi gaps.")},
     { SET_ONNOW, SEC_LIVETV, TRN("On Now on Home"),
       TRN("A Home row of what's on Live TV now, from the server's guide.\n"
-      "X plays the channel.")},
+      "{X} plays the channel.")},
     // ---- Audio
     { SET_AUDIO_OUT, SEC_AUDIO, TRN("Audio Output"),
       TRN("Stereo, 5.1 or 7.1 over HDMI. Dolby Digital sends the film's Dolby\n"
@@ -80,7 +85,7 @@ static const setting_row k_rows[] = {
       "Jellywave is the default; extra .ini themes appear here too.")},
     { SET_HOME_ORDER, SEC_DISPLAY, TRN("Home Order"),
       TRN("The order of your libraries under My Media in the Classic layout.\n"
-      "X to put them in your own order.")},
+      "{X} to put them in your own order.")},
     { SET_SCREEN_SIZE, SEC_DISPLAY, TRN("Screen Size"),
       TRN("Shrink the picture to fit TVs that crop the edges (overscan).\n"
       "Line the corners up with your screen's edges.")},
@@ -101,7 +106,7 @@ static const setting_row k_rows[] = {
       "starts: 30 seconds to 5 minutes.")},
     // ---- System
     { SET_UPDATE,    SEC_SYSTEM, TRN("Software Update"),
-      TRN("Checked at every launch. X checks again, and offers to\n"
+      TRN("Checked at every launch. {X} checks again, and offers to\n"
       "download and install a new version when there is one.") },
     { SET_ABOUT,     SEC_SYSTEM, TRN("About"),
       TRN("The version, who made the app, and the licences of\n"
@@ -112,17 +117,12 @@ static const setting_row k_rows[] = {
     { SET_SEND_LOG,  SEC_SYSTEM, TRN("Send Log to Server"),
       TRN("Send the diagnostic log to your Jellyfin server (X). It is saved\n"
       "under Dashboard > Logs as upload_PS3_...log: share that file.")},
-#if ENABLE_PLAYER_STATS
-    { SET_STATS,     SEC_SYSTEM, TRN("Player Stats Overlay"),
-      TRN("Show playback statistics over the video:\n"
-      "frame rate, bitrate, buffer and decoder figures.")},
-#endif
     // ---- Account & Server
     { SET_SHARE_LOGIN, SEC_ACCOUNT, TRN("Share Sign-in"),
       TRN("On: PS3 users with no sign-in of their own use this account.\n"
       "One account can be shared; users signed in to their own keep it.")},
     { SET_WOL_MAC,   SEC_ACCOUNT, TRN("Server MAC Address"),
-      TRN("The server PC's MAC address, so this PS3 can wake it (X to enter).\n"
+      TRN("The server PC's MAC address, so this PS3 can wake it ({X} to enter).\n"
       "On the PC: ipconfig /all, then Physical Address. Jellyfin can't say.")},
     { SET_WAKE,      SEC_ACCOUNT, TRN("Wake Server"),
       TRN("Send a Wake-on-LAN signal to the server PC (X). It is also sent when\n"

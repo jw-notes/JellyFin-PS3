@@ -87,7 +87,10 @@ static void kinds() {
     CHECK(lfs_media_kind_of("mkv") == LFS_KIND_OTHER);                    // no dot
     CHECK(lfs_media_kind_of(".ts") == LFS_KIND_OTHER);                    // no name
     CHECK(lfs_media_kind_of("films.mkv.part") == LFS_KIND_OTHER);
-    CHECK(lfs_media_kind_of("Film.mp4") == LFS_KIND_OTHER);               // not in 3.2
+    CHECK(lfs_media_kind_of("Film.mp4") == LFS_KIND_VIDEO);
+    CHECK(lfs_media_kind_of("Clip.M4V") == LFS_KIND_VIDEO);
+    CHECK(lfs_media_kind_of("tears_of_steel_720p.mov") == LFS_KIND_VIDEO);
+    CHECK(lfs_media_kind_of("Film.avi") == LFS_KIND_OTHER);               // no reader for it
     CHECK(lfs_media_kind_of("") == LFS_KIND_OTHER);
     CHECK(lfs_media_kind_of("a.ts ") == LFS_KIND_OTHER);
 

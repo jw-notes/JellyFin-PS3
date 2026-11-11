@@ -1301,7 +1301,7 @@ static void xmb_show_item_info_v3(const XMBItem *root) {
 
         // Hints: what X does on the focused control, and Back.
         if (frow == 3) {
-            static const Hint hc[] = {{'E', TRN("Browse cast")}, {'X', TRN("Filmography")}, {'C', TRN("Back")}};
+            static const Hint hc[] = {{'H', TRN("Browse cast")}, {'X', TRN("Filmography")}, {'C', TRN("Back")}};
             draw_hints_bar(hc, 3);
         } else {
             Hint h[2];
@@ -1434,7 +1434,7 @@ static bool film_screen(const char *id, const char *name, XMBItem *out) {
             info_clip_text(cx, ty, f->name, UIS_TF(18), i == s_sel ? XMB_WHITE : XMB_TEXT,
                            pw - UIS_W(60) - rw - UIS_W(20), false);
         }
-        { static const Hint hh[] = {{'D', TRN("Move")}, {'X', TRN("Open")}, {'C', TRN("Back")}};
+        { static const Hint hh[] = {{'V', TRN("Move")}, {'X', TRN("Open")}, {'C', TRN("Back")}};
           draw_hints_bar(hh, 3); }
         flip();
     }

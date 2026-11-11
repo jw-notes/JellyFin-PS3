@@ -43,12 +43,12 @@ since. See the [changelog](CHANGELOG.md) for everything that changed.
 
 | | |
 |---|---|
-| 🎬 **Films and shows** | Hardware H.264 up to 1080p at 25 Mbps, true 24 Hz output, resume and Continue Watching, skip intro / recap / credits |
+| 🎬 **Films and shows** | Hardware H.264 up to 1080p at 25 Mbps, true 24 Hz output, resume and Continue Watching, skip intro / recap / credits, chapters, and an Options menu on `Start` |
 | 🔊 **Lossless sound** | TrueHD, Atmos and DTS-HD MA decoded on the console in 5.1 or 7.1, or Dolby Digital passthrough for a soundbar |
 | 📺 **Live TV** | A channel grid with genre tabs, a guide, and remote-style controls; dead channels are skipped and dropped streams reconnect |
 | 🔍 **Search** | Results as you type, recent searches, and Movies / Shows / Episodes filters |
 | 🎵 **Music** | Albums, artists, playlists and lossless FLAC, with audio-reactive visualisers |
-| 💾 **Offline and USB** | Download films and episodes to the PS3, or play MKV, .m2ts and .ts files from USB drives with no server |
+| 💾 **Offline and USB** | Download films and episodes to the PS3, or play MKV, MP4, MOV, .m2ts and .ts files from USB drives with no server, with the .srt subtitles beside them |
 | 🎨 **Make it yours** | Two layouts (Classic and XMB), nine themes that each recolour the whole app in either layout, an artwork screensaver |
 | 🌍 **Your language** | English, 日本語, Português (Brasil), Deutsch, Français and Español; follows the PS3's language, or pick one in Settings → Display |
 | 🔐 **Easy sign-in** | Quick Connect: approve a code from your phone or computer instead of typing |
@@ -134,7 +134,7 @@ explains every setting and button.
 |---|---|
 | **Menus (Classic)** | D-pad / left stick move · `X` open · `△` quick-peek · `O` back · `L1` / `R1` Home, Search, Settings |
 | **Film page** | `X` play / resume · onto the cast with `Down` from the quality row (Classic) or `Up` from Play (XMB) · `Left` / `Right` scroll the cast |
-| **Playing a film** | Any button shows the bar · `L2` / `R2` skip (hold to scrub) · `△` audio and subtitles · `L1` / `R1` previous / next episode · `X` on PICTURE for picture size · `O` stop |
+| **Playing a film** | Any button shows the bar · `L2` / `R2` skip (hold to scrub) · `△` audio and subtitles · `L1` / `R1` previous / next episode · `X` on PICTURE for picture size · `Start` options (chapters, statistics, skip settings) · `O` stop |
 | **Live TV** | `L1` / `R1` change channel · `Up` / `Down` volume · `L2` / `R2` change tab · `□` guide |
 | **Music** | `L1` / `R1` previous / next track · `△` shuffle · `□` change visualiser |
 
@@ -168,8 +168,8 @@ server settings make a big difference:
 | **Video** | H.264 up to 1080p (High profile, level 4.2), hardware-decoded. Other codecs are transcoded by the server. |
 | **Surround audio** | TrueHD / Atmos (as its 7.1 bed), DTS-HD MA, DTS, Dolby Digital; AC-3 5.1 transcode as a fallback |
 | **Music** | FLAC up to 24-bit / 192 kHz (lossless), MP3 and WAV; other formats are converted by the server |
-| **USB and HDD files** | MKV, .m2ts and .ts from NTFS, exFAT or FAT32 drives (H.264 video) |
-| **Subtitles** | Text and PGS drawn by the console, in 3 fonts and 3 colours |
+| **USB and HDD files** | MKV, MP4 / MOV, .m2ts and .ts from NTFS, exFAT or FAT32 drives: H.264 video; TrueHD, DTS-HD MA, DTS, Dolby Digital, Dolby Digital Plus, AAC, FLAC, MP3 or PCM sound; subtitles inside an MKV and .srt files beside any video |
+| **Subtitles** | Text and PGS drawn by the console, in 3 fonts and 3 colours; Chinese, Japanese, Korean, Hebrew, Arabic and Persian too, right to left where they read that way |
 | **Output** | 480p to 1080p, 24 Hz for films, overscan adjustment |
 
 </details>
@@ -230,7 +230,9 @@ Every library, font and icon set, with its licence, is listed in [CREDITS.md](CR
 ## Licence
 
 GPLv3, see [LICENSE](LICENSE). Copyright (C) 2026 vortigauntlet and MontyMcK;
-changes since 3.2.3 copyright (C) 2026 jw-notes.
+changes since 3.2.3 copyright (C) 2026 jw-notes, GPL-3.0-or-later with the
+attribution terms in [NOTICE](NOTICE): keep the notices, credit
+"JellyFin [PS] for PS3 by jw-notes", and mark modified versions as changed.
 
 <sub>JellyFin [PS] is an independent project and is not affiliated with Jellyfin or Sony.
 PlayStation is a trademark of Sony Interactive Entertainment.</sub>

@@ -471,6 +471,15 @@ typedef struct { char glyph; const char *label; } Hint;
 // D/E=d-pad, L=L2, R=R2.  bright scales RGB (255 = as-authored).
 int  ps_btn_width(char glyph, int h);
 void draw_ps_button_vcentered(u32 x, int cy, char glyph, int h, u32 bright);
+// Text that names buttons as tokens ("{X} to send", "{L2} / {R2} skip") with
+// the sheet's button drawn in place of each: {X} {O} {TRIANGLE} {SQUARE}
+// {START} {SELECT} {L1} {R1} {L2} {R2} {L3} {R3} {DPAD} {DPAD_LR} {DPAD_UD}.
+// CPU draw target only (the sprites are CPU blits).
+int  ttf_rich_width(const char *text, float px, bool bold);
+void drawTTF_rich(u32 x, u32 y, const char *text, float px, u32 color, bool bold);
+// For a path that cannot draw sprites (the GPU-only prompts): the tokens
+// spelled out as words.
+void btn_tokens_to_words(const char *in, char *out, int cap);
 // Decode the sheet now rather than on the first hints bar.  It is a 1536x1536
 // PNG: ~9MB of output plus a comparable working set, transient but far bigger
 // than anything else the UI asks for.  Left lazy it ran after the thumbnail
@@ -480,6 +489,11 @@ void ps_sprites_preload(void);
 
 void visuals_cleanup(void);
 void ttf_init(void);
+// Subtitle lines in Korean, Chinese, Hebrew or Arabic: reads the face for any
+// script in `text` that no loaded face covers, once, so the next draw finds
+// it.  ttf_extra_fonts_release() gives them back (end of playback).
+void ttf_need_text(const char *text);
+void ttf_extra_fonts_release(void);
 void ttf_prewarm_hud(void);
 // Typefaces available to drawTTF_face()/ttf_text_width_face().  The two
 // subtitle faces are bold-only and subset to Latin plus SubRip's punctuation;

@@ -397,7 +397,7 @@ void jellyfin_session_expired(void) {
         drawTTF(40, 152,
                 TR("This usually means another client signed in and took over the "
                    "session."), 14, XMB_TEXT_DIM);
-        drawTTF(40, 188, TR("X: sign in again"), 16, XMB_ACCENT);
+        drawTTF_rich(40, 188, TR("{X} Sign in again"), 16, XMB_ACCENT, false);
         flip();
     }
 }

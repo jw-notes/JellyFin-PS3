@@ -30,6 +30,7 @@
 #include "ui_visuals.h"
 #include "rsxutil.h"
 #include "timing.h"
+#include "watchdog.h"
 #include <unistd.h>
 #include <sys/thread.h>
 
@@ -278,6 +279,7 @@ bool loading_run(void (*work)(void *), void *arg, const char *label,
     }
     const u64 t0 = timing_get_us();
     while (!s_lw_done) {
+        wd_beat();                      // the work may take a while: that is not a hang
         const u64 now = timing_get_us();
         if (now - t0 < 120000ULL || !running) { usleep(4000); continue; }
         sysUtilCheckCallback();

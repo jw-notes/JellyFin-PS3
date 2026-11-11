@@ -59,6 +59,20 @@ MkvTs *mkv_ts_open(MkvFile *f, int video_track, int audio_track, uint64_t start_
 typedef void (*MkvSubSink)(void *ctx, const MkvFrame *frame);
 MkvTs *mkv_ts_open_subs(MkvFile *f, int video_track, int audio_track, int sub_track, MkvSubSink sink, void *sink_ctx,
                         uint64_t start_ns, uint64_t *actual_start_ns, char *err, int err_cap);
+// Another container's frames, as Matroska frames: tracks described by `tracks` (MkvTrack, as mp4_demux.h
+// gives them), frames from `next` in decode order (1 with a frame, 0 at the end, -1 on an error), and `seek`
+// to put the source at the key frame at or before a time before the first `next` (NULL: from the start).
+// The frames may be read into mkv_ts_frame_buffer().
+typedef struct {
+    int  (*next)(void *ctx, MkvFrame *out);
+    bool (*seek)(void *ctx, uint64_t target_ns);
+    void *ctx;
+} MkvTsSource;
+MkvTs *mkv_ts_open_source(const MkvFile *tracks, MkvTsSource src, int video_track, int audio_track,
+                          uint64_t start_ns, uint64_t *actual_start_ns, char *err, int err_cap);
+// The session's one frame buffer (allocated on first use), for a source to read into.  NULL when out of memory.
+uint8_t *mkv_ts_frame_buffer(uint32_t *cap);
+
 // Writes up to n bytes of whole 188-byte packets.  Returns the byte count, 0 at the end of the file,
 // -1 on a read error.
 int  mkv_ts_read(MkvTs *t, uint8_t *out, int n);

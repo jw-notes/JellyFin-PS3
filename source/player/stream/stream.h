@@ -86,7 +86,10 @@ int  stream_open_m2ts(const char *path, u64 ts_offset);
 // sub_track (0 = none) and sink: the blocks of that subtitle track go to the sink as the file is read (mkv_ts.h).
 int  stream_open_mkv(const char *path, int video_track, int audio_track, int sub_track, MkvSubSink sub_sink,
                      void *sub_ctx, u64 start_ns, u64 *actual_start_ns);
-// End of a playback session: closes the Matroska file and frees its frame buffer.  Safe to call
+// An MP4 / QuickTime file (.mp4, .m4v, .mov), the same way: tracks are numbered as mp4_demux.h
+// numbers them.  Its own subtitles are not read (sidecar files are: local_sidecar.h).
+int  stream_open_mp4(const char *path, int video_track, int audio_track, u64 start_ns, u64 *actual_start_ns);
+// End of a playback session: closes the Matroska or MP4 file and frees its frame buffer.  Safe to call
 // whenever, and twice.
 void stream_local_release(void);
 bool stream_is_file(int h);

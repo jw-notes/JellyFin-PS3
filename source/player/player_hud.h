@@ -110,5 +110,14 @@ void      hud_open_menu(const char *title, const char *const *items,
 // Triangle.  hud_open_menu clears it, so a menu without one has none.
 void      hud_set_menu_switch(const char *label);
 
+// After hud_open_menu: a right-hand value per row (what each is set to now),
+// drawn dimmed; `values` has n_items entries (NULL entries draw nothing) and
+// the strings must outlive the menu, like the items.
+void      hud_set_menu_values(const char *const *values);
+// After hud_open_menu: put the cursor on `row` without moving the accent dot.
+void      hud_set_menu_cursor(int row);
+bool      hud_menu_open(void);
+void      hud_close_menu(void);
+
 // Entry chosen by the last HUD_ACTION_MENU_SELECT.
 int       hud_menu_choice(void);

@@ -5,6 +5,7 @@
 #include "lang_names.h"
 #include "mkv_demux.h"
 #include "mkv_ts.h"
+#include "mp4_demux.h"
 #include "h264_sps.h"
 #include "stream_local.h"
 
@@ -148,13 +149,8 @@ static LocalAudioCodec from_mkv_audio(MkvAudioCodec c) {
     }
 }
 
-static bool probe_mkv(LocalReadAt rd, void *ctx, uint64_t size, LocalInfo *o, char *err, int cap) {
-    // the parsed file is ~60 KB: kept off the stack, since a worker thread's is 128 KB
-    MkvFile *fp = (MkvFile *)malloc(sizeof *fp);
-    if (!fp) { set_err(err, cap, TR("out of memory")); return false; }
-    MkvFile &f = *fp;
-    if (mkv_open(&f, rd, ctx, size) != 0) { set_err(err, cap, f.err[0] ? f.err : TR("not a Matroska file")); free(fp); return false; }
-    o->container = LM_MKV;
+// The picture, the sound and the subtitles, from tracks described the Matroska way (an MP4's are too: mp4_demux.h).
+static void probe_tracks(const MkvFile &f, LocalInfo *o) {
     o->duration_secs = (uint32_t)(f.duration_ns / 1e9 + 0.5);
 
     const MkvTrack *v = mkv_first_track(&f, MKV_TRACK_VIDEO);
@@ -231,9 +227,41 @@ static bool probe_mkv(LocalReadAt rd, void *ctx, uint64_t size, LocalInfo *o, ch
                      s->forced ? " - Forced" : "", t->name[0] ? " - " : "", local_clip_utf8(t->name, 24), t->name);
         }
     }
+}
+
+static bool probe_mkv(LocalReadAt rd, void *ctx, uint64_t size, LocalInfo *o, char *err, int cap) {
+    // the parsed file is ~60 KB: kept off the stack, since a worker thread's is 128 KB
+    MkvFile *fp = (MkvFile *)malloc(sizeof *fp);
+    if (!fp) { set_err(err, cap, TR("out of memory")); return false; }
+    MkvFile &f = *fp;
+    if (mkv_open(&f, rd, ctx, size) != 0) { set_err(err, cap, f.err[0] ? f.err : TR("not a Matroska file")); free(fp); return false; }
+    o->container = LM_MKV;
+    probe_tracks(f, o);
     mkv_close(&f);
     free(fp);
     return true;
+}
+
+// ---- MP4 / QuickTime ---------------------------------------------------------------------------
+
+static bool probe_mp4(LocalReadAt rd, void *ctx, uint64_t size, LocalInfo *o, char *err, int cap) {
+    char why[64] = "";
+    Mp4File *f = mp4_open(rd, ctx, size, why, sizeof why);
+    if (!f) { set_err(err, cap, why[0] ? why : TR("not a video file this player reads")); return false; }
+    o->container = LM_MP4;
+    probe_tracks(*mp4_view(f), o);
+    // An MP4's subtitles (timed text) are not read: the file's own are left out of the list.
+    for (int i = 0; i < o->n_subs; i++) o->subs[i].usable = false;
+    mp4_close(f);
+    return true;
+}
+
+// The box types an MP4 or QuickTime file starts with.
+static bool looks_mp4(const uint8_t *h, int n) {
+    if (n < 8) return false;
+    const char *t = (const char *)h + 4;
+    return !memcmp(t, "ftyp", 4) || !memcmp(t, "moov", 4) || !memcmp(t, "mdat", 4) || !memcmp(t, "wide", 4) ||
+           !memcmp(t, "free", 4) || !memcmp(t, "skip", 4) || !memcmp(t, "pnot", 4);
 }
 
 // ---- TS --------------------------------------------------------------------------------------
@@ -426,14 +454,15 @@ static bool probe_ts(LocalReadAt rd, void *ctx, uint64_t size, bool m2ts, LocalI
         case 0x86: codec = LA_DTS_HD; dec = true; ma = true; break;
         case 0x8A: codec = LA_DTS_HD; dec = true; break;
         case 0x83: codec = LA_TRUEHD; dec = true; break;
-        case 0x84: case 0x87: case 0xA1: codec = LA_EAC3; break;
+        case 0x84: case 0x87: codec = LA_EAC3; dec = true; break;
+        case 0xA1: codec = LA_EAC3; break;               // the secondary stream of a Blu-ray: not played
         case 0xA2: codec = LA_DTS_HD; break;             // the secondary stream of a Blu-ray: not played
         case 0x0F: codec = LA_AAC; dec = true; break;     // AAC in ADTS
         case 0x11: codec = LA_AAC; break;                  // in LATM: not read
         case 0x80: codec = LA_PCM; break;
         case 0x06:
             if (s->ac3_desc) { codec = LA_AC3; dec = true; }
-            else if (s->eac3_desc) codec = LA_EAC3;
+            else if (s->eac3_desc) { codec = LA_EAC3; dec = true; }
             else if (s->dts_desc) { codec = LA_DTS; dec = true; }
             else continue;
             break;
@@ -489,6 +518,8 @@ bool local_probe(LocalReadAt rd, void *ctx, uint64_t size, const char *name, Loc
         return probe_ts(rd, ctx, size, true, out, err, cap);
     if (ends_with(name, ".ts") || ends_with(name, ".m2ts") || ends_with(name, ".mts") || head[0] == 0x47)
         return probe_ts(rd, ctx, size, false, out, err, cap);
+    if (looks_mp4(head, n) || ends_with(name, ".mp4") || ends_with(name, ".m4v") || ends_with(name, ".mov"))
+        return probe_mp4(rd, ctx, size, out, err, cap);
     set_err(err, cap, TR("not a video file this player reads"));
     return false;
 }
@@ -501,6 +532,7 @@ static int codec_rank(const LocalAudio *a, bool passthrough) {
     case LA_DTS_HD: return passthrough ? 5 : 6;
     case LA_DTS:    return passthrough ? 4 : 5;
     case LA_AC3:    return passthrough ? 9 : 4;
+    case LA_EAC3:   return 4;            // decoded here either way: the bitstream link carries only AC-3
     case LA_AAC:    return 3;
     case LA_MP3:    return 2;
     case LA_MP2:    return 1;

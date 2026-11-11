@@ -1,0 +1,84 @@
+JellyFin [PS] for PS3
+Copyright (C) 2026 jw-notes <https://github.com/jw-notes>
+https://github.com/jw-notes/JellyFin-PS3
+
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
+any later version. See LICENSE for the full text.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+more details.
+
+It continues the work of vortigauntlet (JellyFin-PS3-LosslessAudio) and
+MontyMcK (JellyFin-PS3), copyright (C) 2026 vortigauntlet and MontyMcK,
+whose code remains under the GNU GPL version 3 as they released it. The
+additional terms below cover only the material jw-notes wrote.
+
+
+ADDITIONAL TERMS (GNU GPL version 3, section 7)
+-----------------------------------------------
+
+The following terms apply to all material in this repository written by
+jw-notes, as permitted by section 7(b) and 7(c) of the GNU GPL version 3.
+They apply to any copy, port, translation or modified version of that
+material, in whole or in part, however it was made.
+
+1. Attribution (section 7(b)). You must keep this NOTICE file, and the
+   copyright and licence notices in the source files, intact. Any work that
+   contains this material must credit it, in its README or credits, and in
+   the Appropriate Legal Notices (for example an About or Credits screen)
+   if it has an interactive user interface, with at least:
+
+       Based on JellyFin [PS] for PS3 by jw-notes
+       https://github.com/jw-notes/JellyFin-PS3
+
+2. Third-party credits (section 7(b)). You must keep the credits to every
+   other author listed below and in CREDITS.md, in the README and on the
+   About screen, for any of their work you keep.
+
+3. No misrepresentation of origin (section 7(c)). You must not present this
+   material, or a modified version of it, as your own original work or as
+   written from scratch. Modified versions must be marked as changed from
+   the original, with the date of the change.
+
+
+CREDITS
+-------
+
+JellyFin [PS] for PS3 is made by jw-notes (https://github.com/jw-notes), from
+the LosslessAudio fork by vortigauntlet
+(https://github.com/vortigauntlet/JellyFin-PS3-LosslessAudio) and the original
+JellyFin-PS3 by MontyMcK (https://github.com/MontyMcK/JellyFin-PS3), with
+contributions from Ethan Hammer, Lucian and orbisai0security.
+
+It is built on the work of these projects and authors, each under its own
+licence (see CREDITS.md and the licence files beside each component):
+
+  FFmpeg (MLP, DCA, AC-3/E-AC-3 decoders)  LGPL 2.1+
+  liba52                                   GPL 2+
+  libdca                                   GPL 2+
+  minimp3                                  Public domain (CC0)
+  stb_image, stb_truetype (Sean Barrett)   Public domain / MIT
+  mohasi/ps3-dev NTFS and exFAT drivers    Apache 2.0
+  PSL1GHT and the ps3dev toolchain         MIT
+  libFLAC, FAAD2 (ps3dev portlibs)         BSD / GPL 2+
+  Movian (the display loop, blending and seek path follow it)   GPL 3
+  Archivo, Noto Sans, Noto Sans JP, Michroma                    SIL OFL 1.1
+  Noto Sans SC, Hebrew, Arabic             SIL OFL 1.1
+    (subtitle fonts, subset; licences in subtitle-fonts/)
+  Open Sans, Roboto Condensed, Material Icons                   Apache 2.0
+  Tabler Icons                             MIT
+  Satoshi (Indian Type Foundry)            ITF Free Font License
+  PlayStation button sprites (Kenney)      CC0
+  Jellyfin logo                            CC BY-SA 4.0
+
+No code, SDK, firmware or other files by Sony are included. The interface
+font (Rodin) and the Korean subtitle font are read from the console's own
+firmware at run time and are not distributed. PlayStation and PS3 are
+trademarks of Sony Interactive Entertainment; this project is not made,
+endorsed or supported by Sony. JellyFin [PS] is an unofficial client for
+Jellyfin (https://jellyfin.org), not made or endorsed by the Jellyfin
+project.

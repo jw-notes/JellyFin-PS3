@@ -42,6 +42,7 @@
 #define TS_AUDIO_AAC  5
 #define TS_AUDIO_FLAC 6
 #define TS_AUDIO_PCM  7
+#define TS_AUDIO_EAC3 8   // E-AC-3 (Dolby Digital Plus): the vendored FFmpeg decoder (adec_eac3.h)
 
 typedef struct {
     u16  pmt_pid;

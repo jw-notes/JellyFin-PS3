@@ -130,6 +130,8 @@ static void xmb_play_list_with_next(const XMBItem *items, int count, int idx,
     for (;;) {
         if (idx + 1 < count) player_arm_next(label, hint);
         if (idx > 0) player_arm_prev();
+        player_set_nav_names(idx + 1 < count ? items[idx + 1].name : NULL,
+                             idx > 0 ? items[idx - 1].name : NULL);
         xmb_play_item(&items[idx], 0);
         if (!player_take_next_request()) break;
         if (player_took_prev()) idx--;
@@ -207,8 +209,9 @@ void xmb_play_episode_with_next(const XMBItem *first, u32 resume_secs,
         const bool have = xmb_fetch_next_episode(cur.id, &next);
         const bool have_prev = xmb_fetch_prev_episode(cur.id, &prev);
         if (have)
-            player_arm_next(TR("NEXT EPISODE"), TR("Press SELECT for next episode"));
+            player_arm_next(TR("NEXT EPISODE"), TR("Press {SELECT} for next episode"));
         if (have_prev) player_arm_prev();
+        player_set_nav_names(have ? next.name : NULL, have_prev ? prev.name : NULL);
         xmb_play_item(&cur, resume, media_source_id);
         if (!player_take_next_request()) break;
         const bool back = player_took_prev();
@@ -478,7 +481,7 @@ static void xmb_input_col_sub(void) {
     if (BTN_PRESSED(cross) && g_col_sub_count > 0 && g_col_sub_sel < g_col_sub_count) {
         xmb_play_list_with_next(g_col_sub_items, g_col_sub_count,
                                 g_col_sub_sel, TR("NEXT MOVIE"),
-                                TR("Press SELECT for next movie"));
+                                TR("Press {SELECT} for next movie"));
         g_col_depth = 0;
         g_col_sub_sel = 0;
         g_col_sub_scroll = 0;

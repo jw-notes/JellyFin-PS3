@@ -77,6 +77,16 @@ static bool            s_lockup_ok  = false;
 static stbtt_fontinfo  s_font_jp;
 static bool            s_jp_ok = false;
 static float           s_jp_k  = 0.0f;   // scale per requested pixel; see chain_of()
+// Subtitle scripts no UI face has (ttf_need_text): Korean from the firmware's own
+// face, Chinese, Hebrew and Arabic from the fonts the package ships in
+// USRDIR/fonts.  Read only when a line on screen needs one, and given back when
+// playback ends (ttf_extra_fonts_release): the CJK face is 2 MB.
+enum { XS_KOREAN, XS_CJK, XS_HEBREW, XS_ARABIC, XS_COUNT };
+static stbtt_fontinfo  s_xs[XS_COUNT];
+static unsigned char  *s_xs_buf[XS_COUNT];
+static bool            s_xs_ok[XS_COUNT];
+static bool            s_xs_tried[XS_COUNT];     // a failed read is not retried every line
+static float           s_xs_k[XS_COUNT];         // scale per requested pixel, as s_jp_k
 static bool            s_icons_ok    = false;
 
 // Gamma LUTs for correct anti-aliasing.  Blending coverage in linear light
@@ -143,7 +153,8 @@ static inline u8 aa_blend(u8 a, u8 fg, u8 bg) {
 #define GC_FONT_TABREG  9
 #define GC_FONT_LOCKUP 10
 #define GC_FONT_JP     11
-#define GC_FONT_COUNT  12
+#define GC_FONT_XS     12      // + XS_*: the subtitle scripts
+#define GC_FONT_COUNT  (GC_FONT_XS + XS_COUNT)
 
 typedef struct {
     float px;
@@ -179,6 +190,7 @@ static inline int font_id_of(const stbtt_fontinfo *fi) {
     if (fi == &s_font_tab_reg) return GC_FONT_TABREG;
     if (fi == &s_font_lockup)  return GC_FONT_LOCKUP;
     if (fi == &s_font_jp)      return GC_FONT_JP;
+    if (fi >= &s_xs[0] && fi < &s_xs[XS_COUNT]) return GC_FONT_XS + (int)(fi - &s_xs[0]);
     return GC_FONT_REG;
 }
 
@@ -591,7 +603,7 @@ static stbtt_fontinfo *face_of(int face) {
 //
 // Every walker in this file uses this, and identically -- see the note on
 // utf8_next() above for why that matters.
-#define FACE_CHAIN_MAX 3
+#define FACE_CHAIN_MAX (3 + XS_COUNT)
 
 typedef struct {
     stbtt_fontinfo *fi[FACE_CHAIN_MAX];
@@ -630,13 +642,19 @@ static void chain_of(int face, float px, FaceChain *c)
         break;
     }
     if (s_jp_ok) c->fi[c->n++] = &s_font_jp;
+    for (int k = 0; k < XS_COUNT; k++)
+        if (s_xs_ok[k]) c->fi[c->n++] = &s_xs[k];
 
     for (int i = 0; i < c->n; i++) {
         c->id[i]    = (u8)font_id_of(c->fi[i]);
         // The Japanese face is sized by the same em the Latin faces get (not by its own, taller,
         // ascent + descent, which would draw kana noticeably smaller), and independently of which
-        // role's face it backs, because the glyph cache keys it by pixel size alone.
-        c->scale[i] = (c->fi[i] == &s_font_jp) ? px * s_jp_k : stbtt_ScaleForPixelHeight(c->fi[i], px);
+        // role's face it backs, because the glyph cache keys it by pixel size alone.  The
+        // subtitle-script faces likewise.
+        const int x = (int)c->id[i] - GC_FONT_XS;
+        c->scale[i] = (c->fi[i] == &s_font_jp) ? px * s_jp_k
+                    : (x >= 0 && x < XS_COUNT) ? px * s_xs_k[x]
+                    : stbtt_ScaleForPixelHeight(c->fi[i], px);
     }
     c->baseline = (int)((float)s_ascent[c->id[0]] * c->scale[0]);
 }
@@ -1456,6 +1474,75 @@ void ttf_init(void) {
     s_gc_on    = (s_gc_arena != NULL);
     plog(s_gc_on ? "ttf: glyph cache ready (256K)"
                  : "ttf: glyph cache alloc FAILED - using direct rasterize");
+}
+
+// ---- subtitle scripts ---------------------------------------------------------
+
+#define XS_USRDIR "/dev_hdd0/game/JFPS30000/USRDIR/fonts/"
+static const char *const XS_PATH[XS_COUNT] = {
+    "/dev_flash/data/font/SCE-PS3-YG-B-KOR.TTF",   // the console's own Korean face, bold
+    XS_USRDIR "JFSub-CJK.otf",                     // Noto Sans SC Bold: GB2312, Big5 level 1, JIS level 1
+    XS_USRDIR "JFSub-Hebrew.ttf",                  // Noto Sans Hebrew Bold
+    XS_USRDIR "JFSub-Arabic.ttf",                  // Noto Sans Arabic Bold, with the presentation forms
+};
+static const char *const XS_NAME[XS_COUNT] = { "Korean", "CJK", "Hebrew", "Arabic" };
+
+// The script a code point needs a subtitle face for, or -1.
+static int xs_script_of(int cp) {
+    if ((cp >= 0x1100 && cp <= 0x11FF) || (cp >= 0x3130 && cp <= 0x318F) ||
+        (cp >= 0xA960 && cp <= 0xA97F) || (cp >= 0xAC00 && cp <= 0xD7FF)) return XS_KOREAN;
+    if ((cp >= 0x2E80 && cp <= 0x312F) || (cp >= 0x31F0 && cp <= 0x31FF) ||
+        (cp >= 0x3400 && cp <= 0x4DBF) || (cp >= 0x4E00 && cp <= 0x9FFF) ||
+        (cp >= 0xF900 && cp <= 0xFAFF) || (cp >= 0xFE30 && cp <= 0xFE4F) ||
+        (cp >= 0xFF00 && cp <= 0xFFEF)) return XS_CJK;
+    if ((cp >= 0x0590 && cp <= 0x05FF) || (cp >= 0xFB1D && cp <= 0xFB4F)) return XS_HEBREW;
+    if ((cp >= 0x0600 && cp <= 0x06FF) || (cp >= 0x0750 && cp <= 0x077F) ||
+        (cp >= 0xFB50 && cp <= 0xFDFF) || (cp >= 0xFE70 && cp <= 0xFEFF)) return XS_ARABIC;
+    return -1;
+}
+
+static void xs_load(int k) {
+    s_xs_tried[k] = true;
+    unsigned char *b = read_font_file(XS_PATH[k]);
+    char line[128];
+    if (!b || !stbtt_InitFont(&s_xs[k], b, stbtt_GetFontOffsetForIndex(b, 0))) {
+        free(b);
+        snprintf(line, sizeof line, "ttf: %s subtitle face unavailable (%s)", XS_NAME[k], XS_PATH[k]);
+        plog(line);
+        return;
+    }
+    // Sized by Rodin's em, as the Japanese face is (see chain_of).
+    int asc = 0, desc = 0;
+    stbtt_GetFontVMetrics(&s_font, &asc, &desc, NULL);
+    const float rodin_upem = 1.0f / stbtt_ScaleForMappingEmToPixels(&s_font, 1.0f);
+    const float upem       = 1.0f / stbtt_ScaleForMappingEmToPixels(&s_xs[k], 1.0f);
+    if (asc - desc <= 0 || upem <= 0.0f) { free(b); return; }
+    s_xs_k[k]   = (rodin_upem / (float)(asc - desc)) / upem;
+    s_xs_buf[k] = b;
+    s_xs_ok[k]  = true;
+    snprintf(line, sizeof line, "ttf: %s subtitle face loaded", XS_NAME[k]);
+    plog(line);
+}
+
+void ttf_need_text(const char *text) {
+    if (!text || !s_ttf_ok) return;
+    for (const char *p = text; *p; ) {
+        const int cp = utf8_next(&p);
+        if (cp < 0x0590) continue;
+        const int k = xs_script_of(cp);
+        if (k < 0 || s_xs_ok[k] || s_xs_tried[k]) continue;
+        // Kana and the commoner kanji are in the Japanese face already.
+        if (k == XS_CJK && s_jp_ok && stbtt_FindGlyphIndex(&s_font_jp, cp)) continue;
+        xs_load(k);
+    }
+}
+
+void ttf_extra_fonts_release(void) {
+    for (int k = 0; k < XS_COUNT; k++) {
+        s_xs_ok[k] = s_xs_tried[k] = false;
+        free(s_xs_buf[k]);
+        s_xs_buf[k] = NULL;
+    }
 }
 
 // Rasterize one glyph purely to populate the cache.  If the cache is

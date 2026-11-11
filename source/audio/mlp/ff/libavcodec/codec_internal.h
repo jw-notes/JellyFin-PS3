@@ -15,6 +15,7 @@ typedef struct FFCodecP {
     int            capabilities;
     const AVClass *priv_class;
     const void    *profiles;
+    const int     *sample_fmts;      /* ac3dec_float.c's CODEC_SAMPLEFMTS */
 } FFCodecP;
 
 typedef struct FFCodec {
@@ -29,6 +30,7 @@ typedef struct FFCodec {
 
 #define FF_CODEC_DECODE_CB(x) .cb.decode = (x)
 #define CODEC_LONG_NAME(x)    .p.long_name = (x)
+#define CODEC_SAMPLEFMTS(...) .p.sample_fmts = (const int[]){ __VA_ARGS__, -1 }
 #ifndef FF_CODEC_CAP_INIT_CLEANUP
 #define FF_CODEC_CAP_INIT_CLEANUP 0
 #endif

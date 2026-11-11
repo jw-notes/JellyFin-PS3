@@ -171,6 +171,20 @@ static const char *parse_block(const char *p, SubCue *cue)
     return t;
 }
 
+// SubRip text into the cue table (which the caller has emptied).
+static void parse_srt(const char *p)
+{
+    while (s_n < SUB_MAX_CUES) {
+        SubCue *c = &s_cues[s_n];
+        const char *next = parse_block(p, c);
+        if (!next) break;
+        p = next;
+        // Drop cues that say nothing or end before they start rather than
+        // carrying them into the lookup.
+        if (c->text[0] && c->end_ms > c->start_ms) s_n++;
+    }
+}
+
 int subs_load(const char *item_id, const char *media_source_id, int stream_index)
 {
     subs_clear();
@@ -204,20 +218,30 @@ int subs_load(const char *item_id, const char *media_source_id, int stream_index
         return -1;
     }
 
-    const char *p = body;
-    while (s_n < SUB_MAX_CUES) {
-        SubCue *c = &s_cues[s_n];
-        const char *next = parse_block(p, c);
-        if (!next) break;
-        p = next;
-        // Drop cues that say nothing or end before they start rather than
-        // carrying them into the lookup.
-        if (c->text[0] && c->end_ms > c->start_ms) s_n++;
-    }
+    parse_srt(body);
 
     char b[128];
     snprintf(b, sizeof(b), "subs: loaded %d cues (%d bytes) idx=%d%s",
              s_n, rc, stream_index,
+             (s_n == SUB_MAX_CUES) ? " [TABLE FULL]" : "");
+    plog(b);
+    s_cursor = 0;
+    if (s_n <= 0) return -1;
+    s_mode = SUB_TEXT;
+    return s_n;
+}
+
+int subs_load_srt(const char *srt)
+{
+    subs_clear();
+    if (!srt) return -1;
+    if (!s_cues) {
+        s_cues = (SubCue *)malloc(sizeof(SubCue) * SUB_MAX_CUES);
+        if (!s_cues) { plog("subs: out of memory for the cue table"); return -1; }
+    }
+    parse_srt(srt);
+    char b[96];
+    snprintf(b, sizeof(b), "subs: loaded %d cues from a file%s", s_n,
              (s_n == SUB_MAX_CUES) ? " [TABLE FULL]" : "");
     plog(b);
     s_cursor = 0;

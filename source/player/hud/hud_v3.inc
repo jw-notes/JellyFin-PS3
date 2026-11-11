@@ -16,8 +16,7 @@
 // are the chips on the right, REW / FF show their step above the bar -- and
 // the X hint names whatever X will do.
 //
-// NOT SHOWN, because the client has no such data yet: the buffered-to mark
-// and the "2014 · Chapter 14" subline.
+// NOT SHOWN, because the client has no such data yet: the buffered-to mark.
 
 static const int V3_INCR[3] = { 10, 30, 300 };   // mirrors hud_core.cpp
 
@@ -128,21 +127,30 @@ static void v3_draw_banner(void) {
     const u32 WHITE = 0x00FFFFFF;
     if (g_hud.banner[0] && timing_get_us() < g_hud.banner_until_us) {
         const float p1 = UIS_TF(26.0f), p2 = UIS_TF(14.0f);
-        char l1[96], l2[96];
+        char l1[96], l2[sizeof g_hud.banner_sub];
         snprintf(l1, sizeof l1, "%s", g_hud.banner);
         snprintf(l2, sizeof l2, "%s", g_hud.banner_sub);
         const int maxw = v3x(900) - v3x(57);
-        int n1 = (int)strlen(l1), n2 = (int)strlen(l2);
+        int n1 = (int)strlen(l1);
         while (n1 > 1 && ttf_text_width(l1, p1, true) > maxw) l1[--n1] = 0;
-        while (n2 > 1 && ttf_text_width(l2, p2) > maxw) l2[--n2] = 0;
-        int w1 = ttf_text_width(l1, p1, true), w2 = l2[0] ? ttf_text_width(l2, p2) : 0;
+        // The second line can name buttons ({R1}, {O}): drawn as the buttons.
+        // Too wide for the box, it names them in words and is cut.
+        bool rich2 = ttf_rich_width(l2, p2, false) <= maxw;
+        if (!rich2) {
+            char words[sizeof l2];
+            btn_tokens_to_words(l2, words, sizeof words);
+            snprintf(l2, sizeof l2, "%s", words);
+            int n2 = (int)strlen(l2);
+            while (n2 > 1 && ttf_text_width(l2, p2) > maxw) l2[--n2] = 0;
+        }
+        int w1 = ttf_text_width(l1, p1, true), w2 = l2[0] ? ttf_rich_width(l2, p2, false) : 0;
         const int bw3 = (w1 > w2 ? w1 : w2) + UIS_W(40);
         const int bh3 = UIS_H(l2[0] ? 84 : 56);
         const int bx3 = v3x(57), by3 = v3y(48);
         v3_rrect(bx3, by3, bw3, bh3, UIS_H(12), 1, 0x000A0C18, 205, WHITE, 40);
         drawTTF((u32)(bx3 + UIS_W(20)), (u32)(by3 + UIS_H(12)), l1, p1, WHITE, true);
         if (l2[0])
-            drawTTF((u32)(bx3 + UIS_W(20)), (u32)(by3 + UIS_H(50)), l2, p2, 0x00C2C2C2);
+            drawTTF_rich((u32)(bx3 + UIS_W(20)), (u32)(by3 + UIS_H(50)), l2, p2, 0x00C2C2C2, false);
         ovl_span(by3, by3 + bh3);
     }
 }
@@ -332,6 +340,18 @@ static void hud_body_v3(u64 elapsed_us, bool paused, bool scrubbing) {
     }
     // While it moves these are the GPU's (hud_scrub_bar_gpu); the track stays here.
     if (fill > 0 && !g_hud.scrub_moving) v3_rrect(bx, by, fill, bh, bh / 2, 0, XMB_ACCENT, 255, 0, 0);
+    // Chapter marks: a notch in the bar where each chapter after the first begins.
+    const JFChapters *chs = (!g_hud.live && g_hud.total_secs > 0 &&
+                             jf_chapters_state() == JF_CHAPTERS_READY) ? jf_chapters() : NULL;
+    if (chs) {
+        const int nw = UIS_W(2) > 2 ? UIS_W(2) : 2;
+        for (int i = 0; i < chs->n; i++) {
+            const double s = chs->ch[i].start_secs;
+            if (s < 1.0 || s >= (double)g_hud.total_secs - 1.0) continue;
+            const int mx = bx + (int)(s / (double)g_hud.total_secs * (double)bw);
+            v3_fill(mx - nw / 2, by, nw, bh, 0x00000000, 200);
+        }
+    }
     if (!g_hud.live && !g_hud.scrub_moving && g_hud.focus == FOCUS_REW)
         v3_rrect(bx + fill - UIS_H(7), by + bh / 2 - UIS_H(7), UIS_H(14), UIS_H(14),
                  UIS_H(7), 0, WHITE, 255, 0, 0);
@@ -385,6 +405,21 @@ static void hud_body_v3(u64 elapsed_us, bool paused, bool scrubbing) {
         } else {
             const bool hv = (int)display_height < 720;      // heavy on SD: see the chips
             drawTTF((u32)bx, (u32)v3y(644), el_s, tpx, 0x00E0E0E0, hv);
+            // While the position moves (a scrub, or taps waiting to land), the
+            // chapter it is in, beside the time.
+            if (chs && g_hud.scrub_moving) {
+                const int ci = jf_chapter_index_at(chs, (double)el);
+                if (ci >= 0) {
+                    char cn[64];
+                    if (chs->ch[ci].name[0]) snprintf(cn, sizeof cn, "%s", chs->ch[ci].name);
+                    else                     snprintf(cn, sizeof cn, TR("Chapter %d"), ci + 1);
+                    const int ex = bx + ttf_text_width(el_s, tpx, hv) + UIS_W(14);
+                    const int maxw = bw / 4;          // clear of "Ends at", centred
+                    int len = (int)strlen(cn);
+                    while (len > 1 && ttf_text_width(cn, tpx, hv) > maxw) cn[--len] = 0;
+                    drawTTF((u32)ex, (u32)v3y(644), cn, tpx, XMB_ACCENT_ALT, hv);
+                }
+            }
             if (rem_s[0]) {
                 const int rw = ttf_text_width(rem_s, tpx, hv);
                 drawTTF((u32)(bx + bw - rw), (u32)v3y(644), rem_s, tpx, 0x00E0E0E0, hv);
@@ -408,6 +443,7 @@ static void hud_body_v3(u64 elapsed_us, bool paused, bool scrubbing) {
         Hint h[10]; int n = 0;
         if (g_hud.menu_visible) {
             // A menu owns the pad: say what its buttons do, and where Triangle goes.
+            h[n].glyph = 'V'; h[n].label = TRN("Move");   n++;
             h[n].glyph = 'X'; h[n].label = TRN("Select"); n++;
             if (g_hud.menu_switch) { h[n].glyph = 'T'; h[n].label = g_hud.menu_switch; n++; }
             h[n].glyph = 'C'; h[n].label = TRN("Back");   n++;
@@ -421,11 +457,11 @@ static void hud_body_v3(u64 elapsed_us, bool paused, bool scrubbing) {
                        : paused                      ? TRN("Play") : TRN("Pause");
             n++;
             if (g_hud.live) {
-                h[n].glyph = 'D'; h[n].label = TRN("Volume");  n++;
+                h[n].glyph = 'V'; h[n].label = TRN("Volume");  n++;
                 h[n].glyph = 'l'; h[n].label = "";             n++;   // L1 R1: one cluster
                 h[n].glyph = 'r'; h[n].label = TRN("Channel"); n++;
             } else {
-                if (g_hud.focus == FOCUS_REW) { h[n].glyph = 'D'; h[n].label = TRN("Seek"); n++; }
+                if (g_hud.focus == FOCUS_REW) { h[n].glyph = 'H'; h[n].label = TRN("Seek"); n++; }
                 h[n].glyph = 'L'; h[n].label = "";       n++;   // L2 R2: one cluster
                 h[n].glyph = 'R'; h[n].label = TRN("Rewind / Fast Forward"); n++;
                 if (g_hud.has_prev && g_hud.has_next) {
@@ -437,9 +473,9 @@ static void hud_body_v3(u64 elapsed_us, bool paused, bool scrubbing) {
                     h[n].glyph = 'l'; h[n].label = TRN("Previous");        n++;
                 }
             }
-            h[n].glyph = 'T'; h[n].label = TRN("Tracks"); n++;
-            h[n].glyph = 'C'; h[n].label = TRN("Stop");   n++;
-            h[n].glyph = 'S'; h[n].label = TRN("Hide");   n++;
+            h[n].glyph = 'T'; h[n].label = TRN("Tracks");  n++;
+            h[n].glyph = 'A'; h[n].label = TRN("Options"); n++;
+            h[n].glyph = 'C'; h[n].label = TRN("Stop");    n++;
         }
         draw_hints_bar(h, n);
         ovl_span(v3y(660), (int)s_ovl_h);

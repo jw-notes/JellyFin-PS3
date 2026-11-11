@@ -46,23 +46,31 @@ TRUEHD_SRCS = ../source/audio/truehd_stream.c ../source/audio/truehd_map.c \
 # not liba52's, so DCAHD_CFLAGS goes BEFORE CFLAGS.
 DCAHD_CFLAGS = -I../source/audio/mlp/ff -I../source/audio/mlp/ff/libavcodec \
                -I../source/audio/dcahd
+# libavutil's transforms and float DSP, compiled for the AC-3 / E-AC-3 decoder and shared with DTS-HD.
+FF_SHARED_SRCS = ../source/audio/eac3_tx.c ../source/audio/eac3_txf.c ../source/audio/eac3_util.c
 DCAHD_SRCS = ../source/audio/dcahd_api.c ../source/audio/dcahd_xll.c \
-             ../source/audio/dcahd_compat.c \
+             ../source/audio/dcahd_compat.c $(FF_SHARED_SRCS) \
              ../source/audio/mlp_api.c ../source/audio/mlp_compat.c
+
+# Vendored FFmpeg AC-3 / E-AC-3 decoder (source/audio/eac3/PROVENANCE.md): eac3_api.c is the decoder in
+# one translation unit.  Same include ORDER rule as MLP.
+EAC3_CFLAGS = -I../source/audio/mlp/ff -I../source/audio/mlp/ff/libavcodec -I../source/audio/eac3 -I../source/audio \
+              -Wno-parentheses -Wno-pointer-sign
+EAC3_SRCS = ../source/audio/eac3_api.c $(FF_SHARED_SRCS) ../source/audio/mlp_api.c ../source/audio/mlp_compat.c
 DTS_HD_DEPS = $(DTS_STREAM_SRC) $(DTS_MAP_SRC) $(DTS_EXSS_SRC) $(DCA_SRCS) \
               ../source/audio/truehd_map.c $(DCAHD_SRCS)
 
 all: test_livetv_quality test_classic_library test_release_version test_login_osk test_login_drawn test_search_model test_sha256 test_release_asset test_auth_data test_wave_scope test_ac3_map test_ac3_decode test_iec61937 test_media_sources test_subtitles \
      test_subtitles_pgs test_trickplay_info test_media_segments \
      test_dts_map test_dts_decode test_dts_stream test_dts_exss test_track_codec \
-     test_truehd_map test_truehd_decode \
+     test_truehd_map test_truehd_decode test_eac3_decode \
      test_dts_hd test_dts_xll_dump test_text_runs test_text_clip test_text_shadow test_utf8 test_theme test_layout test_circle_blit \
      test_wave_kernel test_wave_spline test_wave_ribbon test_wave_field \
      test_wave_audio test_wave_motion test_wave_render_map \
      test_wave_cam test_wave_light test_wave_gel test_spine test_depth test_facts test_stream_budget \
      test_experience test_json_unescape test_boot_seq \
      test_wave_nav test_daynight test_canyon test_display_mode test_wave_look test_wave_drop test_offline test_stream_request test_jbuf_order \
-     test_settings_model test_settings_model_nostats test_userdata test_livetv test_server_discovery test_rx_gap test_home_order test_scrub_motion test_http_range test_livetv_prefs test_chapters test_wol test_icons test_live_watch test_picture_resume test_mohasi_fs test_lfs_path test_lfs test_h264_sps test_mkv_demux test_mkv_ts test_local_probe test_local_play test_local_names test_local_resume test_resample test_aac test_flac test_lossless test_sub_conv test_local_subs test_local_tags test_local_audio test_local_music test_music_engine test_i18n test_i18n_text test_line_break test_clock_fmt
+     test_settings_model test_settings_model_nostats test_userdata test_livetv test_server_discovery test_rx_gap test_home_order test_rtl_text test_scrub_motion test_http_range test_livetv_prefs test_chapters test_wol test_icons test_live_watch test_picture_resume test_mohasi_fs test_lfs_path test_lfs test_h264_sps test_mkv_demux test_mkv_ts test_mp4_demux test_local_sidecar test_local_probe test_local_play test_local_names test_local_resume test_resample test_aac test_flac test_lossless test_sub_conv test_local_subs test_local_tags test_local_audio test_local_music test_music_engine test_i18n test_i18n_text test_line_break test_clock_fmt
 
 test_release_version: test_release_version.cpp ../source/net/release_version.h ../source/net/update_check.h
 	$(CXX) $(CXXFLAGS) -Wextra -o $@ test_release_version.cpp
@@ -115,6 +123,10 @@ test_truehd_map: test_truehd_map.c ../source/audio/truehd_map.c
 # FFmpeg headers' `#include "config.h"` would otherwise pick up a52's.
 test_truehd_decode: test_truehd_decode.c $(TRUEHD_SRCS)
 	$(CC) $(MLP_CFLAGS) $(CFLAGS) -o $@ $^ -lm
+
+# AC-3 / E-AC-3 through the vendored FFmpeg decoder, against ffmpeg's own decode of the same files.
+test_eac3_decode: test_eac3_decode.c $(EAC3_SRCS) $(wildcard ../source/audio/eac3/*)
+	$(CC) $(EAC3_CFLAGS) $(CFLAGS) -Wno-dangling-else -o $@ test_eac3_decode.c $(EAC3_SRCS) -lm
 
 # subtitles.cpp is compiled straight into the test with its console-only
 # dependencies stubbed, so what is tested is the code the PS3 runs.
@@ -226,6 +238,9 @@ test_scrub_motion: test_scrub_motion.c ../source/player/core/scrub_motion.h
 test_home_order: test_home_order.c ../source/ui/home_order.h
 	$(CC) $(CFLAGS) -Wextra -I../source/ui -o $@ test_home_order.c
 
+test_rtl_text: test_rtl_text.c ../source/util/rtl_text.h
+	$(CC) $(CFLAGS) -Wextra -I../source/util -o $@ test_rtl_text.c
+
 test_http_range: test_http_range.c ../source/net/http_range.h
 	$(CC) $(CFLAGS) -Wextra -I../source/net -o $@ test_http_range.c
 
@@ -266,15 +281,41 @@ test_mkv_ts: test_mkv_ts.cpp mkv_builder.h ../source/video/mkv_ts.cpp ../source/
 	$(CC) $(CFLAGS) -c -o resample_p.o ../source/audio/resample.c
 	$(CXX) $(CXXFLAGS) -Wextra -Ihoststub -I../source/video -I../source/util -I../source/audio -o $@ test_mkv_ts.cpp 	    ../source/video/mkv_ts.cpp ../source/video/mkv_demux.cpp ../source/video/ts_demux.cpp aac_adts_p.o flac_dec_p.o resample_p.o ../source/i18n/i18n.c ../source/i18n/i18n_tables.c -lm
 
+# Subtitle files beside a video: which belong to it, their labels, their text as UTF-8.
+test_local_sidecar: test_local_sidecar.c ../source/local/local_sidecar.c ../source/local/local_sidecar.h ../source/util/lang_names.c
+	$(CC) $(CFLAGS) -Wextra -I../source/local -o $@ test_local_sidecar.c ../source/local/local_sidecar.c ../source/util/lang_names.c
+
+# MP4 / QuickTime: the demuxer, and mkv_ts writing a transport stream from it, over ffmpeg-made files.
+test_mp4_demux: test_mp4_demux.cpp ../source/video/mp4_demux.cpp ../source/video/mp4_demux.h ../source/video/mkv_ts.cpp \
+                ../source/video/mkv_ts.h ../source/video/mkv_demux.cpp
+	$(CC) $(CFLAGS) -c -o aac_adts_p.o ../source/audio/aac_adts.c
+	$(CC) $(CFLAGS) -c -o flac_dec_p.o ../source/audio/flac_dec.c
+	$(CC) $(CFLAGS) -c -o resample_p.o ../source/audio/resample.c
+	$(CXX) $(CXXFLAGS) -Wextra -I../source/video -I../source/util -I../source/audio -o $@ test_mp4_demux.cpp \
+	    ../source/video/mp4_demux.cpp ../source/video/mkv_ts.cpp ../source/video/mkv_demux.cpp aac_adts_p.o flac_dec_p.o resample_p.o \
+	    ../source/i18n/i18n.c ../source/i18n/i18n_tables.c -lm
+
+MP4_FIXTURES = mp4_h264_aac.mp4 mp4_h264_aac_fast.mp4 mp4_h264_mp3.mov mp4_h264_ac3.mp4
+MP4_IN    = -f lavfi -i "testsrc=size=320x240:rate=24:duration=3" -f lavfi -i "sine=frequency=440:duration=3"
+MP4_VIDEO = -c:v libx264 -profile:v high -g 24 -keyint_min 24 -sc_threshold 0 -bf 2 -pix_fmt yuv420p
+mp4_h264_aac.mp4:
+	ffmpeg -y -loglevel error $(MP4_IN) $(MP4_VIDEO) -c:a aac -ar 48000 -ac 2 -shortest $@
+mp4_h264_aac_fast.mp4:
+	ffmpeg -y -loglevel error $(MP4_IN) $(MP4_VIDEO) -c:a aac -ar 48000 -ac 2 -shortest -movflags +faststart $@
+mp4_h264_mp3.mov:
+	ffmpeg -y -loglevel error $(MP4_IN) $(MP4_VIDEO) -c:a libmp3lame -ar 44100 -ac 2 -shortest $@
+mp4_h264_ac3.mp4:
+	ffmpeg -y -loglevel error $(MP4_IN) $(MP4_VIDEO) -c:a ac3 -ar 48000 -ac 6 -shortest $@
+
 # What a local video file is, which track to start with (Matroska, TS and m2ts fixtures).
-PROBE_SRC = ../source/local/local_probe.cpp ../source/video/mkv_demux.cpp ../source/video/mkv_ts.cpp             ../source/video/h264_sps.c ../source/player/stream/stream_local.cpp ../source/offline/dl_ts.cpp             ../source/util/lang_names.c
+PROBE_SRC = ../source/local/local_probe.cpp ../source/video/mkv_demux.cpp ../source/video/mp4_demux.cpp ../source/video/mkv_ts.cpp             ../source/video/h264_sps.c ../source/player/stream/stream_local.cpp ../source/offline/dl_ts.cpp             ../source/util/lang_names.c
 test_local_probe: test_local_probe.cpp $(PROBE_SRC) ../source/local/local_probe.h $(wildcard fixtures/mkv/* fixtures/ts/*)
 	$(CC) $(CFLAGS) -c -o h264_sps_p.o ../source/video/h264_sps.c
 	$(CC) $(CFLAGS) -c -o lang_names_p.o ../source/util/lang_names.c
 	$(CC) $(CFLAGS) -c -o aac_adts_p.o ../source/audio/aac_adts.c
 	$(CC) $(CFLAGS) -c -o flac_dec_p.o ../source/audio/flac_dec.c
 	$(CC) $(CFLAGS) -c -o resample_p.o ../source/audio/resample.c
-	$(CXX) $(CXXFLAGS) -Wextra -I../source/local -I../source/video -I../source/util -I../source/audio -I../source/player/stream -I../source/offline 	    -o $@ test_local_probe.cpp ../source/local/local_probe.cpp ../source/video/mkv_demux.cpp ../source/video/mkv_ts.cpp 	    ../source/player/stream/stream_local.cpp ../source/offline/dl_ts.cpp h264_sps_p.o lang_names_p.o aac_adts_p.o flac_dec_p.o resample_p.o ../source/i18n/i18n.c ../source/i18n/i18n_tables.c -pthread -lm
+	$(CXX) $(CXXFLAGS) -Wextra -I../source/local -I../source/video -I../source/util -I../source/audio -I../source/player/stream -I../source/offline 	    -o $@ test_local_probe.cpp ../source/local/local_probe.cpp ../source/video/mkv_demux.cpp ../source/video/mp4_demux.cpp ../source/video/mkv_ts.cpp 	    ../source/player/stream/stream_local.cpp ../source/offline/dl_ts.cpp h264_sps_p.o lang_names_p.o aac_adts_p.o flac_dec_p.o resample_p.o ../source/i18n/i18n.c ../source/i18n/i18n_tables.c -pthread -lm
 
 # AAC: the ADTS and config helpers, the channel map, and the libfaad glue (adec_aac.cpp) with the resampler, over
 # ffmpeg-made files.  Needs libfaad (apt: libfaad-dev).
@@ -378,7 +419,7 @@ test_local_play: test_local_play.cpp $(PROBE_SRC) ../source/video/ts_demux.cpp .
 	$(CC) $(CFLAGS) -c -o flac_dec_p.o ../source/audio/flac_dec.c
 	$(CC) $(CFLAGS) -c -o resample_p.o ../source/audio/resample.c
 	$(CXX) $(CXXFLAGS) -Wextra -Ihoststub -I../source/local -I../source/video -I../source/util -I../source/audio -I../source/player/stream -I../source/offline \
-	    -o $@ test_local_play.cpp ../source/video/ts_demux.cpp ../source/local/local_probe.cpp ../source/video/mkv_demux.cpp \
+	    -o $@ test_local_play.cpp ../source/video/ts_demux.cpp ../source/local/local_probe.cpp ../source/video/mkv_demux.cpp ../source/video/mp4_demux.cpp \
 	    ../source/video/mkv_ts.cpp ../source/player/stream/stream_local.cpp ../source/offline/dl_ts.cpp h264_sps_p.o lang_names_p.o aac_adts_p.o flac_dec_p.o resample_p.o ../source/i18n/i18n.c ../source/i18n/i18n_tables.c -lm
 
 # lfs: drives, hotplug, paths, listings and reads, over directory trees and the NTFS / exFAT images.
@@ -514,6 +555,22 @@ tones51.ac3:
 	  -filter_complex "join=inputs=6:channel_layout=5.1(side):map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-SL|5.0-SR[a]" \
 	  -map "[a]" -c:a ac3 -b:a 640k -ar 48000 $@
 
+# The same six tones as E-AC-3 (Dolby Digital Plus), and ffmpeg's decodes of both, as interleaved floats.
+tones51.eac3:
+	ffmpeg -y -loglevel error \
+	  -f lavfi -i "sine=frequency=300:duration=2" \
+	  -f lavfi -i "sine=frequency=500:duration=2" \
+	  -f lavfi -i "sine=frequency=700:duration=2" \
+	  -f lavfi -i "sine=frequency=60:duration=2" \
+	  -f lavfi -i "sine=frequency=900:duration=2" \
+	  -f lavfi -i "sine=frequency=1100:duration=2" \
+	  -filter_complex "join=inputs=6:channel_layout=5.1(side):map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-SL|5.0-SR[a]" \
+	  -map "[a]" -c:a eac3 -b:a 640k -ar 48000 -f eac3 $@
+tones51.eac3.ref: tones51.eac3
+	ffmpeg -y -loglevel error -i $< -f f32le -c:a pcm_f32le $@
+tones51.ac3.ref: tones51.ac3
+	ffmpeg -y -loglevel error -i $< -f f32le -c:a pcm_f32le $@
+
 tones51.dts:
 	ffmpeg -y -loglevel error \
 	  -f lavfi -i "sine=frequency=300:duration=2" \
@@ -542,7 +599,8 @@ tones51.thd:
 tones51.thd.ref: tones51.thd
 	ffmpeg -y -loglevel error -i tones51.thd -c:a pcm_s32le -f s32le $@
 
-check: all tones51.ac3 tones51.spdif tones51.dts tones51.thd tones51.thd.ref
+check: all tones51.ac3 tones51.spdif tones51.dts tones51.thd tones51.thd.ref tones51.eac3 tones51.eac3.ref tones51.ac3.ref \
+       $(MP4_FIXTURES)
 	./test_release_version
 	./test_login_osk
 	./test_login_drawn
@@ -560,6 +618,7 @@ check: all tones51.ac3 tones51.spdif tones51.dts tones51.thd tones51.thd.ref
 	./test_track_codec
 	./test_truehd_map
 	./test_truehd_decode tones51.thd tones51.thd.ref
+	./test_eac3_decode tones51.eac3 tones51.eac3.ref tones51.ac3 tones51.ac3.ref
 	./test_dts_hd tones51.dts
 	./test_media_sources
 	./test_subtitles
@@ -604,6 +663,7 @@ check: all tones51.ac3 tones51.spdif tones51.dts tones51.thd tones51.thd.ref
 	./test_server_discovery
 	./test_rx_gap
 	./test_home_order
+	./test_rtl_text
 	./test_scrub_motion
 	./test_http_range
 	./test_livetv_prefs
@@ -618,6 +678,8 @@ check: all tones51.ac3 tones51.spdif tones51.dts tones51.thd tones51.thd.ref
 	./test_h264_sps
 	./test_mkv_demux
 	./test_mkv_ts
+	./test_mp4_demux
+	./test_local_sidecar
 	./test_local_probe
 	./test_local_play
 	./test_local_names
@@ -654,15 +716,15 @@ clean:
 	rm -f test_ac3_map test_ac3_decode test_media_sources test_subtitles \
 	      test_subtitles_pgs test_trickplay_info \
 	      test_dts_map test_dts_decode test_dts_stream test_dts_exss test_track_codec \
-	      test_truehd_map test_truehd_decode test_dts_hd test_dts_xll_dump \
+	      test_truehd_map test_truehd_decode test_eac3_decode test_dts_hd test_dts_xll_dump \
 	      test_text_runs test_text_clip test_text_shadow test_utf8 test_theme test_layout test_circle_blit \
 	      test_wave_kernel test_wave_spline test_wave_ribbon test_wave_field \
 	      test_wave_audio test_wave_motion test_wave_render_map \
 	      test_wave_cam test_wave_light test_wave_gel test_spine test_depth test_facts test_stream_budget test_experience test_json_unescape test_boot_seq test_display_mode \
 	      test_offline test_stream_request track_codec_host.o \
-	      test_settings_model test_settings_model_nostats test_userdata test_livetv test_server_discovery test_rx_gap test_home_order test_scrub_motion test_http_range test_livetv_prefs test_chapters test_wol test_icons test_live_watch test_picture_resume \
+	      test_settings_model test_settings_model_nostats test_userdata test_livetv test_server_discovery test_rx_gap test_home_order test_rtl_text test_scrub_motion test_http_range test_livetv_prefs test_chapters test_wol test_icons test_live_watch test_picture_resume \
 	      test_mohasi_fs test_mohasi_fs_be test_lfs_path \
-	      tones51.ac3 tones51.dts tones51.thd tones51.thd.ref
+	      tones51.ac3 tones51.dts tones51.thd tones51.thd.ref test_mp4_demux test_local_sidecar $(MP4_FIXTURES)
 
 .PHONY: all check clean check-mohasi-readonly check-app-version
 

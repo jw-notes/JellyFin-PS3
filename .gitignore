@@ -118,3 +118,18 @@ data/jf_spu_kernel.bin
 
 # Preview renderer intermediates (the PNGs are kept)
 tools/ui_preview/*.ppm
+tests/mp4_*.mp4
+tests/mp4_*.mov
+tests/test_mp4_demux
+tests/test_rtl_text
+tests/test_local_sidecar
+
+# The PS4 version lives in its own repository: nothing of it is committed here
+*PS4*/
+*-PS4*.pkg
+IV0000-*.pkg
+JFPS40000*
+tests/tones51.eac3
+tests/tones51.eac3.ref
+tests/tones51.ac3.ref
+tests/test_eac3_decode

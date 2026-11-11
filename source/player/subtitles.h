@@ -50,6 +50,9 @@ extern "C" {
 // rather than as a reason to fail playback).  Replaces whatever was loaded.
 int  subs_load(const char *item_id, const char *media_source_id, int stream_index);
 
+// The same from SubRip text already in memory (a file beside a video on a drive, as UTF-8).
+int  subs_load_srt(const char *srt);
+
 // PGS (bitmap) counterpart to subs_load() -- fetches the raw .sup stream
 // once and indexes its display sets (cheap; see pgs_build_index). Bitmaps
 // are decoded lazily, one at a time, as playback reaches them. Same

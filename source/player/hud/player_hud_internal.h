@@ -57,6 +57,8 @@
 #define MENU_ROW_H           30
 #define MENU_PAD             16            // popup inner padding
 #define MENU_DOT_COL         22            // width of the current-entry dot column
+#define MENU_VALUE_GAP       40            // between an item and its value
+#define MENU_VALUE_MAX_W    320            // a value wider than this is clipped
 
 #define MATERIAL_MUSIC_NOTE  ICON_MUSIC   // Tabler music glyph (icons.h)
 
@@ -96,7 +98,7 @@ struct HudState {
     int  live_permille;     // -1 = unknown
     u32  live_epoch;        // bumped when any live text changes (the compose key)
     char banner[160];
-    char banner_sub[160];
+    char banner_sub[224];   // button tokens and Japanese make the picture hints long
     u64  banner_until_us;
     bool banner_solo;       // the banner alone, no bar (hud_set_picture_banner)
 
@@ -105,6 +107,7 @@ struct HudState {
     bool        menu_visible;
     char        menu_title[24];
     const char *menu_items[MENU_MAX];
+    const char *menu_values[MENU_MAX]; // right-hand column (Options' settings), NULL = none
     int         menu_n;
     int         menu_sel;      // cursor row
     int         menu_cur;      // active entry (accent dot)

@@ -87,7 +87,7 @@ static bool ext_is(const char *name, const char *ext) {
 }
 
 lfs_media_kind lfs_media_kind_of(const char *name) {
-    static const char *const video[] = { "mkv", "ts", "m2ts", "mts" };
+    static const char *const video[] = { "mkv", "ts", "m2ts", "mts", "mp4", "m4v", "mov" };
     static const char *const music[] = { "flac", "mp3", "wav" };
     for (size_t i = 0; i < sizeof video / sizeof video[0]; i++) if (ext_is(name, video[i])) return LFS_KIND_VIDEO;
     for (size_t i = 0; i < sizeof music / sizeof music[0]; i++) if (ext_is(name, music[i])) return LFS_KIND_MUSIC;

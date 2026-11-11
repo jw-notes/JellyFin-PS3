@@ -61,6 +61,7 @@ static void video_route_audio(int ready, int alen) {
         else if (s_ts.audio_codec == TS_AUDIO_AAC)    want = ADEC_CODEC_AAC;
         else if (s_ts.audio_codec == TS_AUDIO_FLAC)   want = ADEC_CODEC_FLAC;
         else if (s_ts.audio_codec == TS_AUDIO_PCM)    want = ADEC_CODEC_PCM;
+        else if (s_ts.audio_codec == TS_AUDIO_EAC3)   want = ADEC_CODEC_EAC3;
         adec_set_codec(want);
         s_codec_applied = s_ts.audio_codec;
     }

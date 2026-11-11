@@ -26,6 +26,17 @@ def specs(s):
     return [m for m in SPEC.findall(s) if m != '%%']
 
 
+# Button tokens, drawn as the controller's buttons (ui_widgets.cpp, BTN_TOKENS).
+# A translation names the same buttons as the English, in any order.
+BUTTONS = {'{X}', '{O}', '{TRIANGLE}', '{SQUARE}', '{START}', '{SELECT}', '{L1}', '{R1}',
+           '{L2}', '{R2}', '{L3}', '{R3}', '{DPAD}', '{DPAD_LR}', '{DPAD_UD}'}
+TOKEN = re.compile(r'\{[A-Z0-9_]+\}')
+
+
+def buttons(s):
+    return sorted(TOKEN.findall(s))
+
+
 def load_catalog():
     cat, where = {}, {}
     for path in sorted(glob.glob(os.path.join(CAT_DIR, '*.json'))):
@@ -46,6 +57,9 @@ def problems_of(cat, where):
         extra = set(v) - set(LANGS)
         if extra:
             errs.append('%s: %r has unknown language(s) %s' % (w, k, sorted(extra)))
+        for b in buttons(k):
+            if b not in BUTTONS:
+                errs.append('%s: %r names an unknown button %s' % (w, k, b))
         for lg in LANGS:
             t = v.get(lg)
             if not t:
@@ -53,6 +67,8 @@ def problems_of(cat, where):
                 continue
             if specs(t) != specs(k):
                 errs.append('%s: %r [%s] conversions %s differ from English %s' % (w, k, lg, specs(t), specs(k)))
+            if buttons(t) != buttons(k):
+                errs.append('%s: %r [%s] buttons %s differ from English %s' % (w, k, lg, buttons(t), buttons(k)))
             if t.count('\n') != k.count('\n'):
                 errs.append('%s: %r [%s] has %d line breaks, English has %d' % (w, k, lg, t.count('\n'), k.count('\n')))
             if (t[:1].isspace(), t[-1:].isspace()) != (k[:1].isspace(), k[-1:].isspace()):

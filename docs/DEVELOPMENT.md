@@ -38,6 +38,12 @@ the console's firmware at run time. For builds that need it on the PC, put
 `-e JF_RODIN_TTF=/build/tests/local/SCE-PS3-RD-R-LATIN.TTF` to `docker run`.
 Every other font is free and in `source/gfx/fonts/`.
 
+The subtitle fonts for Chinese, Hebrew and Arabic are not compiled in: they ship
+as files in `USRDIR/fonts` from `subtitle-fonts/`, and are read only while a
+subtitle line needs them. `tools/make_subtitle_fonts.py` rebuilds them from the
+Noto sources; `tools/verify_pkg.py` checks they are in the package. Korean
+subtitles use the console's own `SCE-PS3-YG-B-KOR.TTF`, read from the firmware.
+
 ### Output
 
 | File | What it is |
@@ -198,17 +204,18 @@ source/
   cache/    Poster and artwork cache
   gfx/      RSX setup, shaders, fonts, text rendering
   i18n/     Translations
-  local/    USB and hard-drive files (NTFS / exFAT / FAT32, MKV / TS)
+  local/    USB and hard-drive files (NTFS / exFAT / FAT32, MKV / MP4 / TS), .srt files beside them
   music/    Music player and visualisers
   net/      HTTP / HTTPS, server discovery, update check and install
   offline/  Downloads
   player/   Playback: main loop, HUD, stream reader, threads
   spu/      SPU kernels for the visualisers
   ui/       Interface: Classic and XMB layouts, Live TV, search, settings, rendering
-  util/     Settings, timing, logging
-  video/    TS demux, hardware decoder, jitter buffer
+  util/     Settings, timing, logging, right-to-left text (rtl_text.h)
+  video/    TS demux, MKV and MP4 demuxers and their TS writer, hardware decoder, jitter buffer
 tests/      Host tests (Makefile.host)
 tools/      Docker image, package checker, translation and font tools
 themes/     Theme .ini files (themes/jw-notes/ for the newer ones)
+subtitle-fonts/  The CJK, Hebrew and Arabic subtitle fonts, shipped in USRDIR/fonts
 docs/       Manual, design notes; docs/history/ for finished plans
 ```

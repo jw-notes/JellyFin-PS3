@@ -48,6 +48,9 @@ void player_arm_next(const char *label, const char *hint);
 void player_arm_prev(void);
 // After player_take_next_request() returned true: the viewer went back, not on.
 bool player_took_prev(void);
+// The names of what player_arm_next / player_arm_prev lead to, for Options'
+// Next / Previous Episode (NULL or "" for none).  Consumed with the arming.
+void player_set_nav_names(const char *next_name, const char *prev_name);
 
 // Episode chains (2026-09-26): what the last playback used, so the next
 // episode keeps the same audio LANGUAGE and a matching version.

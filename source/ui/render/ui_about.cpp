@@ -24,14 +24,22 @@ struct Line { Kind kind; const char *a; const char *b; };   // b: right column (
 // Updates: the last releases, newest first, from CHANGELOG.md in short.
 // Add the new release at the top with each one.
 const Line k_updates[] = {
+    { K_VER,  "3.6.0", NULL },
+    { K_ITEM, TRN("Fixed episodes ending minutes early, and the sound drifting after a seek."), NULL },
+    { K_ITEM, TRN("Fixed a freeze when leaving a file's page on a USB drive."), NULL },
+    { K_ITEM, TRN("Options on {START}: chapters, tracks, picture, statistics and skips."), NULL },
+    { K_ITEM, TRN("Chapters are marked on the bar and named while you scrub."), NULL },
+    { K_ITEM, TRN("USB drives: MP4 and MOV files, .srt subtitles and Dolby Digital Plus."), NULL },
+    { K_ITEM, TRN("Subtitles in Chinese, Japanese, Korean, Hebrew, Arabic and Persian."), NULL },
+    { K_ITEM, TRN("{R3} shows playback statistics; hints show the PS3's own buttons."), NULL },
     { K_VER,  "3.5.1", NULL },
-    { K_ITEM, TRN("Triangle in the player now reaches the subtitles as well as the audio."), NULL },
+    { K_ITEM, TRN("{TRIANGLE} in the player now reaches the subtitles as well as the audio."), NULL },
     { K_ITEM, TRN("Back to Season no longer overlaps the Home tab (Classic)."), NULL },
     { K_VER,  "3.5.0", NULL },
     { K_ITEM, TRN("Fixed seeking jumping to the next episode or running out of sync."), NULL },
     { K_ITEM, TRN("Fixed the menus freezing when leaving Settings."), NULL },
     { K_ITEM, TRN("Smooth scrub bar: tap for 10 seconds, hold to glide."), NULL },
-    { K_ITEM, TRN("L1 / R1 skip episodes and change Live TV channels."), NULL },
+    { K_ITEM, TRN("{L1} / {R1} skip episodes and change Live TV channels."), NULL },
     { K_ITEM, TRN("Live TV: On Now on Home, next show in the bar, quicker reconnects."), NULL },
     { K_ITEM, TRN("Downloads save to NTFS and now FAT32 USB drives (4 GB a file)."), NULL },
     { K_ITEM, TRN("Direct Play for MKV and TS files (off by default)."), NULL },
@@ -87,9 +95,10 @@ const Line k_licences[] = {
     { K_TEXT, TRN("It comes with no warranty. Each component keeps its own licence."), NULL },
     { K_TEXT, TRN("Source code and the full licence texts:"), NULL },
     { K_TEXT, "github.com/jw-notes/JellyFin-PS3", NULL },
+    { K_TEXT, TRN("Additional attribution terms are in the NOTICE file."), NULL },
     { K_GAP, NULL, NULL },
     { K_HEAD, TRN("Open-source software"), NULL },
-    { K_NAME, "FFmpeg (TrueHD, DTS-HD)", "LGPL 2.1+" },
+    { K_NAME, "FFmpeg (TrueHD, DTS-HD, Dolby Digital Plus)", "LGPL 2.1+" },
     { K_NAME, "liba52 (Dolby Digital)", "GPL 2+" },
     { K_NAME, "libdca (DTS)", "GPL 2+" },
     { K_NAME, "minimp3", "CC0" },
@@ -101,6 +110,7 @@ const Line k_licences[] = {
     { K_GAP, NULL, NULL },
     { K_HEAD, TRN("Fonts and art"), NULL },
     { K_NAME, "Archivo, Noto Sans, Noto Sans JP, Michroma", "SIL OFL 1.1" },
+    { K_NAME, "Noto Sans SC, Hebrew, Arabic (subtitles)", "SIL OFL 1.1" },
     { K_NAME, "Open Sans, Roboto Condensed, Material Icons", "Apache 2.0" },
     { K_NAME, "Satoshi", "ITF Free Font License" },
     { K_NAME, "Tabler Icons", "MIT" },
@@ -161,7 +171,7 @@ void draw_about(int sec, int top) {
                 break;
             case K_ITEM:
                 drawTTF((u32)(x0 + UIS_W(6)), (u32)y, "\xC2\xB7", UIS_TF(15.0f), XMB_ACCENT);
-                drawTTF((u32)(x0 + UIS_W(22)), (u32)y, tr(l.a), UIS_TF(15.0f), XMB_TEXT_DIM);
+                drawTTF_rich((u32)(x0 + UIS_W(22)), (u32)y, tr(l.a), UIS_TF(15.0f), XMB_TEXT_DIM, false);
                 break;
             case K_NAME: {
                 drawTTF((u32)x0, (u32)y, l.a, UIS_TF(16.0f), XMB_TEXT);
@@ -211,7 +221,7 @@ void draw_about(int sec, int top) {
     }
     drawRect(0, (u32)list_bot, (u32)W, (u32)((int)display_height - list_bot), XMB_BG);
 
-    static const Hint hints[] = {{'l', ""}, {'r', TRN("Section")}, {'D', TRN("Scroll")}, {'C', TRN("Back")}};
+    static const Hint hints[] = {{'l', ""}, {'r', TRN("Section")}, {'V', TRN("Scroll")}, {'C', TRN("Back")}};
     draw_hints_bar(hints, 4);
     flip();
 }

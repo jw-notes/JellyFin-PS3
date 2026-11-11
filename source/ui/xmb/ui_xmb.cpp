@@ -545,7 +545,7 @@ static void xmb_draw_hints(int tab) {
             draw_hints_bar(h, n);
         }
     } else if (xmb_kind(tab) == TABKIND_MUSIC && g_music_header) {
-        static const Hint h[] = {{'D',TRN("Switch")},{'X',TRN("Select")}};
+        static const Hint h[] = {{'H',TRN("Switch")},{'X',TRN("Select")}};
         draw_hints_vis(h, 2);
     } else if (g_music_depth > 0 && xmb_kind(tab) == TABKIND_MUSIC) {
         static const Hint h[] = {{'X',TRN("Select")},{'C',TRN("Back")}};

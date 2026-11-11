@@ -40,7 +40,7 @@ with tempfile.TemporaryDirectory() as scratch:
             pos = data_start + data_off
             values[key] = sfo[pos:pos + length].rstrip(b"\0").decode()
     for key, expected in {"CATEGORY": "AT", "TITLE": "JellyFin [PS]",
-                          "TITLE_ID": "JFPS30000", "APP_VER": "03.51"}.items():
+                          "TITLE_ID": "JFPS30000", "APP_VER": "03.60"}.items():
         require(values.get(key) == expected, f"Unexpected {key}: {values.get(key)}")
     require((extracted / "USRDIR/EBOOT.BIN").read_bytes()[:4] == b"SCE\0",
             "Executable is not a SELF")
@@ -53,6 +53,15 @@ with tempfile.TemporaryDirectory() as scratch:
         actual = packed.read_bytes()
         require(actual[:len(expected)] == expected and not any(actual[len(expected):]),
                 f"Theme payload mismatch: {theme.name}")
+    fonts = sorted((ROOT / "subtitle-fonts").glob("JFSub-*"))
+    require(len(fonts) == 3, "Expected the three subtitle fonts in subtitle-fonts")
+    for font in fonts:
+        packed = extracted / "USRDIR/fonts" / font.name
+        require(packed.exists(), f"Subtitle font missing from package: {font.name}")
+        expected = font.read_bytes()
+        actual = packed.read_bytes()
+        require(actual[:len(expected)] == expected and not any(actual[len(expected):]),
+                f"Subtitle font payload mismatch: {font.name}")
 
 for suffix in (".pkg", ".gnpdrm.pkg"):
     path = ROOT / ("JellyFin-PS3" + suffix)
@@ -65,4 +74,4 @@ for suffix in (".pkg", ".gnpdrm.pkg"):
     require(data[0x30:0x60].rstrip(b"\0").decode() == CONTENT_ID,
             f"Incorrect content ID: {path.name}")
     print(f"{hashlib.sha256(data).hexdigest()}  {path.name}")
-print("PKG payloads match staging; TV category, version, executable and themes verified.")
+print("PKG payloads match staging; TV category, version, executable, themes and subtitle fonts verified.")

@@ -144,10 +144,11 @@ void hud_open_menu(const char *title, const char *const *items,
                    int n_items, int current) {
     if (n_items > MENU_MAX) n_items = MENU_MAX;
     snprintf(g_hud.menu_title, sizeof(g_hud.menu_title), "%s", title ? title : "");
-    for (int i = 0; i < n_items; i++) g_hud.menu_items[i] = items[i];
+    for (int i = 0; i < n_items; i++) { g_hud.menu_items[i] = items[i]; g_hud.menu_values[i] = NULL; }
     g_hud.menu_n   = n_items;
-    g_hud.menu_cur = (current >= 0 && current < n_items) ? current : 0;
-    g_hud.menu_sel = g_hud.menu_cur;
+    // No current entry (-1): no dot, and the cursor starts at the top.
+    g_hud.menu_cur = (current >= 0 && current < n_items) ? current : -1;
+    g_hud.menu_sel = g_hud.menu_cur >= 0 ? g_hud.menu_cur : 0;
     g_hud.menu_visible = (n_items > 0);
     g_hud.menu_switch  = NULL;
     g_hud.menu_epoch++;
@@ -156,6 +157,24 @@ void hud_open_menu(const char *title, const char *const *items,
 
 void hud_set_menu_switch(const char *label) {
     g_hud.menu_switch = label;
+    g_hud.menu_epoch++;
+}
+
+void hud_set_menu_values(const char *const *values) {
+    for (int i = 0; i < g_hud.menu_n; i++) g_hud.menu_values[i] = values ? values[i] : NULL;
+    g_hud.menu_epoch++;
+}
+
+void hud_set_menu_cursor(int row) {
+    if (row >= 0 && row < g_hud.menu_n) g_hud.menu_sel = row;
+    g_hud.menu_epoch++;
+}
+
+bool hud_menu_open(void) { return g_hud.menu_visible; }
+
+void hud_close_menu(void) {
+    if (!g_hud.menu_visible) return;
+    g_hud.menu_visible = false;
     g_hud.menu_epoch++;
 }
 
@@ -238,12 +257,13 @@ HudAction hud_handle_input(bool l2_pressed, bool r2_pressed, bool paused) {
             return HUD_ACTION_SEEK;
         }
     }
-    // The remote's INFO key and a click of either stick toggle the stats
-    // overlay, bar up or not; the overlay is its own layer, so the bar stays
-    // as it is.
-    if (BTN_PRESSED(info) || BTN_PRESSED(l3) || BTN_PRESSED(r3)) {
+    // R3 (or the remote's INFO key: the remote has no sticks) shows or hides the
+    // stats overlay for this playback, bar up or not; the overlay is its own
+    // layer, so the bar stays as it is.  Settings > Playback > Playback
+    // Statistics keeps it on.
+    if (BTN_PRESSED(info) || BTN_PRESSED(r3)) {
 #if ENABLE_PLAYER_STATS
-        statsovl_set_enabled(!statsovl_enabled());
+        statsovl_toggle_shown();
 #endif
         return HUD_ACTION_NONE;
     }

@@ -53,7 +53,10 @@ void show_error(const char *line1, const char *line2) {
         drawHeader();
         drawText(40, 100, tr(line1));
         if (line2 && line2[0]) drawText(40, 130, tr(line2));
-        drawText(40, 160, TR("O: back"));
+        {
+            static const Hint h[] = { { 'C', TRN("Back") } };   // the Circle button itself
+            draw_hints_bar(h, 1);
+        }
 #else
         // Emulator: the bitmap-font (NV3089) glyph blits dead-lock the RSX FIFO in
         // the fragile post-failure state (Dead FIFO ... nv3089 decode_transfer),

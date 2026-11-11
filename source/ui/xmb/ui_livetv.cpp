@@ -819,8 +819,8 @@ void customise(void) {
         drawRect((u32)(px + pw - 1), (u32)py, 1, (u32)ph, XMB_HAIRLINE);
         const int cx = px + UIS_W(30);
         drawTTF((u32)cx, (u32)(py + UIS_H(20)), TR("Customise Live TV"), UIS_TF(24), XMB_WHITE, true);
-        drawTTF((u32)cx, (u32)(py + UIS_H(58)),
-                TR("Ticked pages are shown. L2 / R2 skip the others."), UIS_TF(13), XMB_TEXT_DIM);
+        drawTTF_rich((u32)cx, (u32)(py + UIS_H(58)),
+                     TR("Ticked pages are shown. {L2} / {R2} skip the others."), UIS_TF(13), XMB_TEXT_DIM, false);
         for (int r = 0; r < VIS && top + r < nr; r++) {
             const int i = top + r, y = py + UIS_H(90) + r * rh, h = rh - UIS_H(4);
             const bool is_sel = (i == sel);
@@ -1173,7 +1173,7 @@ void xmb_livetv_hints(void) {
     if (!s_guide) {
         h[n].glyph = 'X'; h[n].label = TRN("Watch"); n++;
         h[n].glyph = 'T'; h[n].label = TRN("Favourite"); n++;
-        if (have_guide()) { h[n].glyph = classic_grid() ? 'S' : 'E'; h[n].label = TRN("Guide"); n++; }
+        if (have_guide()) { h[n].glyph = classic_grid() ? 'S' : '>'; h[n].label = TRN("Guide"); n++; }
         // L2 and R2 pair into one "Category" hint (an empty label pairs with the next).
         if (paging() && !s_search_on) {
             h[n].glyph = 'L'; h[n].label = ""; n++;
@@ -1423,8 +1423,8 @@ static void classic_heading(void) {
     const int sub_y = XMB_OY + UIS_H(122);
     if (s_search_on) {
         char line[200];
-        snprintf(line, sizeof line, TR("Search: %s  (%d found)  -  O to go back"), s_term, s_n);
-        drawTTF((u32)x, (u32)sub_y, line, UIS_TF(15), XMB_ACCENT_ALT);
+        snprintf(line, sizeof line, TR("Search: %s  (%d found)  -  {O} to go back"), s_term, s_n);
+        drawTTF_rich((u32)x, (u32)sub_y, line, UIS_TF(15), XMB_ACCENT_ALT, false);
     } else if (paging()) {
         draw_cat_tabs(x, sub_y, (int)display_width - x, true);
     }
@@ -1454,8 +1454,8 @@ void xmb_draw_livetv(void) {
         // classic_heading() has drawn the search / category line.
     } else if (s_search_on && !s_guide) {
         char line[200];
-        snprintf(line, sizeof line, TR("Search: %s  (%d found)  -  O to go back"), s_term, s_n);
-        drawTTF((u32)list_x(), (u32)(list_top() - UIS_H(30)), line, UIS_TF(14), XMB_ACCENT_ALT);
+        snprintf(line, sizeof line, TR("Search: %s  (%d found)  -  {O} to go back"), s_term, s_n);
+        drawTTF_rich((u32)list_x(), (u32)(list_top() - UIS_H(30)), line, UIS_TF(14), XMB_ACCENT_ALT, false);
     } else if (paging() && !s_guide) {
         draw_cat_tabs(list_x(), list_top() - UIS_H(32), list_x() + list_w() - UIS_W(90), false);
     }
@@ -1463,11 +1463,11 @@ void xmb_draw_livetv(void) {
         const char *m = s_failed ? TR("Couldn't load the channel list")
                       : !s_loaded ? TR("Loading channels...")
                       : s_search_on ? TR("No channels found")
-                      : cur_key() == LP_FAVS ? TR("No favourites yet. Press the Favourite button on a channel.")
+                      : cur_key() == LP_FAVS ? TR("No favourites yet. Press {TRIANGLE} on a channel to add it.")
                       : cur_key() == LP_RECENT ? TR("Nothing watched yet")
                       : TR("No channels");
-        drawTTF((u32)(cx - ttf_text_width(m, UIS_TF(18)) / 2), (u32)(band_top() + UIS_H(60)), m,
-                UIS_TF(18), XMB_TEXT_DIM);
+        drawTTF_rich((u32)(cx - ttf_rich_width(m, UIS_TF(18), false) / 2), (u32)(band_top() + UIS_H(60)), m,
+                     UIS_TF(18), XMB_TEXT_DIM, false);
         return;
     }
     const uint64_t now = jf_now_ticks();

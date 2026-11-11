@@ -407,7 +407,7 @@ void player_stats_get(PlayerStats *out) {
 
 void player_stats_overlay_alloc(void) {
     if (s_ovl_stage && s_ovl_tex) return;
-    if (!statsovl_enabled()) return;   // never enabled: pay nothing
+    if (!statsovl_shown()) return;     // never shown: pay nothing
 
     u32 bytes = OVL_W * OVL_H * 4;
     if (!s_ovl_stage) s_ovl_stage = (u32*)memalign(128, bytes);
@@ -603,7 +603,7 @@ void player_stats_render_overlay(void) {
     // Runtime switch: off means zero rendering cost.  No compose, no text
     // layout, no draw call — the counters above keep running so the panel is
     // already populated the moment it is switched on.
-    if (!statsovl_enabled()) return;
+    if (!statsovl_shown()) return;
 
     if (!s_ovl_stage || !s_ovl_tex) {
         player_stats_overlay_alloc();          // enabled mid-session

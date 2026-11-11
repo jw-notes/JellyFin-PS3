@@ -224,13 +224,21 @@ static bool s_avsync_initialized  = false;
 // converge.  We must NOT subtract the raw video-minus-audio gap (that would zero
 // the real residual too and freeze the desync).  A per-stream latch decides
 // absolute-vs-relative once, from the first frame, using the audio clock as the
-// always-relative reference: if the first video PTS sits > 3s from the audio
-// clock, the stream is absolute -> subtract play_base; else relative -> 0.
-// Reset per stream via avsync_reset() (seek / track-change reopen, session
-// start).  Normal (non-subtitle) playback keeps gap<3s so nothing is folded.
+// always-relative reference: the stream is absolute -> subtract play_base when
+// the first video PTS sits AHEAD of the audio clock by about play_base; else
+// relative -> 0.  Reset per stream via avsync_reset() (seek / track-change
+// reopen, session start).
+//
+// Only ahead, never behind.  A copied video stream reopened part way starts at
+// the keyframe BEFORE the target while its sound starts AT it, so the first
+// picture can sit up to a GOP (10 s and more) behind the audio clock.  Taking
+// that for absolute folded every frame's PTS to 0: the catch-up dropped frames
+// as fast as they decoded for 10 s, then sync was off for the rest of the stream.
+// Behind is ordinary lateness, which the catch-up drops in one go.
 static s64  s_avsync_vbase_us  = 0;      // label offset folded out of video pts
 static bool s_avsync_vbase_set = false;  // latched for the current stream?
-static const s64 AVSYNC_ABS_THRESH_US = 3000000;   // >3s from audio clk => absolute video pts
+static const s64 AVSYNC_ABS_THRESH_US = 3000000;    // >3s ahead of audio clk => maybe absolute
+static const s64 AVSYNC_ABS_SLACK_US  = 15000000;   // and within a GOP or two of play_base
 
 s64 avsync_compute_diff(u64 video_pts_us, u64 play_base_us) {
     if (video_pts_us == 0) return 0;
@@ -242,9 +250,17 @@ s64 avsync_compute_diff(u64 video_pts_us, u64 play_base_us) {
     u64 audio_clk = audio_get_clock_us();
     if (audio_clk == 0) return 0;
     if (!s_avsync_vbase_set) {
-        s64 gap = (s64)video_pts_us - (s64)audio_clk;
-        s_avsync_vbase_us  = (gap > AVSYNC_ABS_THRESH_US || gap < -AVSYNC_ABS_THRESH_US)
+        const s64 gap  = (s64)video_pts_us - (s64)audio_clk;
+        const s64 miss = gap - (s64)play_base_us;
+        s_avsync_vbase_us  = (gap > AVSYNC_ABS_THRESH_US &&
+                              miss < AVSYNC_ABS_SLACK_US && miss > -AVSYNC_ABS_SLACK_US)
                              ? (s64)play_base_us : 0;
+        if (s_avsync_vbase_us == 0 && (gap > AVSYNC_ABS_THRESH_US || gap < -AVSYNC_ABS_THRESH_US)) {
+            char b[112];
+            snprintf(b, sizeof(b), "avsync_vbase: relative, first picture %+lld ms from the sound",
+                     (long long)(gap / 1000));
+            plog(b);
+        }
         s_avsync_vbase_set = true;
         if (s_avsync_vbase_us != 0) {
             char b[112];

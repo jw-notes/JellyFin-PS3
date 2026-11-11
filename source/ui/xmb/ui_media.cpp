@@ -48,6 +48,9 @@
 #include "local_music_fs.h"
 #include "music_screen.h"
 #include "dl_library.h"
+#include "watchdog.h"    // these loops beat it too, so a hang here is named
+
+extern void crash_log(const char *msg);   // main.cpp: written at once, survives a hard hang
 
 namespace {
 
@@ -377,11 +380,14 @@ struct DetailJob { char path[256]; LocalInfo *info; bool ok; char err[64]; };
 
 void detail_work(void *arg) {
     DetailJob *j = (DetailJob *)arg;
+    crash_log("md probe open");
     int fd = lfs_open(j->path);
     if (fd < 0) { j->ok = false; snprintf(j->err, sizeof j->err, fd == LFS_E_REMOVED ? TR("The drive was removed.") : TR("The file could not be opened.")); return; }
     const uint64_t size = lfs_size(fd);
+    crash_log("md probe read");
     j->ok = local_probe(probe_rd, &fd, size, leaf_of(j->path), j->info, j->err, sizeof j->err);
     lfs_close(fd);
+    crash_log(j->ok ? "md probe done" : "md probe failed");
     if (!j->ok && !j->err[0]) snprintf(j->err, sizeof j->err, TR("This file could not be read."));
 }
 
@@ -481,7 +487,9 @@ void show_details(const char *path, const lfs_entry &e) {
     memset(&job, 0, sizeof job);
     snprintf(job.path, sizeof job.path, "%s", path);
     job.info = &info;
+    wd_stage("md details probe");
     loading_run(detail_work, &job, TR("Loading"), false);
+    wd_stage("md details screen_begin");
     screen_begin();
 
     LocalTitle lt;
@@ -492,6 +500,12 @@ void show_details(const char *path, const lfs_entry &e) {
     const LocalAudioPrefs prefs = { surround_enabled(), audio_passthrough_wanted() };
     char why[160] = "";
     const bool can = job.ok && local_can_play(&info, &prefs, why, sizeof why);
+    {
+        char b[240];
+        snprintf(b, sizeof b, "media: details %.80s ok=%d can=%d audio=%d why=%.80s",
+                 leaf_of(path), (int)job.ok, (int)can, info.n_audio, job.ok ? why : job.err);
+        plog(b);
+    }
 
     res_ensure();
     uint32_t res_secs = 0, res_total = 0;
@@ -507,17 +521,25 @@ void show_details(const char *path, const lfs_entry &e) {
     }
     int sel = 0;
     Arm arm;
+    // Leaving straight after waitflip() leaves no frame queued, and the folder's
+    // loop starts with a waitflip() of its own, which then waits forever (a hard
+    // hang backing out of a file that cannot play, 2026-11-11).  Those exits
+    // queue one frame on the way out; Play leaves through the player, which does.
+    bool owe_flip = false;
 
     while (running) {
+        wd_beat();
+        wd_stage("md details waitflip");
         waitflip();
+        wd_stage("md details input");
         sysUtilCheckCallback();
         poll_buttons();
         if (arm.ready()) {
-            if (BTN_PRESSED(circle)) { ui_sfx_play(SFX_CANCEL); break; }
+            if (BTN_PRESSED(circle)) { ui_sfx_play(SFX_CANCEL); owe_flip = true; break; }
             if (BTN_PRESSED(up) && sel > 0)                 { sel--; ui_sfx_play(SFX_CURSOR); }
             if (BTN_PRESSED(down) && sel < n_labels - 1)    { sel++; ui_sfx_play(SFX_CURSOR); }
             if (BTN_PRESSED(cross)) {
-                if (n_labels == 0) { ui_sfx_play(SFX_CANCEL); break; }
+                if (n_labels == 0) { ui_sfx_play(SFX_CANCEL); owe_flip = true; break; }
                 ui_sfx_play(SFX_DECIDE);
                 const u32 from = (have_resume && sel == 0) ? res_secs : 0;
                 play_file(path, e, title, from, info.duration_secs);
@@ -525,7 +547,9 @@ void show_details(const char *path, const lfs_entry &e) {
             }
         }
 
+        wd_stage("md details frame_begin");
         frame_begin();
+        wd_stage("md details text");
         const int x = XMB_ITEM_PAD, w = (int)display_width - 2 * XMB_ITEM_PAD;
         int y = XMB_OY + UIS_H(28);
         clip_text(x, y, title, UIS_TF(28), XMB_TEXT, w, true);
@@ -538,7 +562,8 @@ void show_details(const char *path, const lfs_entry &e) {
             char sz[24], du[32], line[240];
             local_format_size(e.size, sz, sizeof sz);
             local_format_duration(info.duration_secs, du, sizeof du);
-            const char *cont = info.container == LM_MKV ? TR("Matroska") : info.container == LM_M2TS ? TR("Blu-ray m2ts") : TR("MPEG-TS");
+            const char *cont = info.container == LM_MKV ? TR("Matroska") : info.container == LM_M2TS ? TR("Blu-ray m2ts")
+                             : info.container == LM_MP4 ? "MP4" : TR("MPEG-TS");
             int n = snprintf(line, sizeof line, "%s  %s  %s", cont, MIDDOT, sz);
             if (du[0] && n < (int)sizeof line) n += snprintf(line + n, sizeof line - (size_t)n, "  %s  %s", MIDDOT, du);
             wrap_lines(x, y, line, UIS_TF(16), XMB_TEXT_DIM, w, UIS_H(26));
@@ -567,9 +592,11 @@ void show_details(const char *path, const lfs_entry &e) {
                 wrap_lines(x, y, s, UIS_TF(14), XMB_TEXT_FAINT, w, UIS_H(30));
             }
             if (!can) {
+                wd_stage("md details why");
                 wrap_lines(x, y, why, UIS_TF(16), XMB_ACCENT_ALT, w, UIS_H(30));
             }
         }
+        wd_stage("md details buttons");
         // the buttons, at the foot
         const int bh = UIS_H(48), bw = UIS_W(420);
         int by = bottom() - n_labels * (bh + UIS_H(8)) - UIS_H(10);
@@ -581,7 +608,13 @@ void show_details(const char *path, const lfs_entry &e) {
         { Hint h[2]; int nh = 0;
           if (n_labels) { h[nh].glyph = 'X'; h[nh].label = TRN("Select"); nh++; }
           h[nh].glyph = 'C'; h[nh].label = TRN("Back"); nh++;
+          wd_stage("md details hints");
           draw_hints_bar(h, nh); }
+        wd_stage("md details flip");
+        flip();
+    }
+    if (owe_flip) {
+        frame_begin();      // the background alone, for the one frame before the folder draws
         flip();
     }
     init_btns();
@@ -640,7 +673,10 @@ void browse(const lfs_drive &drive) {
     bool leave = false;
 
     while (running && !leave) {
+        wd_beat();
+        wd_stage("md browse waitflip");
         waitflip();
+        wd_stage("md browse input");
         sysUtilCheckCallback();
         poll_buttons();
         refresh_drives(true);

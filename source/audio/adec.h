@@ -21,6 +21,8 @@ typedef enum {
                           // (local files only; see adec_aac.h)
     ADEC_CODEC_FLAC = 5,  // audio/flac_dec.c, lossless, up to 8 channels (local files; adec_flac.h)
     ADEC_CODEC_PCM = 6,   // uncompressed audio of a Matroska file (local files; adec_pcm.h)
+    ADEC_CODEC_EAC3 = 7,  // vendored FFmpeg decoder, E-AC-3 (Dolby Digital Plus), up to 7.1 folded to the
+                          // port (local files; the server converts it to AC-3; adec_eac3.h)
 } adec_codec_t;
 
 // Switch decoder.  Call from the demux when the PMT selects the audio
@@ -85,6 +87,9 @@ void adec_decode_stats(u64 *busy_us, u32 *count);
 // reading further ahead rather than overrun it (a full queue drops the oldest
 // PES, which is heard as a jump).
 bool adec_pes_queue_hungry(void);
+
+// Compressed-audio chunks still waiting to be decoded.
+int  adec_pes_pending(void);
 
 // Copy up to n_frames interleaved float32 frames into buf[].  Each frame is
 // adec_output_channels() floats wide.  Returns the number of frames written —

@@ -22,7 +22,7 @@ extern "C" {
 // Reads up to len bytes at off: the count (0 at the end), or < 0.
 typedef int (*LocalReadAt)(void *ctx, uint64_t off, uint8_t *buf, int len);
 
-typedef enum { LM_NONE = 0, LM_TS, LM_M2TS, LM_MKV } LocalContainer;
+typedef enum { LM_NONE = 0, LM_TS, LM_M2TS, LM_MKV, LM_MP4 } LocalContainer;   // LM_MP4: .mp4, .m4v, .mov
 
 typedef enum {
     LA_OTHER = 0, LA_AC3, LA_EAC3, LA_DTS, LA_DTS_HD, LA_TRUEHD, LA_MP3, LA_MP2, LA_AAC, LA_FLAC, LA_PCM, LA_VORBIS, LA_OPUS

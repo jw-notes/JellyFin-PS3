@@ -141,7 +141,7 @@ static void v_sendlog(char *b, int c, bool *l) {
            : st == LOGUP_SENT    ? TR("Sent")
            : st == LOGUP_FAILED  ? TR("Failed")
            : st == LOGUP_NOLOG   ? TR("No log yet")
-           :                       TR("X to send"),
+           :                       TR("{X} to send"),
              st == LOGUP_SENT);
 }
 // The tallies are a lock and a walk of the slot table (no copies, no disk).
@@ -196,7 +196,7 @@ static void v_wake(char *b, int c, bool *l) {
     uint8_t mac[6];
     if (!wol_have(mac))                                        val_text(b, c, l, TR("Set the MAC first"), false);
     else if (s_wake_sent_us && timing_get_us() - s_wake_sent_us < 5000000ULL) val_text(b, c, l, TR("Sent"), true);
-    else                                                       val_text(b, c, l, TR("X to send"), false);
+    else                                                       val_text(b, c, l, TR("{X} to send"), false);
 }
 static void a_wolmac(void) {
     char text[40] = "";
@@ -580,15 +580,15 @@ void xmb_draw_settings(void) {
         val[0] = '\0';
         if (u && u->value) {
             u->value(val, sizeof val, &lit);
-            vw = ttf_text_width(val, UIS_TF(18), sel);
+            vw = ttf_rich_width(val, UIS_TF(18), sel);     // "{X} to send"
         }
         char lab[96];
         fit_text(tr(r->label), UIS_TF(18), XMB_LIST_W - UIS_W(52) - vw - UIS_W(56), sel, lab, sizeof lab);
         drawTTF((u32)(lx + UIS_W(52)), (u32)(y + (ROW_H - UIS_H(18)) / 2 - UIS_H(2)),
                 lab, UIS_TF(18), clr, sel);
         if (val[0])
-            drawTTF((u32)(lx + XMB_LIST_W - UIS_W(24) - vw), (u32)(y + (ROW_H - UIS_H(18)) / 2 - UIS_H(2)),
-                    val, UIS_TF(18), lit ? XMB_ACCENT : XMB_TEXT_FAINT, sel);
+            drawTTF_rich((u32)(lx + XMB_LIST_W - UIS_W(24) - vw), (u32)(y + (ROW_H - UIS_H(18)) / 2 - UIS_H(2)),
+                         val, UIS_TF(18), lit ? XMB_ACCENT : XMB_TEXT_FAINT, sel);
     }
 
     // What the highlighted setting does.
@@ -602,9 +602,20 @@ void xmb_draw_settings(void) {
             char raw[200], hl[200];
             if (len > (int)sizeof raw - 1) len = (int)sizeof raw - 1;
             memcpy(raw, t, (size_t)len); raw[len] = '\0';
-            fit_text(raw, UIS_TF(15), XMB_LIST_W - UIS_W(44), false, hl, sizeof hl);
-            drawTTF((u32)(lx + UIS_W(22)), (u32)(dy + UIS_H(8) + ln * UIS_H(24)), hl, UIS_TF(15),
-                    ln == 0 ? XMB_TEXT : XMB_TEXT_DIM, false);
+            // Buttons the help names ({X}) are drawn as the buttons.  A line too
+            // long for the panel is cut, and then names them in words: a cut
+            // could land inside a token.
+            const int maxw = XMB_LIST_W - UIS_W(44);
+            const u32 hx = (u32)(lx + UIS_W(22)), hy = (u32)(dy + UIS_H(8) + ln * UIS_H(24));
+            const u32 hc = ln == 0 ? XMB_TEXT : XMB_TEXT_DIM;
+            if (ttf_rich_width(raw, UIS_TF(15), false) <= maxw) {
+                drawTTF_rich(hx, hy, raw, UIS_TF(15), hc, false);
+            } else {
+                char words[200];
+                btn_tokens_to_words(raw, words, sizeof words);
+                fit_text(words, UIS_TF(15), maxw, false, hl, sizeof hl);
+                drawTTF(hx, hy, hl, UIS_TF(15), hc, false);
+            }
             t = nl ? nl + 1 : NULL;
         }
     }
@@ -678,11 +689,11 @@ void xmb_overscan_calib_text(void) {
     int pw = ttf_text_width(pct, UIS_TF(30), true);
     drawTTF((u32)((W - pw) / 2), (u32)(cy - UIS_H(2)), pct, UIS_TF(30), XMB_ACCENT_DEEP, true);
 
-    const char *hint = TR("D-pad Left / Right to adjust");
-    int hw = ttf_text_width(hint, UIS_TF(15));
-    drawTTF((u32)((W - hw) / 2), (u32)(cy + UIS_H(44)), hint, UIS_TF(15), OVL_INK_DIM);
+    const char *hint = TR("{DPAD_LR} to adjust");
+    int hw = ttf_rich_width(hint, UIS_TF(15), false);
+    drawTTF_rich((u32)((W - hw) / 2), (u32)(cy + UIS_H(44)), hint, UIS_TF(15), OVL_INK_DIM, false);
 
-    const char *keys = TR("Cross  Save        Circle  Cancel");
-    int kw = ttf_text_width(keys, UIS_TF(15));
-    drawTTF((u32)((W - kw) / 2), (u32)(cy + UIS_H(70)), keys, UIS_TF(15), OVL_INK_DIM);
+    const char *keys = TR("{X} Save        {O} Cancel");
+    int kw = ttf_rich_width(keys, UIS_TF(15), false);
+    drawTTF_rich((u32)((W - kw) / 2), (u32)(cy + UIS_H(70)), keys, UIS_TF(15), OVL_INK_DIM, false);
 }

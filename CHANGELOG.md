@@ -10,6 +10,29 @@ public: it froze on the Home screen on real hardware, ran out of memory at
 1080p, and had sign-in and update-check bugs (see 3.3.0 below). vortigauntlet's own release notes for 3.2.3
 and earlier are kept at the end, as he wrote them.
 
+## 3.6.0
+
+- **Fixed: episodes ended minutes early, and the sound drifted after fast-forward**
+  ([#3](https://github.com/jw-notes/JellyFin-PS3/issues/3)). The player now plays out what it
+  has buffered before it stops, and keeps the picture and sound together after a seek.
+- **Fixed: leaving a file's page on a USB drive froze the console** (for example after looking
+  at a Dolby Digital Plus file's details).
+- **Options on `START`.** One menu in the player for chapters, audio and subtitle tracks, picture
+  size, playback statistics and next / previous episode. `◯` stops playback, as before.
+- **Chapters.** Marked on the progress bar, named while you scrub, and listed in Options, for films
+  and episodes on your server.
+- **PS3 button icons.** Hints in the player, menus and Settings show the PS3's own `✕ ◯ △ ▢`,
+  `START`, `L1`/`R1` and so on.
+- **Subtitles in Chinese, Japanese, Korean, Hebrew, Arabic and Persian.** Hebrew, Arabic and
+  Persian read right to left, with Arabic letters joined. Korean uses the console's own font;
+  the others use small Noto cuts in `USRDIR/fonts`.
+- **USB drives:** MP4, M4V and MOV files now show and play; `.srt` files beside a video
+  (`Film.srt`, `Film.en.srt`) are offered as subtitles; and **Dolby Digital Plus (E-AC-3) 5.1**
+  is decoded, from MKV, TS and MP4.
+- **`R3` shows playback statistics.** The setting moved to Settings → Playback →
+  Playback Statistics.
+- Up to 24 subtitle tracks per film (was 8), so a folder of `.srt` files all show.
+
 ## 3.5.1
 
 - **Fixed: `△` showed only the audio tracks** ([#2](https://github.com/jw-notes/JellyFin-PS3/issues/2)).

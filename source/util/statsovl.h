@@ -19,5 +19,10 @@
 
 void statsovl_load(void);            // read the persisted value (once, at startup)
 void statsovl_save(void);            // persist the current value
-bool statsovl_enabled(void);         // true => draw the overlay during playback
+bool statsovl_enabled(void);         // the setting: shown from the start of every playback
 void statsovl_set_enabled(bool on);  // set + persist immediately
+// R3 (and the remote's INFO key, and Options) shows or hides it for this playback only, whatever the
+// setting; the next playback starts as the setting says again.
+bool statsovl_shown(void);           // true => draw the overlay now
+void statsovl_toggle_shown(void);
+void statsovl_session_end(void);     // the playback is over: back to the setting

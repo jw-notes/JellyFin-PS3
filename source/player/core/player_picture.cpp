@@ -79,7 +79,7 @@ static void shift_text(char *out, size_t cap, int v, const char *pos, const char
 }
 
 static void show_readout(void) {
-    char l1[160], l2[160];
+    char l1[160], l2[224];
     if (s_shift) {
         char hx[40], hy[40];
         shift_text(hx, sizeof hx, s_pic.x, TR("Right"), TR("Left"));
@@ -87,12 +87,12 @@ static void show_readout(void) {
         snprintf(l1, sizeof l1, "%s  %s   %s   %s", TR("Picture position"), hx, hy,
                  aspect_label(s_pic.aspect));
         snprintf(l2, sizeof l2, "%s",
-                 TR("D-pad move  R1 size  Square fit / fill / stretch  Hold Triangle reset  O done"));
+                 TR("{DPAD} Move  {R1} Size  {SQUARE} Fit / Fill / Stretch  Hold {TRIANGLE} Reset  {O} Done"));
     } else {
         snprintf(l1, sizeof l1, "%s  %s %d%%   %s %d%%   %s", TR("Picture size"),
                  TR("Width"), s_pic.w, TR("Height"), s_pic.h, aspect_label(s_pic.aspect));
         snprintf(l2, sizeof l2, "%s",
-                 TR("D-pad size  R1 move  Square fit / fill / stretch  Hold Triangle reset  O done"));
+                 TR("{DPAD} Size  {R1} Move  {SQUARE} Fit / Fill / Stretch  Hold {TRIANGLE} Reset  {O} Done"));
     }
     hud_set_picture_banner(l1, l2);
 }

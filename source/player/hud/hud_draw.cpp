@@ -32,6 +32,7 @@
 #include "../core/scrub_motion.h"
 #include "audio_bitstream.h"   // audio_passthrough_active(): the receiver owns the volume
 #include "../core/player_picture.h"   // picture_get(): the picture-shape chip
+#include "chapters.h"                 // marks on the bar, the name while scrubbing
 
 // -------------------------------------------------------
 // Overlay buffers + compose-on-change state
@@ -150,9 +151,20 @@ static void fmt_time(char *buf, int sz, u32 secs) {
 // -------------------------------------------------------
 
 static void draw_menu(int dw, int dh) {
+    // Items left, values (if any) right-aligned after a gap.
     int max_w = ttf_text_width(g_hud.menu_title, MENU_TITLE_PX);
+    int item_w = 0, val_w = 0;
     for (int i = 0; i < g_hud.menu_n; i++) {
-        int tw = MENU_DOT_COL + ttf_text_width(g_hud.menu_items[i], ROW_TEXT_PX);
+        int tw = ttf_text_width(g_hud.menu_items[i], ROW_TEXT_PX);
+        if (tw > item_w) item_w = tw;
+        if (g_hud.menu_values[i] && g_hud.menu_values[i][0]) {
+            int vw = ttf_text_width(g_hud.menu_values[i], ROW_TEXT_PX);
+            if (vw > val_w) val_w = vw;
+        }
+    }
+    if (val_w > MENU_VALUE_MAX_W) val_w = MENU_VALUE_MAX_W;
+    {
+        int tw = MENU_DOT_COL + item_w + (val_w ? MENU_VALUE_GAP + val_w : 0);
         if (tw > max_w) max_w = tw;
     }
     int ox  = overscan_x();
@@ -202,6 +214,17 @@ static void draw_menu(int dw, int dh) {
                 (u32)(row_cy - (int)(ROW_TEXT_PX * 0.5f)),
                 g_hud.menu_items[i], ROW_TEXT_PX,
                 (i == g_hud.menu_sel) ? HUD_FOCUSED : XMB_TEXT_DIM);
+        if (g_hud.menu_values[i] && g_hud.menu_values[i][0]) {
+            // Clipped from the right to the column, so a long episode name fits.
+            char v[96];
+            snprintf(v, sizeof v, "%s", g_hud.menu_values[i]);
+            int len = (int)strlen(v);
+            while (len > 1 && ttf_text_width(v, ROW_TEXT_PX) > val_w) v[--len] = 0;
+            const int vw = ttf_text_width(v, ROW_TEXT_PX);
+            drawTTF((u32)(mx1 - MENU_PAD - vw),
+                    (u32)(row_cy - (int)(ROW_TEXT_PX * 0.5f)),
+                    v, ROW_TEXT_PX, (i == g_hud.menu_sel) ? XMB_TEXT_DIM : HUD_DIMMED);
+        }
     }
 }
 

@@ -53,6 +53,14 @@ full-width forms and the 2,965 kanji of JIS X 0208 level 1 — 685 KB. It is the
 dropped before. Kanji outside level 1 (rare names) are still dropped. Regenerate with `tools/gen_jp_font.py` when a
 translation needs a character the subset lacks; the test says when. Licence and provenance: `source/gfx/fonts/LICENSES.md`.
 
+**Subtitles in other scripts.** Chinese, Korean, Hebrew, Arabic and Persian subtitles use faces read only when a line
+needs them (`ttf_need_text` in `ui_text.cpp`) and freed when playback ends: Korean from the console's firmware
+(`SCE-PS3-YG-B-KOR.TTF`), Chinese (and kanji outside level 1), Hebrew and Arabic from `subtitle-fonts/`, shipped in
+`USRDIR/fonts`. The renderer draws left to right with no shaping engine, so `source/util/rtl_text.h` puts a Hebrew,
+Arabic or Persian line into display order (a cut-down Unicode bidi: numbers and Latin runs keep their order, brackets
+mirror) and swaps each Arabic letter for its joined form from the Presentation Forms blocks, lam-alef ligatures
+included; vowel marks are dropped. Tested in `tests/test_rtl_text.c`.
+
 The Japanese face is scaled by Rodin's em, not its own ascent + descent (which is 1.45 em against Rodin's 0.97, and
 would draw kana about a third smaller). The factor is fixed, not derived from the role's own face, because the glyph
 cache keys a glyph by font and pixel size only.

@@ -6,11 +6,11 @@
 
 int main() {
     // The build's own release is up to date; anything later is an update.
-    assert(strcmp(APP_VERSION, "3.5.1") == 0);
-    assert(release_version_cmp("v3.5.1", APP_VERSION) == 0);
-    assert(release_version_cmp("V3.5.1", APP_VERSION) == 0);
-    assert(release_version_cmp("v3.5.2", APP_VERSION) > 0 &&
-           release_version_cmp("v3.6.0", APP_VERSION) > 0);
+    assert(strcmp(APP_VERSION, "3.6.0") == 0);
+    assert(release_version_cmp("v3.6.0", APP_VERSION) == 0);
+    assert(release_version_cmp("V3.6.0", APP_VERSION) == 0);
+    assert(release_version_cmp("v3.6.1", APP_VERSION) > 0 &&
+           release_version_cmp("v3.7.0", APP_VERSION) > 0);
     assert(release_version_cmp("v3.10.0", APP_VERSION) > 0);
     assert(release_version_cmp("v4.0", APP_VERSION) > 0);
     // Older releases, including the upstream one this is based on, are not.

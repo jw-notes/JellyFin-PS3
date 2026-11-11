@@ -129,11 +129,14 @@ All taken on a real PS3 at 1920×1080. More in the
   drive.
 - **Favourites** on their own Home row.
 - **A Media tab that plays from USB drives and the hard drive, with no server**:
-  MKV, .m2ts and .ts files from **NTFS, exFAT or FAT32** drives (playback
+  MKV, MP4 / MOV (.mp4, .m4v, .mov), .m2ts and .ts files from **NTFS, exFAT or FAT32** drives (playback
   only reads; downloads are the one thing written, to NTFS or FAT32), with audio-track switching and a resume point
   kept on the console. H.264 only, with Dolby Digital, DTS, TrueHD, MP3, AAC,
-  FLAC or PCM audio; the file's page says what a file lacks. MKV files show their
-  text and PGS subtitles; subtitles in .ts / .m2ts files are not supported yet.
+  Dolby Digital Plus, FLAC or PCM audio; the file's page says what a file lacks. MKV files show their
+  text and PGS subtitles; subtitles inside MP4, .ts and .m2ts files are not supported yet.
+- **Subtitle files beside a video**: `.srt` files named after it (`Film.srt`,
+  `Film.eng.srt`, `Film.ch-traditional.srt`) are in its subtitle menu, named by
+  language. UTF-8, UTF-16 and older Western files all read correctly.
 - **Music from the same drives**: FLAC (up to 24-bit, 192 kHz), MP3 and WAV files.
   A folder is an album, played in track order from the tags, with its cover art
   and no gap between tracks; the music screen and its visualisers work as for
@@ -147,7 +150,11 @@ All taken on a real PS3 at 1920×1080. More in the
 - **Lossless HD audio**: TrueHD / Atmos and DTS-HD MA, decoded on the console
   (see [Surround sound](#surround-sound)).
 - **Subtitles rendered by the console** (PGS and text) in 3 fonts and 3 colours,
-  so turning them on no longer means a server-side burn-in.
+  so turning them on no longer means a server-side burn-in. Chinese, Japanese,
+  Korean, Hebrew, Arabic and Persian text included, right to left where it reads that way.
+- **Chapters**: marked on the progress bar, named beside the time while you
+  scrub, and listed in **Options** (`Start`), which also holds Audio / Subtitles,
+  Picture, Playback Statistics, Next / Previous Episode and the skip settings.
 - **Skip intro / recap / credits** from Jellyfin's media segments, with
   **Skip Intros** and **Skip Credits** settings (Off, Button or Auto). The next-episode countdown starts with the credits,
   and the next episode keeps your audio language, quality and version.
@@ -233,8 +240,10 @@ Notes and limitations:
     data is not rendered, for the same reason as Atmos. **DTS-HD HRA and
     DTS-ES** play from their core, at up to 1509 kbps.
     See [docs/dts-hd.md](dts-hd.md).
-  - **Dolby Digital Plus (E-AC-3), including DD+ Atmos: unchanged.** Nothing
-    here decodes it; the server transcodes it to AC-3 5.1 as before.
+  - **Dolby Digital Plus (E-AC-3), including DD+ Atmos:** from the server,
+    unchanged: it transcodes it to AC-3 5.1 as before. In a **file on a drive**
+    it is decoded on the console (up to 7.1, folded to 5.1; the Atmos layer is
+    not rendered). Dolby Digital output cannot carry it, so it plays as PCM.
 - HD mode streams the original audio track over your network instead of a
   640 kbps transcode — a TrueHD or DTS-HD MA track can be several Mbps on top
   of the video. That is fine on a LAN and a bad idea over the internet.
@@ -242,7 +251,7 @@ Notes and limitations:
   way 5.1 does — and the app only offers 7.1 at all when the connected chain
   reports it will take eight channels.
 - Music playback is stereo by design and ignores this switch.
-- The **Player Stats Overlay** shows the negotiated result while playing:
+- The **playback statistics** (`R3` while playing) show the negotiated result:
   `truehd 8/8` is a lossless 7.1 bed, `truehd 6/8` a lossless 5.1 one,
   `ac3 6/8` is a working AC-3 5.1 transcode, `dts-hd 6/8` a DTS-HD/DTS:X track
   playing from its core, and `mp3 2/2` means the server fell back to stereo.
@@ -326,8 +335,19 @@ visualiser. On the Blu-ray remote, `|<<` `>>|` and `<<` `>>` also switch tabs.
 move across it and `X` activates the focused control. `R2`/`L2` tap to skip, or
 hold to scrub. `△` opens the audio tracks, and `△` again (or `Left`/`Right`) switches
 to the subtitles and back. `□` puts the bar away,
-and `O` or `Start` stops. When an intro or recap is playing, `X` skips it; during
+and `O` stops. `Start` opens **Options** over the player, each row with what it is
+set to now: **Chapters** (pick one and `X` plays from it), **Audio / Subtitles**,
+**Picture**, **Playback Statistics**, and for a show **Next Episode** and **Previous
+Episode** with their names, and **Skip Intros** and **Skip Credits** (`X` steps
+Off, Button, Auto). A live channel has Picture and Playback Statistics. Chapters
+are marked on the progress bar, and the chapter's name shows beside the time while
+you skip or scrub. When an intro or recap is playing, `X` skips it; during
 the next-episode prompt, `Select` starts the next episode.
+
+**Subtitles in other scripts.** Chinese, Japanese, Korean, Hebrew, Arabic and
+Persian subtitles show in their own letters. Hebrew, Arabic and Persian read right
+to left and Arabic letters join. The font each needs is read the first time a line
+in it appears (Korean comes from the PS3's own font) and freed when playback ends.
 
 **Music player.** `Left`/`Right` move across the transport row, and going `Right`
 past Shuffle drops you into the UP NEXT queue. `L1`/`R1` are previous/next track,
@@ -391,7 +411,8 @@ resumes it; `O` goes up a folder, `L2`/`R2` page through a long one.
 
 | Button          | Action                                                            |
 |-----------------|-------------------------------------------------------------------|
-| O / Start       | Stop / exit player (O closes an open track menu first)            |
+| O               | Stop / exit player (O closes an open menu first)                  |
+| Start           | Options: Chapters, Audio / Subtitles, Picture, Playback Statistics, Next / Previous Episode, Skip Intros / Credits. Start again closes it |
 | Square          | Hide the player bar before its timeout                            |
 | Left / Right    | Seek bar highlighted (how the bar comes up): tap for 10 s, hold to glide, faster the longer you hold. On the controls: move between them |
 | Up / Down       | Up from the seek bar to the controls, Down back |
@@ -399,7 +420,7 @@ resumes it; `O` goes up a folder, `L2`/`R2` page through a long one.
 | Triangle        | Audio tracks; in the menu, Triangle or Left/Right switches to Subtitles and back |
 | X on PICTURE    | Picture size: Left/Right = width, Up/Down = height, Square = Fit / Fill / Stretch, R1 = move instead of size, hold Triangle 3 s = reset, O = done |
 | L1 / R1         | Previous / next episode (or title, when a collection is playing through) |
-| L3 / R3 (stick click) | Show / hide the player stats                                |
+| R3 (right stick click) | Show / hide the playback statistics for this video (remote: INFO); Settings → Playback → Playback Statistics keeps them on |
 | R2 / L2 (tap)   | Skip +10 s / -10 s (taps within 1 s batch into one seek)          |
 | R2 / L2 (hold)  | The same glide from anywhere on the bar; it seeks once on release |
 | Select          | Picture shape: Fit, Fill (crops the edges, for 16:9 films on a 4:3 TV), Stretch. During the NEXT prompt (last 90 s): jump to the next episode/movie |
