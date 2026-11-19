@@ -2,6 +2,8 @@
 #include <ppu-types.h>
 #include "../build_config.h"   // relative: source/ is not on the -I path
 
+struct PlayerState;
+
 // =========================================================================
 //  Player stats — live playback instrumentation
 // =========================================================================
@@ -133,6 +135,10 @@ void player_stats_get(PlayerStats *out);
 // GPU quad.  Call during playback, after hud_draw().
 void player_stats_render_overlay(void);
 
+// The playback the panel describes: its tracks, its stream request and how
+// it is read.  Bound at session start, NULL at the end.
+void player_stats_bind(const PlayerState *ps);
+
 #else   // stats stripped — every hook collapses to nothing
 
 static inline void player_stats_reset(void) {}
@@ -143,5 +149,6 @@ static inline void player_stats_on_audio_write(int, int, int, bool) {}
 static inline void player_stats_on_audio_levels(const int *, int) {}
 static inline void player_stats_get(PlayerStats *) {}
 static inline void player_stats_render_overlay(void) {}
+static inline void player_stats_bind(const PlayerState *) {}
 
 #endif  // ENABLE_PLAYER_STATS

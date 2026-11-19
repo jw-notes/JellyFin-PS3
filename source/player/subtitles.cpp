@@ -69,6 +69,7 @@ static int         s_pgs_px_cap = 0;     // pixels
 static PgsBitmap   s_pgs_cur;
 static bool        s_pgs_cur_ok    = false;
 static int         s_pgs_cur_epoch = -1; // which epoch s_pgs_cur holds, -1 = none
+static u32         s_pgs_gen = 0;        // bumped on every decode into s_pgs_cur
 
 bool subs_active(void) { return s_mode != SUB_NONE; }
 
@@ -381,7 +382,13 @@ static const PgsBitmap *pgs_at_locked(u64 pts_ms)
 
     s_pgs_cur_epoch = idx;
     s_pgs_cur_ok    = ok;
+    s_pgs_gen++;
     return ok ? &s_pgs_cur : NULL;
+}
+
+u32 subs_pgs_generation(void)
+{
+    return s_pgs_gen;
 }
 
 const char *subs_text_at(u64 pts_ms)

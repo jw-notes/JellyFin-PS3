@@ -8,6 +8,7 @@
 #include "vquality.h"
 #include "jellyfin_api.h"   // g_source_fps_milli — server-reported frame rate
 #include "display_diag.h"   // 24p decision record, logged once the rate is known
+#include "h264_sps.h"       // profile / level for the stats panel
 
 #include <stdio.h>
 #include <string.h>
@@ -301,6 +302,23 @@ void vdec_flush(void) {
     vdecStartSequence(s_vdec);
 }
 
+// What the stats panel reads: compressed bytes handed to the decoder (never
+// reset, readers take differences) and the stream's H.264 profile and level
+// and picture size from its last SPS (0 until one arrives).
+static volatile u64 s_es_bytes    = 0;
+static volatile int s_sps_profile = 0;
+static volatile int s_sps_level   = 0;
+static volatile int s_sps_w = 0, s_sps_h = 0;
+
+u64 vdec_es_bytes(void) { return s_es_bytes; }
+
+void vdec_stream_info(int *profile_idc, int *level_idc, int *w, int *h) {
+    *profile_idc = s_sps_profile;
+    *level_idc   = s_sps_level;
+    *w           = s_sps_w;
+    *h           = s_sps_h;
+}
+
 void vdec_submit(const u8 *data, int len, u64 pts) {
     if (len > AU_BUF_SIZE) {
         // Dropped AU = missing reference frame = corruption until next IDR.
@@ -316,6 +334,7 @@ void vdec_submit(const u8 *data, int len, u64 pts) {
         return;
     }
     if (len <= 0) return;
+    s_es_bytes += (u64)len;
     // Keep the first input PTS (90 kHz) for measure_fps() below.
     if (s_in_pts_n < IN_PTS_MAX && pts < (1ULL << 40)) s_in_pts[s_in_pts_n++] = pts;
     {
@@ -341,7 +360,17 @@ void vdec_submit(const u8 *data, int len, u64 pts) {
         else if (data[i+2]==0 && data[i+3]==0x01 && i+4 < len) nal = data[i+4] & 0x1f;
         else continue;
         if (!nal_first) nal_first = nal;
-        if (nal == 7) has_sps = true;
+        if (nal == 7) {
+            has_sps = true;
+            const int at = (data[i+2] == 0x01) ? i + 3 : i + 4;
+            H264SpsInfo sps;
+            if (h264_parse_sps(data + at, len - at, &sps)) {
+                s_sps_profile = sps.profile_idc;
+                s_sps_level   = sps.level_idc;
+                s_sps_w       = sps.width;
+                s_sps_h       = sps.height;
+            }
+        }
     }
     if (has_sps) s_got_sps = true;
 

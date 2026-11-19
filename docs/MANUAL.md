@@ -251,10 +251,11 @@ Notes and limitations:
   way 5.1 does — and the app only offers 7.1 at all when the connected chain
   reports it will take eight channels.
 - Music playback is stereo by design and ignores this switch.
-- The **playback statistics** (`R3` while playing) show the negotiated result:
-  `truehd 8/8` is a lossless 7.1 bed, `truehd 6/8` a lossless 5.1 one,
-  `ac3 6/8` is a working AC-3 5.1 transcode, `dts-hd 6/8` a DTS-HD/DTS:X track
-  playing from its core, and `mp3 2/2` means the server fell back to stereo.
+- The **playback statistics** (`R3` while playing) show the negotiated result
+  under Audio → Output: `TrueHD 7.1 decoded, PCM 7.1 to the PS3` is a lossless
+  7.1 bed, `AC3 5.1 decoded` a working AC-3 5.1 transcode, `DTS-HD (core)` a
+  DTS-HD/DTS:X track playing from its core, and a stereo codec means the server
+  fell back to stereo.
 
 ---
 

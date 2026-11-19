@@ -122,8 +122,7 @@ void stream_prefs_current(StreamPrefs *out) {
     out->no_video_copy = !directstream_enabled();
 }
 
-void build_stream_url(char *url, int url_sz, const PlayerState *ps,
-                      u64 start_ticks) {
+void player_stream_request(const PlayerState *ps, StreamRequest *rq) {
     StreamPrefs prefs;
     stream_prefs_current(&prefs);
     if (ps->live) {
@@ -134,12 +133,17 @@ void build_stream_url(char *url, int url_sz, const PlayerState *ps,
     StreamSelection sel = { ps->item->id, player_current_source(ps),
                             &ps->tracks, ps->cur_audio, ps->cur_sub,
                             ps->sub_is_text || ps->sub_is_pgs, ps->live };
-    StreamRequest rq;
-    stream_request_resolve(&prefs, &sel, &rq);
+    stream_request_resolve(&prefs, &sel, rq);
     // The frame ceiling the jitter buffer was allocated for at open.  A seek
     // keeps it, so it can never ask for a different frame size.
-    rq.max_w = ps->req_w;
-    rq.max_h = ps->req_h;
+    rq->max_w = ps->req_w;
+    rq->max_h = ps->req_h;
+}
+
+void build_stream_url(char *url, int url_sz, const PlayerState *ps,
+                      u64 start_ticks) {
+    StreamRequest rq;
+    player_stream_request(ps, &rq);
     if (rq.budgeted) {
         char lb[128];
         snprintf(lb, sizeof(lb),

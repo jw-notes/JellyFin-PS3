@@ -97,6 +97,12 @@ const u8    *jbuf_peek(void);
 void         jbuf_pop(void);
 u32          jbuf_fw(void);
 u32          jbuf_fh(void);
+// Compressed video bytes handed to the decoder since start-up (never reset:
+// take differences), and the H.264 profile_idc / level_idc and cropped
+// picture size of the stream's last SPS (0 until one has arrived).  For the
+// stats panel.
+u64          vdec_es_bytes(void);
+void         vdec_stream_info(int *profile_idc, int *level_idc, int *w, int *h);
 int          jbuf_count(void);
 int          jbuf_rd(void);
 u64          jbuf_peek_pts_us(void);  // PTS (us, 0=unknown) of current front slot

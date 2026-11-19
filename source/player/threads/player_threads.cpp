@@ -84,6 +84,11 @@ static live_pcr s_pcr;
 
 static void ring_reset(void) { s_ring_rd = s_ring_wr = s_ring_n = 0; live_pcr_reset(&s_pcr); }
 
+void decode_ring_fill(int *packets, int *cap) {
+    *packets = s_ring_n;
+    *cap     = s_ring_cap;
+}
+
 bool decode_ring_alloc(u32 want_bytes) {
     decode_ring_free();
     if (want_bytes < RING_BYTES_MIN) want_bytes = RING_BYTES_MIN;

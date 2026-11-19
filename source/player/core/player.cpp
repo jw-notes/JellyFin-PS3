@@ -40,6 +40,7 @@
 #include "player_picture.h"
 #include "player_internal.h"
 #include "player_stats.h"
+#include "sub_overlay.h"
 #include "ui.h"
 #include "ui_visuals.h"
 #include "jellyfin_api.h"
@@ -1172,9 +1173,12 @@ void show_player_run(const JFItem *item, u32 resume_secs,
     // Claim the cached HUD overlay buffers before the big allocations so
     // they sit low in the heap once and forever (see player_hud.h).
     hud_overlay_alloc();
+    // Subtitles too: there is no room for them once playback is under way.
+    sub_overlay_alloc();
     // Same reasoning for the stats panel — and it only allocates at all when
     // the Settings toggle is on, so a normal build costs nothing.
     player_stats_reset();
+    player_stats_bind(&ps);
     player_stats_overlay_alloc();
 
     crash_log("p2 vdec_open begin");
@@ -2008,6 +2012,7 @@ void show_player_run(const JFItem *item, u32 resume_secs,
     picture_session_end();
     ttf_extra_fonts_release();   // the subtitle-script faces go back to the menus
     statsovl_session_end();      // R3's show / hide was for this playback
+    player_stats_bind(NULL);
     hud_shutdown();
 
     // Final position for the server's resume bookmark — read before the

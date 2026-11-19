@@ -9,6 +9,7 @@
 #include "dl_library.h"
 #include "local_probe.h"
 #include "local_sidecar.h"
+#include "stream_request.h"   // StreamRequest (player_stream_request)
 
 // A subtitle track that is a file beside the video, not a track of it (PlayerLocal.sidecar).
 #define LOCAL_SIDECAR_BASE 0x10000
@@ -237,6 +238,9 @@ const JFMediaSource *player_current_source(const PlayerState *ps);
 // start_ticks is in Jellyfin's 100-ns units (seconds * 10,000,000).
 void build_stream_url(char *url, int url_sz, const PlayerState *ps,
                       u64 start_ticks);
+// The request build_stream_url() turns into a URL: what the player asks the
+// server for with the current settings and tracks (also read by the stats panel).
+void player_stream_request(const PlayerState *ps, StreamRequest *rq);
 
 // Feed TS packets until the jitter buffer holds JBUF_PREFILL frames.
 // fatal_on_eof: a network error stops playback (initial open) instead of
@@ -315,6 +319,9 @@ bool player_live_preroll(PlayerState *ps, bool startup);
 // decode_ring_fill()/cap() are in PACKETS and drive the pre-roll wait.
 bool decode_ring_alloc(u32 want_bytes);
 void decode_ring_free(void);
+// How full the read-ahead ring is, in TS packets (cap 0: no ring).  Read
+// without the decode thread's cooperation: a snapshot, good for display.
+void decode_ring_fill(int *packets, int *cap);
 int  decode_ring_fill(void);
 int  decode_ring_cap(void);
 // Programme time received since the stream (re)opened, from its PCR; 0 until one arrives.

@@ -199,6 +199,9 @@ bool timing_is_1to1(void) {
 
 bool timing_display_interlaced(void) { return s_display_interlaced; }
 
+void timing_content_fps(u32 *num, u32 *den)  { *num = s_fps_num;     *den = s_fps_den; }
+void timing_display_rate(u32 *num, u32 *den) { *num = s_display_num; *den = s_display_den; }
+
 s64 timing_vblank_period_us(void) {
     if (s_display_num == 0) return 16683;   // defensive; never happens post-init
     return (s64)1000000 * (s64)s_display_den / (s64)s_display_num;

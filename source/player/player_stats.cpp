@@ -28,6 +28,11 @@
 #include "plog.h"
 #include "ui.h"          // cpu_rt_begin/end, drawTTF, drawRect, ttf_text_width
 #include "ui_visuals.h"  // XMB_* palette
+#include "i18n.h"        // TR
+#include "video.h"       // vdec_es_bytes, vdec_stream_info, jbuf_*
+#include "stream.h"      // stream_rx_stats
+#include "audio_bitstream.h"   // audio_passthrough_active
+#include "player_internal.h"   // PlayerState, player_stream_request, decode_ring_fill
 
 // =========================================================================
 //  Sample window sizing
@@ -65,15 +70,20 @@
 // be readable, and a recompose costs a full text layout pass.
 #define STAT_REFRESH_US 250000ULL
 
-// Overlay panel geometry (main-RAM compose + RSX texture, both this size).
-// OVL_W must be a multiple of 16: bind_texture() sets pitch = width * 4 and
-// RSX linear textures need a 64-byte-aligned pitch.  384*4 = 1536 = 64*24.
-// The HUD never has to think about this because it is display-width sized
-// (1280/1920, both already aligned); a small panel does.
-// Height covers a header + 12 stat lines (last baseline at y=225) plus a
-// bottom margin matching the top pad.  Only the WIDTH has an alignment rule.
-#define OVL_W 384
-#define OVL_H 256
+// Overlay panel geometry, in pixels at 720p; ovl_layout() scales it by the
+// display (s_k) once, before the buffers are allocated.  The width is rounded
+// up to a multiple of 16: bind_texture() sets pitch = width * 4, and RSX
+// linear textures need a 64-byte-aligned pitch.
+#define ST_PAD       12
+#define ST_LINE      19
+#define ST_PX        14.0f
+#define ST_HDR       16.0f
+#define ST_LABEL_W   96      // the label column
+#define ST_ROWS_MAX  21      // every row the panel can have, with room to spare
+
+// Samples of the byte counters for the network and video rates: one per
+// recompose (~250 ms), so eight cover about two seconds.
+#define RATE_SAMPLES 8
 
 // =========================================================================
 //  State
@@ -134,6 +144,15 @@ static u32 *s_ovl_stage   = NULL;
 static u32 *s_ovl_tex     = NULL;
 static u32  s_ovl_tex_off = 0;
 static u64  s_ovl_next_us = 0;
+static u32  s_ovl_w = 0, s_ovl_h = 0;   // set once by ovl_layout()
+static float s_k = 1.0f;                  // display scale of the layout
+
+// The playback the panel describes (player_stats_bind).
+static const PlayerState *s_ps = NULL;
+
+struct RateSample { u64 t_us, rx, es; };
+static RateSample s_rate[RATE_SAMPLES];
+static int        s_rate_n = 0;
 
 static inline int bin_of(u32 ft_us) {
     u32 b = ft_us / STAT_BIN_US;
@@ -162,6 +181,7 @@ void player_stats_reset(void) {
     s_ram_min_kb = 0xFFFFFFFFu;
     s_ram_next_us = 0;
     s_ovl_next_us = 0;
+    s_rate_n = 0;
 
     s_vb_nominal_us = (u64)timing_vblank_period_us();
     s_ctrl = gcmGetControlRegister();
@@ -405,11 +425,28 @@ void player_stats_get(PlayerStats *out) {
 //  Overlay
 // =========================================================================
 
+void player_stats_bind(const PlayerState *ps) {
+    s_ps = ps;
+    s_rate_n = 0;
+}
+
+// The panel is sized by the display, which is fixed at boot: a 1080p screen
+// gets bigger text than a 480i one, and the buffers are allocated once.
+static void ovl_layout(void) {
+    if (display_height >= 1080)     s_k = 1.25f;
+    else if (display_height >= 720) s_k = 1.0f;
+    else                            s_k = 0.75f;
+    s_ovl_w = ((u32)(500.0f * s_k) + 15u) & ~15u;   // pitch: a multiple of 16 pixels
+    // Rows, the pads, and the small gaps above the heading and each section.
+    s_ovl_h = (u32)(ST_PAD * s_k) * 2 + (u32)(ST_LINE * s_k) * ST_ROWS_MAX + (u32)(24 * s_k);
+}
+
 void player_stats_overlay_alloc(void) {
     if (s_ovl_stage && s_ovl_tex) return;
     if (!statsovl_shown()) return;     // never shown: pay nothing
 
-    u32 bytes = OVL_W * OVL_H * 4;
+    if (!s_ovl_w) ovl_layout();
+    u32 bytes = s_ovl_w * s_ovl_h * 4;
     if (!s_ovl_stage) s_ovl_stage = (u32*)memalign(128, bytes);
     if (!s_ovl_tex) {
         s_ovl_tex = (u32*)rsxMemalign(64, bytes);
@@ -421,182 +458,311 @@ void player_stats_overlay_alloc(void) {
     else                            plog("stats_ovl: buffers ready");
 }
 
-// Translucent backdrop written straight into the staging buffer.
-static void ovl_dim(int rx, int ry, int rw, int rh, u8 alpha) {
-    if (rx < 0 || ry < 0 || rx >= OVL_W || ry >= OVL_H) return;
-    int x2 = (rx + rw > OVL_W) ? OVL_W : rx + rw;
-    int y2 = (ry + rh > OVL_H) ? OVL_H : ry + rh;
-    u32 px = (u32)alpha << 24;
-    for (int y = ry; y < y2; y++) {
-        u32 *row = s_ovl_stage + y * OVL_W;
-        for (int x = rx; x < x2; x++) row[x] = px;
+// ---- rates ----------------------------------------------------------------
+// Network and video bitrate are differences of byte counters over the last
+// couple of seconds, sampled at each recompose.
+static void rate_sample(u64 now) {
+    u64 rxb = 0, rxw = 0; u32 rxc = 0;
+    stream_rx_stats(&rxb, &rxw, &rxc);
+    RateSample *r;
+    if (s_rate_n < RATE_SAMPLES) r = &s_rate[s_rate_n++];
+    else {
+        memmove(&s_rate[0], &s_rate[1], sizeof(RateSample) * (RATE_SAMPLES - 1));
+        r = &s_rate[RATE_SAMPLES - 1];
+    }
+    r->t_us = now; r->rx = rxb; r->es = vdec_es_bytes();
+}
+
+// Bits per second over the window, -1 while there is not yet a window.
+static double rate_bps(bool video) {
+    if (s_rate_n < 2) return -1.0;
+    const RateSample *a = &s_rate[0], *b = &s_rate[s_rate_n - 1];
+    if (b->t_us <= a->t_us) return -1.0;
+    const u64 d = video ? b->es - a->es : b->rx - a->rx;
+    return (double)d * 8.0 * 1e6 / (double)(b->t_us - a->t_us);
+}
+
+static void fmt_mbps(char *out, int cap, double bps) {
+    if (bps < 0.0)          snprintf(out, cap, "...");
+    else if (bps >= 1e6)    snprintf(out, cap, "%.1f Mbps", bps / 1e6);
+    else                    snprintf(out, cap, "%.0f kbps", bps / 1e3);
+}
+
+// "23.976", "25", "59.94": a frame or refresh rate fraction, as people write it.
+static void fmt_rate(char *out, int cap, u32 num, u32 den) {
+    if (!num || !den) { snprintf(out, cap, "?"); return; }
+    if (num % den == 0) { snprintf(out, cap, "%u", num / den); return; }
+    const double v = (double)num / (double)den;
+    if (num == 24000 && den == 1001) snprintf(out, cap, "%.3f", v);   // 23.976
+    else                             snprintf(out, cap, "%.2f", v);   // 29.97, 59.94
+}
+
+static const char *channels_name(int n) {
+    switch (n) {
+    case 1:  return "Mono";
+    case 2:  return "Stereo";
+    case 6:  return "5.1";
+    case 8:  return "7.1";
+    default: return NULL;
     }
 }
 
-#define ST_PAD    12
-#define ST_LINE   19
-#define ST_PX   14.0f
-#define ST_HDR  15.0f
-
-// One "label: value" line.  Label in faint ink at the left margin, value in
-// the given colour at a fixed column so the numbers stay in a straight edge.
-// Peak in 1/32768 units -> integer dBFS, floored at -99 for "silent".
-// Integer result keeps the overlay line short enough to read at TV distance.
-static int peak_db(u32 pk) {
-    if (pk == 0) return -99;
-    float d = 20.0f * log10f((float)pk / 32768.0f);
-    if (d < -99.0f) d = -99.0f;
-    if (d >   0.0f) d =   0.0f;
-    return (int)(d - 0.5f);
+static const char *h264_profile_name(int idc) {
+    switch (idc) {
+    case 66:  return "Baseline";
+    case 77:  return "Main";
+    case 88:  return "Extended";
+    case 100: return "High";
+    case 110: return "High 10";
+    case 122: return "High 4:2:2";
+    case 244: return "High 4:4:4";
+    default:  return NULL;
+    }
 }
 
-static void stat_line(int y, const char *label, const char *value, u32 color) {
-    drawTTF((u32)ST_PAD, (u32)y, label, ST_PX, XMB_TEXT_FAINT);
-    drawTTF((u32)(ST_PAD + 62), (u32)y, value, ST_PX, color);
+static const char *container_name(LocalContainer c) {
+    switch (c) {
+    case LM_MKV:  return "MKV";
+    case LM_MP4:  return "MP4";
+    case LM_M2TS: return "M2TS";
+    default:      return "TS";
+    }
+}
+
+static const char *audio_codec_name(void) {
+    switch (adec_get_codec()) {
+    case ADEC_CODEC_AC3:    return "AC3";
+    case ADEC_CODEC_EAC3:   return "E-AC3";
+    case ADEC_CODEC_DTS:
+        // "DTS-HD MA" only when the lossless extension is really decoded;
+        // otherwise the extension is present and the core is what plays.
+        return adec_dts_is_lossless() ? "DTS-HD MA"
+             : adec_dts_saw_extension() ? "DTS-HD (core)" : "DTS";
+    case ADEC_CODEC_TRUEHD: return "TrueHD";
+    case ADEC_CODEC_AAC:    return "AAC";
+    case ADEC_CODEC_FLAC:   return "FLAC";
+    case ADEC_CODEC_PCM:    return "PCM";
+    default:                return "MP3";
+    }
+}
+
+// ---- layout ----------------------------------------------------------------
+
+static int s_y = 0;   // baseline of the next row while composing
+
+static int kpx(float v) { return (int)(v * s_k + 0.5f); }
+
+// Cuts `s` from the right until it fits `w` pixels, on a UTF-8 boundary.
+static void fit_text(char *s, float px, int w) {
+    int len = (int)strlen(s);
+    while (len > 1 && ttf_text_width(s, px) > w) {
+        do { len--; } while (len > 1 && ((u8)s[len] & 0xC0) == 0x80);
+        s[len] = 0;
+    }
+}
+
+// One "label   value" row: the label in faint ink at the margin, the value
+// at a fixed column so the values make a straight edge.
+static void stat_row(const char *label, const char *value, u32 color) {
+    const float px  = ST_PX * s_k;
+    const int   col = kpx(ST_PAD + ST_LABEL_W);
+    char v[128];
+    snprintf(v, sizeof v, "%s", value);
+    fit_text(v, px, (int)s_ovl_w - col - kpx(ST_PAD));
+    drawTTF((u32)kpx(ST_PAD + 4), (u32)s_y, label, px, XMB_TEXT_FAINT);
+    drawTTF((u32)col, (u32)s_y, v, px, color);
+    s_y += kpx(ST_LINE);
+}
+
+// A section heading ("Video", "Audio", "Stream") with a hairline under it.
+static void stat_section(const char *name) {
+    s_y += kpx(4);
+    drawTTF((u32)kpx(ST_PAD + 4), (u32)s_y, name, ST_PX * s_k, XMB_WHITE, true);
+    s_y += kpx(ST_LINE);
 }
 
 static void stats_compose(const PlayerStats *s) {
-    cpu_rt_begin(s_ovl_stage, OVL_W, OVL_H);
+    cpu_rt_begin(s_ovl_stage, s_ovl_w, s_ovl_h);
+    // A full wipe: the panel's height follows its rows, which can change.
+    memset(s_ovl_stage, 0, s_ovl_w * s_ovl_h * 4);
 
-    // Covers every pixel, so it doubles as the wipe of the previous compose —
-    // no separate memset needed (unlike the HUD, which only dirties bands of
-    // a display-sized buffer and has to track spans).
-    ovl_dim(0, 0, OVL_W, OVL_H, 190);
-    drawRect(0, 0, OVL_W, 1, XMB_HAIRLINE);
-    drawRect(0, OVL_H - 1, OVL_W, 1, XMB_HAIRLINE);
-    drawRect(0, 0, 1, OVL_H, XMB_HAIRLINE);
-    drawRect(OVL_W - 1, 0, 1, OVL_H, XMB_HAIRLINE);
-    drawRect(0, 0, 3, OVL_H, XMB_ACCENT);
+    const PlayerState *ps = s_ps;
+    char v[160], a[48], b[48], c[48];
+    s_y = kpx(ST_PAD);
+    const int top = 0;
 
-    int y = ST_PAD;
-    drawTTF(ST_PAD, (u32)y, "PLAYER STATS", ST_HDR, XMB_WHITE, true);
-    y += ST_LINE + 4;
+    drawTTF((u32)kpx(ST_PAD + 4), (u32)s_y, TR("Playback Statistics"), ST_HDR * s_k, XMB_WHITE, true);
+    {
+        const char *hide = TR("R3: Hide");
+        const int hw = ttf_text_width(hide, ST_PX * s_k);
+        drawTTF((u32)((int)s_ovl_w - kpx(ST_PAD) - hw), (u32)(s_y + kpx(1)), hide, ST_PX * s_k, XMB_TEXT_DIM);
+    }
+    s_y += kpx(ST_LINE) + kpx(4);
 
-    char v[96];
+    // ---- how it is playing ----
+    StreamRequest rq;
+    bool have_rq = false;
+    if (ps && !ps->local) { player_stream_request(ps, &rq); have_rq = true; }
+    if (ps && ps->local && ps->local->net)
+        snprintf(v, sizeof v, "%s,  %s", TR("Direct Play"), container_name(ps->local->container));
+    else if (ps && ps->local)
+        snprintf(v, sizeof v, "%s,  %s",
+                 strcmp(ps->local->label, "Offline") == 0 ? TR("Offline") : TR("File on this console"),
+                 container_name(ps->local->container));
+    else if (have_rq && rq.vbitrate == 0 && !rq.no_video_copy)
+        snprintf(v, sizeof v, "%s,  TS", TR("Direct Stream"));
+    else if (have_rq) {
+        fmt_mbps(a, sizeof a, (double)rq.vbitrate);
+        snprintf(v, sizeof v, TR("Converted by the server to %s,  TS"), a);
+    } else snprintf(v, sizeof v, "-");
+    if (ps && ps->live) {
+        char t[160];
+        snprintf(t, sizeof t, "%s,  %s", TR("Live TV"), v);
+        snprintf(v, sizeof v, "%s", t);
+    }
+    stat_row(TR("Playing"), v, XMB_TEXT);
 
-    // ---- presented-frame cadence ----
-    snprintf(v, sizeof(v), "%.2f  (%.2f ms)", (double)s->fps_ema,
-             (double)s->ft_cur_ms);
-    stat_line(y, "fps", v, XMB_TEXT); y += ST_LINE;
+    // ---- video ----
+    stat_section(TR("Video"));
+    {
+        int prof = 0, lvl = 0, w = 0, h = 0;
+        vdec_stream_info(&prof, &lvl, &w, &h);
+        const char *pn = h264_profile_name(prof);
+        if (pn && lvl) snprintf(v, sizeof v, "H.264  %s  %d.%d", pn, lvl / 10, lvl % 10);
+        else           snprintf(v, sizeof v, "H.264");
+        stat_row(TR("Codec"), v, XMB_TEXT);
 
-    snprintf(v, sizeof(v), "%.1f / %.1f / %.1f ms", (double)s->ft_min_ms,
-             (double)s->ft_mean_ms, (double)s->ft_max_ms);
-    stat_line(y, "lo/av/hi", v, XMB_TEXT_DIM); y += ST_LINE;
+        if (w <= 0 || h <= 0) { w = (int)jbuf_fw(); h = (int)jbuf_fh(); }
+        snprintf(v, sizeof v, "%d x %d,  %s  %u x %u", w, h, TR("shown at"),
+                 (unsigned)display_width, (unsigned)display_height);
+        stat_row(TR("Resolution"), v, XMB_TEXT);
 
-    snprintf(v, sizeof(v), "%.2f ms   n=%u", (double)s->ft_stdev_ms,
-             (unsigned)s->window_samples);
-    stat_line(y, "stdev", v, XMB_TEXT_DIM); y += ST_LINE;
+        u32 fn = 0, fd = 0, dn = 0, dd = 0;
+        timing_content_fps(&fn, &fd);
+        timing_display_rate(&dn, &dd);
+        fmt_rate(a, sizeof a, fn, fd);
+        fmt_rate(b, sizeof b, dn, dd);
+        snprintf(c, sizeof c, "%.1f", (double)s->fps_ema);
+        snprintf(v, sizeof v, TR("%s in the file,  %s shown,  %s Hz"), a, c, b);
+        stat_row(TR("Frame rate"), v, XMB_TEXT);
 
-    snprintf(v, sizeof(v), "1%%  %.1f    0.1%%  %.1f",
-             (double)s->fps_1_low, (double)s->fps_01_low);
-    stat_line(y, "lows", v, XMB_TEXT_DIM); y += ST_LINE;
+        // The PS3's decoder does not drop pictures; what can go wrong is a
+        // picture held on screen too long (a missed refresh, or a stall).
+        snprintf(v, sizeof v, TR("%u held too long,  %u missed refreshes"),
+                 (unsigned)s->long_holds, (unsigned)s->missed_vsync);
+        stat_row(TR("Late frames"), v,
+                 (s->long_holds || s->missed_vsync) ? XMB_ACCENT : XMB_TEXT);
 
-    // ---- pulldown cadence ----
-    // hold_other is the honest verdict on the 2:3 gate: nonzero means frames
-    // are landing on a vblank count the cadence never asks for.
-    snprintf(v, sizeof(v), "2x %u  3x %u  other %u",
-             (unsigned)s->hold2, (unsigned)s->hold3, (unsigned)s->hold_other);
-    stat_line(y, "pulldown", v,
-              s->hold_other ? XMB_ACCENT : XMB_TEXT_DIM); y += ST_LINE;
-
-    snprintf(v, sizeof(v), "%u shown  %u long  %u missed",
-             (unsigned)s->frames_shown, (unsigned)s->long_holds,
-             (unsigned)s->missed_vsync);
-    stat_line(y, "vsync", v,
-              (s->missed_vsync || s->long_holds) ? XMB_ACCENT : XMB_TEXT_DIM);
-    y += ST_LINE;
-
-    // ---- RSX ----
-    if (s->rsx_fifo_busy_pct < 0.0f)
-        snprintf(v, sizeof(v), "n/a (no counter)");
-    else
-        snprintf(v, sizeof(v), "%.0f%% backlog", (double)s->rsx_fifo_busy_pct);
-    stat_line(y, "rsx fifo", v, XMB_TEXT_DIM); y += ST_LINE;
-
-    // ---- main memory ----
-    // Free rather than used: free is the number that decides whether the next
-    // allocation succeeds, and it is how the rest of the codebase talks about
-    // this pool (meminfo_avail_kb).  "low" is the session's tightest moment.
-    if (s->ram_total_kb)
-        snprintf(v, sizeof(v), "%u / %u MB   low %u",
-                 (unsigned)(s->ram_avail_kb     / 1024),
-                 (unsigned)(s->ram_total_kb     / 1024),
-                 (unsigned)(s->ram_min_avail_kb / 1024));
-    else
-        snprintf(v, sizeof(v), "n/a (syscall failed)");
-    stat_line(y, "ram free", v,
-              (s->ram_avail_kb && s->ram_avail_kb < RAM_LOW_KB)
-                  ? XMB_ACCENT : XMB_TEXT_DIM);
-    y += ST_LINE;
-
-    // ---- audio ----
-    // Codec + channels prefix is the surround diagnostic: what the PMT
-    // actually selected (ac3/dts/truehd/mp3) and how wide the decoder is
-    // running, against the port's capacity (8 for the surround port).
-    // "ac3 6/8" is the fully working 5.1 path; "ac3 2/2" is liba52's stereo
-    // downmix (8ch port unavailable); "mp3 2/2" with surround ON means the
-    // server refused the surround codec.  "dts-hd 6/8" means a DTS-HD MA /
-    // DTS:X track played from its core (extension substreams present and
-    // skipped); plain "dts 6/8" is a core-only DTS track.  "truehd 8/8" is a
-    // lossless 7.1 TrueHD/Atmos bed, "truehd 6/8" a 5.1 one.
-    const char *codec_tag = "mp3";
-    if (adec_get_codec() == ADEC_CODEC_AC3)      codec_tag = "ac3";
-    else if (adec_get_codec() == ADEC_CODEC_DTS)
-        // "dts-ma" is the one that matters: the XLL extension decoded
-        // LOSSLESSLY. "dts-hd" means the extension is present but we are
-        // playing its lossy core, which is all libdca could ever do.
-        codec_tag = adec_dts_is_lossless()    ? "dts-ma"
-                  : adec_dts_saw_extension()  ? "dts-hd" : "dts";
-    else if (adec_get_codec() == ADEC_CODEC_TRUEHD) codec_tag = "truehd";
-    snprintf(v, sizeof(v), "%s %d/%d  pcm %.0f%%  dma %.0f%%",
-             codec_tag,
-             adec_output_channels(), audio_output_channels(),
-             (double)s->pcm_ring_pct, (double)s->dma_ring_pct);
-    stat_line(y, "aud buf", v,
-              (s->pcm_ring_pct < 25.0f) ? XMB_ACCENT : XMB_TEXT_DIM);
-    y += ST_LINE;
-
-    snprintf(v, sizeof(v), "%u  (of %u blocks)",
-             (unsigned)s->audio_starves, (unsigned)s->audio_blocks);
-    stat_line(y, "starves", v,
-              s->audio_starves ? XMB_ACCENT : XMB_TEXT_DIM); y += ST_LINE;
-
-    // ---- per-channel output level ----
-    // The dialogue diagnostic.  These are peaks of the block handed to the
-    // DMA engine, i.e. the last thing the app can see, so they separate the
-    // two reasons a centre speaker can go quiet: a centre reading far below
-    // L/R means the decode really is short of dialogue, while a healthy
-    // centre with nothing audible means the AV chain is not rendering slot 2
-    // (see centermix.h).  Rendered only for a port wider than stereo, where
-    // a centre slot exists at all.
-    if (s->ch_count >= 3) {
-        static const char *SLOT[8] = { "L", "R", "C", "E", "sl", "sr", "bl", "br" };
-        char lv[96];
-        int  n = 0;
-        for (int c = 0; c < s->ch_count && c < 8 && n < (int)sizeof(lv) - 12; c++) {
-            int db = peak_db(s->ch_peak[c]);
-            n += snprintf(lv + n, sizeof(lv) - n, "%s%s%d",
-                          c ? " " : "", SLOT[c], db);
-        }
-        // Flag the case that matters: front L/R clearly active while the
-        // centre sits 20 dB under them is the "dialogue missing" signature.
-        const int dbl = peak_db(s->ch_peak[0]);
-        const int dbr = peak_db(s->ch_peak[1]);
-        const int dbc = peak_db(s->ch_peak[2]);
-        const int fronts = (dbl > dbr) ? dbl : dbr;
-        const bool centre_dead = (fronts > -40) && (dbc < fronts - 20);
-        stat_line(y, "ch peak", lv, centre_dead ? XMB_ACCENT : XMB_TEXT_DIM);
-        y += ST_LINE;
+        fmt_mbps(v, sizeof v, rate_bps(true));
+        stat_row(TR("Bitrate"), v, XMB_TEXT);
     }
 
-    // ---- A/V sync ----
-    snprintf(v, sizeof(v), "%+.1f ms  %s", (double)s->avsync_us / 1000.0,
-             s->avsync_locked ? "LOCK" : "----");
-    stat_line(y, "a/v", v, s->avsync_locked ? XMB_TEXT_DIM : XMB_ACCENT);
+    // ---- audio ----
+    stat_section(TR("Audio"));
+    {
+        const JFStream *track = NULL;
+        if (ps && ps->have_tracks && ps->tracks.n_audio > 0) {
+            int i = ps->cur_audio >= 0 ? ps->cur_audio : ps->tracks.default_audio;
+            if (i >= 0 && i < ps->tracks.n_audio) track = &ps->tracks.audio[i];
+        }
+        snprintf(v, sizeof v, "%s", track && track->label[0] ? track->label : audio_codec_name());
+        stat_row(TR("Track"), v, XMB_TEXT);
+
+        if (audio_passthrough_active()) {
+            snprintf(v, sizeof v, "%s,  %s", audio_codec_name(), TR("sent to the receiver"));
+        } else {
+            const int in = adec_output_channels(), out = audio_output_channels();
+            const char *ni = channels_name(in), *no = channels_name(out);
+            if (ni) snprintf(a, sizeof a, "%s", ni); else snprintf(a, sizeof a, "%d ch", in);
+            if (no) snprintf(b, sizeof b, "%s", no); else snprintf(b, sizeof b, "%d ch", out);
+            snprintf(v, sizeof v, TR("%s %s decoded,  PCM %s to the PS3"), audio_codec_name(), a, b);
+        }
+        stat_row(TR("Output"), v, XMB_TEXT);
+
+        if (s->audio_starves) {
+            snprintf(v, sizeof v, TR("%u gaps in the sound"), (unsigned)s->audio_starves);
+            stat_row(TR("Underruns"), v, XMB_ACCENT);
+        }
+    }
+
+    // ---- subtitles ----
+    stat_section(TR("Subtitles"));
+    {
+        if (!ps || ps->cur_sub < 0 || ps->cur_sub >= ps->tracks.n_subs) {
+            snprintf(v, sizeof v, "%s", TR("Off"));
+        } else {
+            const JFStream *st = &ps->tracks.subs[ps->cur_sub];
+            const char *how = ps->sub_is_pgs  ? TR("drawn by the PS3, PGS")
+                            : ps->sub_is_text ? TR("drawn by the PS3, text")
+                            :                   TR("burned in by the server");
+            snprintf(v, sizeof v, "%s  (%s)", st->label[0] ? st->label : st->codec, how);
+        }
+        stat_row(TR("Track"), v, XMB_TEXT);
+    }
+
+    // ---- stream ----
+    stat_section(TR("Stream"));
+    {
+        int rn = 0, rc = 0;
+        decode_ring_fill(&rn, &rc);
+        if (rc > 0)
+            snprintf(v, sizeof v, TR("%d frames ready,  read-ahead %d%%"),
+                     jbuf_count(), (int)((s64)rn * 100 / rc));
+        else
+            snprintf(v, sizeof v, TR("%d frames ready"), jbuf_count());
+        stat_row(TR("Buffer"), v, XMB_TEXT);
+
+        if (!ps || !ps->local || ps->local->net) {
+            fmt_mbps(v, sizeof v, rate_bps(false));
+            stat_row(TR("Network"), v, XMB_TEXT);
+        }
+
+        snprintf(v, sizeof v, "%+.0f ms%s", (double)s->avsync_us / 1000.0,
+                 s->avsync_locked ? "" : TR(",  settling"));
+        stat_row(TR("A/V sync"), v, s->avsync_locked ? XMB_TEXT : XMB_ACCENT);
+
+        if (s->ram_total_kb) {
+            snprintf(v, sizeof v, TR("%u MB free of %u"),
+                     (unsigned)(s->ram_avail_kb / 1024), (unsigned)(s->ram_total_kb / 1024));
+            stat_row(TR("Memory"), v,
+                     (s->ram_avail_kb < RAM_LOW_KB) ? XMB_ACCENT : XMB_TEXT);
+        }
+    }
+
+    // Backdrop and frame, sized to the rows just drawn.  The text is already
+    // in the buffer, so the backdrop goes UNDER it: only pixels the text did
+    // not touch (alpha 0) take the dim colour.
+    int bottom = s_y + kpx(ST_PAD) - kpx(ST_LINE) + kpx(ST_PX + 6);
+    if (bottom > (int)s_ovl_h) bottom = (int)s_ovl_h;
+    {
+        const u32 dim = (u32)190 << 24;
+        for (int y = top; y < bottom; y++) {
+            u32 *row = s_ovl_stage + y * s_ovl_w;
+            for (u32 x = 0; x < s_ovl_w; x++) {
+                const u32 p = row[x];
+                const u32 pa = p >> 24;
+                if (pa == 0) row[x] = dim;
+                else if (pa < 255) {
+                    // Text edge over the backdrop: blend toward black by
+                    // what the glyph left uncovered.
+                    const u32 out_a = pa + (190 * (255 - pa)) / 255;
+                    const u32 r = ((p >> 16) & 0xFF) * pa / out_a;
+                    const u32 g = ((p >>  8) & 0xFF) * pa / out_a;
+                    const u32 bl = ( p        & 0xFF) * pa / out_a;
+                    row[x] = (out_a << 24) | (r << 16) | (g << 8) | bl;
+                }
+            }
+        }
+    }
+    drawRect(0, 0, s_ovl_w, 1, XMB_HAIRLINE);
+    drawRect(0, (u32)(bottom - 1), s_ovl_w, 1, XMB_HAIRLINE);
+    drawRect(0, 0, 1, (u32)bottom, XMB_HAIRLINE);
+    drawRect(s_ovl_w - 1, 0, 1, (u32)bottom, XMB_HAIRLINE);
+    drawRect(0, 0, (u32)kpx(3), (u32)bottom, XMB_ACCENT);
 
     cpu_rt_end();
 
-    memcpy((void*)s_ovl_tex, s_ovl_stage, OVL_W * OVL_H * 4);
+    memcpy((void*)s_ovl_tex, s_ovl_stage, s_ovl_w * s_ovl_h * 4);
 }
 
 void player_stats_render_overlay(void) {
@@ -615,6 +781,7 @@ void player_stats_render_overlay(void) {
     u64 now = timing_get_us();
     if (now >= s_ovl_next_us) {
         s_ovl_next_us = now + STAT_REFRESH_US;
+        rate_sample(now);
         PlayerStats s;
         player_stats_get(&s);
         stats_compose(&s);
@@ -623,10 +790,12 @@ void player_stats_render_overlay(void) {
     // Top-RIGHT, inside the overscan-safe area so a CRT does not eat it.
     // Right rather than left because the HUD puts the paused item title at
     // top-left and the two would overlap.
-    int px = (int)display_width - OVL_W - 24 - overscan_x();
-    int py = overscan_y() + 24;
+    int px = (int)display_width - (int)s_ovl_w - kpx(24) - overscan_x();
+    int py = overscan_y() + kpx(24);
     if (px < 0) px = 0;
-    rsx_draw_overlay_quad(s_ovl_tex_off, OVL_W, OVL_H, px, py, OVL_W, OVL_H);
+    if (py + (int)s_ovl_h > (int)display_height) py = (int)display_height - (int)s_ovl_h;
+    if (py < 0) py = 0;
+    rsx_draw_overlay_quad(s_ovl_tex_off, s_ovl_w, s_ovl_h, px, py, (int)s_ovl_w, (int)s_ovl_h);
 }
 
 #endif  // ENABLE_PLAYER_STATS

@@ -29,6 +29,10 @@ void timing_init(u32 fps_num, u32 fps_den);
 s64  timing_vblank_period_us(void);
 // True when the output mode is interlaced (480i/576i/1080i); set by timing_init.
 bool timing_display_interlaced(void);
+// The content frame rate timing_init() was given, and the display's refresh
+// rate, as fractions (24000/1001, 60000/1001 ...).  Valid after timing_init().
+void timing_content_fps(u32 *num, u32 *den);
+void timing_display_rate(u32 *num, u32 *den);
 bool timing_is_1to1(void);          // display rate == content rate (24p output)
 
 // Non-blocking: returns true when it is time to display the next frame.

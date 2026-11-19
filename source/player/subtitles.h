@@ -83,6 +83,10 @@ const char *subs_text_at(u64 pts_ms);
 // only when the active display set actually changes, not every call.
 const PgsBitmap *subs_pgs_at(u64 pts_ms);
 
+// Changes whenever subs_pgs_at() decodes a new display set into its bitmap,
+// whose pointer stays the same: tells the caller its copy is out of date.
+u32 subs_pgs_generation(void);
+
 // After a seek the cursor must not be trusted to walk forward.
 void subs_reset_cursor(void);
 

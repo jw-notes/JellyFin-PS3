@@ -13,6 +13,8 @@
 #include "audio.h"
 #include "audio_bitstream.h"   // passthrough: the receiver owns the volume
 #include "statsovl.h"
+#include "plog.h"
+#include "../../build_config.h"   // ENABLE_PLAYER_STATS (relative: source/ is not on the -I path)
 
 HudState g_hud;
 
@@ -264,6 +266,7 @@ HudAction hud_handle_input(bool l2_pressed, bool r2_pressed, bool paused) {
     if (BTN_PRESSED(info) || BTN_PRESSED(r3)) {
 #if ENABLE_PLAYER_STATS
         statsovl_toggle_shown();
+        plog(statsovl_shown() ? "stats_ovl: shown (R3 / DISPLAY)" : "stats_ovl: hidden (R3 / DISPLAY)");
 #endif
         return HUD_ACTION_NONE;
     }

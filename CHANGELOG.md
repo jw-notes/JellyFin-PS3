@@ -10,6 +10,17 @@ public: it froze on the Home screen on real hardware, ran out of memory at
 1080p, and had sign-in and update-check bugs (see 3.3.0 below). vortigauntlet's own release notes for 3.2.3
 and earlier are kept at the end, as he wrote them.
 
+## 3.6.1
+
+- **Fixed: subtitles flickered, sat behind the picture or did not show at all**
+  ([#4](https://github.com/jw-notes/JellyFin-PS3/issues/4)), text (SRT, ASS) and PGS alike, worst
+  at 480i / 576i. Subtitles are now drawn by the GPU on top of the video, like the player's bar.
+- **Fixed: `R3` did nothing.** It shows and hides the playback statistics again.
+- **Playback statistics, laid out like the PS4 version.** How the film is playing (direct or
+  converted by the server), video codec, resolution, frame rate, late frames and bitrate; the audio
+  track and what reaches the PS3 or the receiver; the subtitle track; and the buffer, network speed,
+  A/V sync and free memory.
+
 ## 3.6.0
 
 - **Fixed: episodes ended minutes early, and the sound drifted after fast-forward**
