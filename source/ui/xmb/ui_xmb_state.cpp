@@ -86,6 +86,7 @@ int     g_music_sub_total  = 0;
 int  g_col_depth      = 0;
 char g_col_id[64];
 char g_col_name[128];
+bool g_col_folder     = false;
 XMBItem g_col_sub_items[XMB_ITEMS_MAX];
 int     g_col_sub_count  = 0;
 int     g_col_sub_sel    = 0;

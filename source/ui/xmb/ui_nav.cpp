@@ -32,6 +32,95 @@
 #include "update_check.h"
 
 // -------------------------------------------------------
+// Folders and collections
+// -------------------------------------------------------
+// A BoxSet or a Folder opens inside its tab, in the collection sub-screen.
+// Folders nest, so each level the user goes into is kept here and O walks back
+// up one level at a time.
+
+static bool is_dir_type(const char *ty) {
+    return strcmp(ty, "BoxSet") == 0 || strcmp(ty, "Folder") == 0;
+}
+
+struct ColFrame {
+    char id[64];
+    char name[128];
+    bool folder;
+    int  start;          // g_col_sub_start: where the sliding window began
+    int  sel, scroll;    // relative to that window
+};
+static ColFrame s_col_stack[8];
+static int      s_col_stack_n = 0;
+
+// Open `id` with the sliding window starting at server index `start` (a
+// multiple of XMB_PAGE_SIZE, as the slides leave it).
+static void col_load_at(const char *id, const char *name, bool folder, int start) {
+    strncpy(g_col_id,   id,   sizeof(g_col_id) - 1);
+    strncpy(g_col_name, name, sizeof(g_col_name) - 1);
+    g_col_id[sizeof(g_col_id) - 1]     = 0;
+    g_col_name[sizeof(g_col_name) - 1] = 0;
+    g_col_folder    = folder;
+    g_col_sub_start = start; g_col_sub_total = 0;
+    g_col_sub_count = xmb_fetch_collection_items(g_col_id, g_col_sub_items,
+                                                 XMB_ITEMS_MAX, start, &g_col_sub_total);
+    // The folder shrank under us: fall back to its top.
+    if (g_col_sub_count <= 0 && start > 0) {
+        g_col_sub_start = 0;
+        g_col_sub_count = xmb_fetch_collection_items(g_col_id, g_col_sub_items,
+                                                     XMB_ITEMS_MAX, 0, &g_col_sub_total);
+    }
+    g_col_depth = 1; g_col_sub_sel = 0; g_col_sub_scroll = 0;
+}
+
+static void col_load(const char *id, const char *name, bool folder) {
+    col_load_at(id, name, folder, 0);
+}
+
+static void col_close(void) {
+    g_col_depth = 0; g_col_folder = false; s_col_stack_n = 0;
+    g_col_sub_sel = 0; g_col_sub_scroll = 0; g_col_sub_start = 0; g_col_sub_total = 0;
+}
+
+// Go one level into `it` (a BoxSet or Folder) from the sub-screen.
+static void col_enter(const XMBItem *it) {
+    if (s_col_stack_n >= (int)(sizeof(s_col_stack) / sizeof(s_col_stack[0]))) return;
+    ColFrame *f = &s_col_stack[s_col_stack_n++];
+    memcpy(f->id,   g_col_id,   sizeof(f->id));
+    memcpy(f->name, g_col_name, sizeof(f->name));
+    f->folder = g_col_folder;
+    f->start  = g_col_sub_start;
+    f->sel    = g_col_sub_sel;
+    f->scroll = g_col_sub_scroll;
+    col_load(it->id, it->name, strcmp(it->type, "Folder") == 0);
+}
+
+// Refetch the page on screen so the watched marks and progress bars are
+// current after a title was played or marked watched.
+static void col_refresh(void) {
+    if (g_col_sub_start != 0) return;
+    int total = g_col_sub_total;
+    const int n = xmb_fetch_collection_items(g_col_id, g_col_sub_items,
+                                             XMB_ITEMS_MAX, 0, &total);
+    if (n <= 0) return;
+    g_col_sub_count = n;
+    g_col_sub_total = total;
+    if (g_col_sub_sel >= n) g_col_sub_sel = n - 1;
+}
+
+// One level back up, with the cursor on the folder it came from.  The parent
+// is refetched at the window it had slid to, so a saved cursor past the first
+// XMB_ITEMS_MAX entries still lands on the same folder.
+static void col_leave(const int C) {
+    if (s_col_stack_n <= 0) { col_close(); return; }
+    const ColFrame f = s_col_stack[--s_col_stack_n];
+    col_load_at(f.id, f.name, f.folder, f.start);
+    if (g_col_sub_start == f.start && f.sel < g_col_sub_count) {
+        g_col_sub_sel    = f.sel;
+        g_col_sub_scroll = (f.sel / C) * C;
+    }
+}
+
+// -------------------------------------------------------
 // Tab switching
 // -------------------------------------------------------
 
@@ -60,7 +149,7 @@ void xmb_switch_tab(int new_tab) {
     g_sel = 0;
     g_scroll_top = 0;
     g_tv_depth = 0; g_tv_sub_sel = 0; g_tv_sub_scroll = 0; g_tv_sub_start = 0; g_tv_sub_total = 0;
-    g_col_depth = 0; g_col_sub_sel = 0; g_col_sub_scroll = 0; g_col_sub_start = 0; g_col_sub_total = 0;
+    col_close();
     // Music keeps its sub-tab across visits and lands with the header
     // focused, so Albums/Artists/Playlists/... is one LEFT/RIGHT away.
     g_music_depth = 0; g_music_header = (xmb_kind(new_tab) == TABKIND_MUSIC);
@@ -427,8 +516,7 @@ static void xmb_input_col_sub(void) {
     const int C   = gg.cols;
     const int VIS = gg.vis;
     if (BTN_PRESSED(circle)) {
-        g_col_depth = 0;
-        g_col_sub_sel = 0; g_col_sub_scroll = 0; g_col_sub_start = 0; g_col_sub_total = 0;
+        col_leave(C);
         return;
     }
     if (BTN_REPEAT(up)) {
@@ -470,6 +558,12 @@ static void xmb_input_col_sub(void) {
     if (BTN_REPEAT(left)) {
         if ((g_col_sub_sel % C) > 0) g_col_sub_sel--;
     }
+    if ((BTN_PRESSED(cross) || BTN_PRESSED(triangle)) && g_col_sub_count > 0 &&
+        g_col_sub_sel < g_col_sub_count &&
+        is_dir_type(g_col_sub_items[g_col_sub_sel].type)) {
+        col_enter(&g_col_sub_items[g_col_sub_sel]);
+        return;
+    }
     // Same as the TV episode grid: Triangle reaches the info screen, and with
     // it the Version and Quality rows.
     if (BTN_PRESSED(triangle) && g_col_sub_count > 0 &&
@@ -479,6 +573,16 @@ static void xmb_input_col_sub(void) {
         return;
     }
     if (BTN_PRESSED(cross) && g_col_sub_count > 0 && g_col_sub_sel < g_col_sub_count) {
+        if (g_col_folder) {
+            // As in the library grid, X opens the details page: Version and
+            // Quality are chosen there and Play / Resume live there.
+            const unsigned gen = g_play_gen;
+            if (timing_get_us() >= g_info_cooldown_until)
+                xmb_show_item_info(&g_col_sub_items[g_col_sub_sel]);
+            if (g_play_gen != gen) col_refresh();
+            init_btns();
+            return;
+        }
         xmb_play_list_with_next(g_col_sub_items, g_col_sub_count,
                                 g_col_sub_sel, TR("NEXT MOVIE"),
                                 TR("Press {SELECT} for next movie"));
@@ -715,13 +819,11 @@ bool xmb_handle_input_browse(void) {
         // in, and everywhere else X fell through to the video player.
         if (strcmp(ty, "Series") == 0) {
             xmb_open_series(it);
-        } else if (strcmp(ty, "BoxSet") == 0) {
-            strncpy(g_col_id,   it->id,   sizeof(g_col_id)-1);
-            strncpy(g_col_name, it->name, sizeof(g_col_name)-1);
-            g_col_sub_start = 0; g_col_sub_total = 0;
-            g_col_sub_count = xmb_fetch_collection_items(g_col_id, g_col_sub_items, XMB_ITEMS_MAX,
-                                                          0, &g_col_sub_total);
-            g_col_depth = 1; g_col_sub_sel = 0; g_col_sub_scroll = 0;
+        } else if (is_dir_type(ty)) {
+            // A BoxSet or a Folder (a directory inside a mixed library) is
+            // not playable: it opens and lists what is inside it.
+            s_col_stack_n = 0;
+            col_load(it->id, it->name, strcmp(ty, "Folder") == 0);
         } else if (strcmp(ty, "MusicAlbum")  == 0 ||
                    strcmp(ty, "Audio")       == 0 ||
                    strcmp(ty, "Playlist")    == 0 ||
@@ -807,6 +909,7 @@ bool xmb_handle_input_browse(void) {
     // from there opens full detail.
     if (BTN_PRESSED(triangle) && count > 0 && g_sel < count &&
         xmb_kind(tab) != TABKIND_MUSIC &&
+        strcmp(g_items[tab][g_sel].type, "Folder") != 0 &&
         now_us >= g_info_cooldown_until) {
         peek_open_item(&g_items[tab][g_sel], gg.card_w, gg.card_h);
         return false;
@@ -818,6 +921,10 @@ bool xmb_handle_input_browse(void) {
         // offer "Play" on something that is not playable.  Browse it instead;
         // Triangle on an EPISODE still gets the version picker.
         if (strcmp(sel->type, "Series") == 0) xmb_open_series(sel);
+        else if (strcmp(sel->type, "Folder") == 0) {
+            s_col_stack_n = 0;
+            col_load(sel->id, sel->name, true);
+        }
         else                                  xmb_show_item_info(sel);
     }
     return false;

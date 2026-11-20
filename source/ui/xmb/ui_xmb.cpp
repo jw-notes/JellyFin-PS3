@@ -339,7 +339,7 @@ static void xmb_draw_text_phase(int tab) {
                 xmb_season_toast_draw();
             } else if (g_col_depth > 0) {
                 xmb_draw_breadcrumb(XMB_ITEM_PAD, XMB_CONTENT_Y + UIS_H(2),
-                                    g_col_name, TR("Movies"), NULL);
+                                    g_col_name, g_col_folder ? NULL : TR("Movies"), NULL);
             }
 
         } // XMB breadcrumbs; Classic draws them under its library heading.

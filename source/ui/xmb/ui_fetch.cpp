@@ -606,6 +606,10 @@ int xmb_fetch_collection_items(const char *collection_id, XMBItem *arr, int max,
     int status = http_request(0, url, NULL, g_token, responseBuffer, RESPONSE_SIZE);
     if (status != 200) return 0;
     int n = parse_xmb_items(responseBuffer, arr, max);
+    for (int i = 0; i < n; i++)
+        if (arr[i].played && !arr[i].progress_pct &&
+            strcmp(arr[i].type, "Folder") != 0 && strcmp(arr[i].type, "BoxSet") != 0)
+            arr[i].progress_pct = 100;
     if (out_total)
         *out_total = xmb_json_int_range(responseBuffer,
             (int)strlen(responseBuffer), "TotalRecordCount", n + start_index);

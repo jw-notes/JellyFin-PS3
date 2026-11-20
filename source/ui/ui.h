@@ -43,6 +43,7 @@ typedef struct {
     u32  resume_secs;       // saved playback position (UserData), 0 = none
     u8   progress_pct;      // 0-100 watched percentage (thumbnail bar)
     u8   has_thumb;         // ImageTags carries a "Thumb" (wide) image
+    u8   played;            // UserData.Played: watched through
 } XMBItem;
 
 // Defined in main.cpp; every input loop reads this.

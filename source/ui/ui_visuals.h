@@ -384,6 +384,7 @@ extern int     g_tv_sub_total;
 extern int     g_col_depth;
 extern char    g_col_id[64];
 extern char    g_col_name[128];
+extern bool    g_col_folder;   // the sub-screen lists a Folder, not a collection
 extern int     g_col_sub_sel;
 extern int     g_col_sub_scroll;
 extern int     g_col_sub_count;

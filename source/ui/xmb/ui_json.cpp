@@ -79,6 +79,16 @@ int xmb_json_int_range(const char *start, int len,
     return def;
 }
 
+// True when the range holds "key":true.
+static bool xmb_json_true_range(const char *start, int len, const char *key) {
+    char search[64];
+    snprintf(search, sizeof(search), "\"%s\":true", key);
+    const int slen = (int)strlen(search);
+    for (const char *p = start; p + slen <= start + len; p++)
+        if (memcmp(p, search, slen) == 0) return true;
+    return false;
+}
+
 long long xmb_json_ll_range(const char *start, int len,
                               const char *key, long long def) {
     char search[64];
@@ -220,6 +230,7 @@ int parse_xmb_items_each(const char *json, XMBItem *arr, int max,
             pct = (int)(pos_ticks * 100 / ticks);
         if (pct > 100) pct = 100;
         it.progress_pct = (u8)(pct > 0 ? pct : 0);
+        it.played = xmb_json_true_range(obj, olen, "Played") ? 1 : 0;
 
         char container[16] = "";
         xmb_json_str_range(obj, olen, "Container", container, sizeof(container));
