@@ -105,7 +105,7 @@ void xmb_classic_library_heading(int tab) {
     else if (g_tv_depth > 1)
         xmb_draw_breadcrumb(x, XMB_OY + UIS_H(122), g_tv_series_name, g_tv_season_name, TR("Episodes"));
     else if (g_col_depth > 0)
-        xmb_draw_breadcrumb(x, XMB_OY + UIS_H(122), g_col_name, TR("Movies"), NULL);
+        xmb_draw_breadcrumb(x, XMB_OY + UIS_H(122), g_col_name, g_col_folder ? NULL : TR("Movies"), NULL);
     else if (g_tab_name_filter[tab][0])
         drawTTF((u32)x, (u32)(XMB_OY + UIS_H(122)), g_tab_name_filter[tab], UIS_TF(15), XMB_TEXT_DIM);
     if (g_tv_depth > 0) xmb_season_toast_draw();
