@@ -46,21 +46,34 @@ struct ColFrame {
     char id[64];
     char name[128];
     bool folder;
-    int  sel, scroll;
+    int  start;          // g_col_sub_start: where the sliding window began
+    int  sel, scroll;    // relative to that window
 };
 static ColFrame s_col_stack[8];
 static int      s_col_stack_n = 0;
 
-static void col_load(const char *id, const char *name, bool folder) {
+// Open `id` with the sliding window starting at server index `start` (a
+// multiple of XMB_PAGE_SIZE, as the slides leave it).
+static void col_load_at(const char *id, const char *name, bool folder, int start) {
     strncpy(g_col_id,   id,   sizeof(g_col_id) - 1);
     strncpy(g_col_name, name, sizeof(g_col_name) - 1);
     g_col_id[sizeof(g_col_id) - 1]     = 0;
     g_col_name[sizeof(g_col_name) - 1] = 0;
     g_col_folder    = folder;
-    g_col_sub_start = 0; g_col_sub_total = 0;
+    g_col_sub_start = start; g_col_sub_total = 0;
     g_col_sub_count = xmb_fetch_collection_items(g_col_id, g_col_sub_items,
-                                                 XMB_ITEMS_MAX, 0, &g_col_sub_total);
+                                                 XMB_ITEMS_MAX, start, &g_col_sub_total);
+    // The folder shrank under us: fall back to its top.
+    if (g_col_sub_count <= 0 && start > 0) {
+        g_col_sub_start = 0;
+        g_col_sub_count = xmb_fetch_collection_items(g_col_id, g_col_sub_items,
+                                                     XMB_ITEMS_MAX, 0, &g_col_sub_total);
+    }
     g_col_depth = 1; g_col_sub_sel = 0; g_col_sub_scroll = 0;
+}
+
+static void col_load(const char *id, const char *name, bool folder) {
+    col_load_at(id, name, folder, 0);
 }
 
 static void col_close(void) {
@@ -75,6 +88,7 @@ static void col_enter(const XMBItem *it) {
     memcpy(f->id,   g_col_id,   sizeof(f->id));
     memcpy(f->name, g_col_name, sizeof(f->name));
     f->folder = g_col_folder;
+    f->start  = g_col_sub_start;
     f->sel    = g_col_sub_sel;
     f->scroll = g_col_sub_scroll;
     col_load(it->id, it->name, strcmp(it->type, "Folder") == 0);
@@ -93,12 +107,14 @@ static void col_refresh(void) {
     if (g_col_sub_sel >= n) g_col_sub_sel = n - 1;
 }
 
-// One level back up, with the cursor on the folder it came from.
+// One level back up, with the cursor on the folder it came from.  The parent
+// is refetched at the window it had slid to, so a saved cursor past the first
+// XMB_ITEMS_MAX entries still lands on the same folder.
 static void col_leave(const int C) {
     if (s_col_stack_n <= 0) { col_close(); return; }
     const ColFrame f = s_col_stack[--s_col_stack_n];
-    col_load(f.id, f.name, f.folder);
-    if (f.sel < g_col_sub_count) {
+    col_load_at(f.id, f.name, f.folder, f.start);
+    if (g_col_sub_start == f.start && f.sel < g_col_sub_count) {
         g_col_sub_sel    = f.sel;
         g_col_sub_scroll = (f.sel / C) * C;
     }
