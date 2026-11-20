@@ -59,12 +59,15 @@ int jbuf_prefill_target(void) {
 }
 
 // Planar YUV420P, 1.5 bpp — the universal frame format.  The decoder writes
-// tight planar YUV (picsize == fw*fh*3/2); round the height up to a macroblock
-// (16) for headroom.  This sizes the jitter-buffer slot that holds the whole
-// planar frame (Y|Cb|Cr); the RSX plane textures are sized separately.
+// tight planar YUV (picsize == fw*fh*3/2); round both sides up to a macroblock
+// (16) for headroom.  The width matters too: the server may round the width
+// it was given up to a multiple of 16 (854 -> 864 at 480p).  This sizes the
+// jitter-buffer slot that holds the whole planar frame (Y|Cb|Cr); the RSX
+// plane textures are sized separately.
 u32 vid_frame_bytes(u32 fw, u32 fh) {
+    u32 fw_pad = (fw + 15u) & ~15u;
     u32 fh_pad = (fh + 15u) & ~15u;
-    return fw * fh_pad * 3u / 2u;
+    return fw_pad * fh_pad * 3u / 2u;
 }
 
 // Allocate the slot buffers if not already cached (or cached too small).

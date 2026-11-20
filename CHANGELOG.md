@@ -10,6 +10,19 @@ public: it froze on the Home screen on real hardware, ran out of memory at
 1080p, and had sign-in and update-check bugs (see 3.3.0 below). vortigauntlet's own release notes for 3.2.3
 and earlier are kept at the end, as he wrote them.
 
+## 3.6.2
+
+- **Fixed: 480p would not play on newer Jellyfin servers**
+  ([#7](https://github.com/jw-notes/JellyFin-PS3/issues/7)). The server sends a picture slightly
+  wider than the app asked for (864 instead of 854), and playback ended with "Playback could not
+  start". The player now makes room for it.
+- **Folders in mixed libraries open** ([#6](https://github.com/jw-notes/JellyFin-PS3/pull/6), by
+  [ez2torta](https://github.com/ez2torta)). In a library of mixed or unset content type, `X` on a
+  folder used to try to play it and failed. It now opens and lists what is inside, folders within
+  folders included; `O` goes back up one level to where you were. Inside a folder, `X` opens a
+  title's page to choose the version and quality and play it.
+- **Watched titles in collections and folders show a full progress bar.**
+
 ## 3.6.1
 
 - **Fixed: subtitles flickered, sat behind the picture or did not show at all**

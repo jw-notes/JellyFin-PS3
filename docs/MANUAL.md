@@ -112,6 +112,8 @@ All taken on a real PS3 at 1920×1080. More in the
   photo on the server gets a default silhouette.
   `△` anywhere flips a poster to show its synopsis (quick-peek).
 - **Movies, TV, Collections and Music** as poster grids with an A-Z jump bar.
+  Folders in a mixed library open with `X` and list what is inside them;
+  `O` goes back up one folder.
 - **Search** with an on-screen keyboard; results open the details page or
   start playback directly.
 - **Themes** (including your own `.ini`), menu particles, and overscan that
