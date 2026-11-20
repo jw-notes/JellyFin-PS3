@@ -80,6 +80,19 @@ static void col_enter(const XMBItem *it) {
     col_load(it->id, it->name, strcmp(it->type, "Folder") == 0);
 }
 
+// Refetch the page on screen so the watched marks and progress bars are
+// current after a title was played or marked watched.
+static void col_refresh(void) {
+    if (g_col_sub_start != 0) return;
+    int total = g_col_sub_total;
+    const int n = xmb_fetch_collection_items(g_col_id, g_col_sub_items,
+                                             XMB_ITEMS_MAX, 0, &total);
+    if (n <= 0) return;
+    g_col_sub_count = n;
+    g_col_sub_total = total;
+    if (g_col_sub_sel >= n) g_col_sub_sel = n - 1;
+}
+
 // One level back up, with the cursor on the folder it came from.
 static void col_leave(const int C) {
     if (s_col_stack_n <= 0) { col_close(); return; }
@@ -181,14 +194,6 @@ void xmb_play_item(const XMBItem *it, u32 resume_secs,
     xmb_resume_note(it->id, player_last_position_secs(), player_last_total_secs());
 }
 
-// The nearest item to play from idx in direction dir: Folders in the list are
-// not playable, so they are stepped over.  -1 when there is none.
-static int list_step(const XMBItem *items, int count, int idx, int dir) {
-    for (int i = idx + dir; i >= 0 && i < count; i += dir)
-        if (!is_dir_type(items[i].type)) return i;
-    return -1;
-}
-
 // Play items[idx] and keep advancing through the list while the user
 // accepts the player's end-of-item NEXT prompt (SELECT during the last
 // 90 s).  Used for movies in a collection; episodes go through
@@ -196,16 +201,14 @@ static int list_step(const XMBItem *items, int count, int idx, int dir) {
 static void xmb_play_list_with_next(const XMBItem *items, int count, int idx,
                                     const char *label, const char *hint) {
     for (;;) {
-        const int nx = list_step(items, count, idx, +1);
-        const int pv = list_step(items, count, idx, -1);
-        if (nx >= 0) player_arm_next(label, hint);
-        if (pv >= 0) player_arm_prev();
-        player_set_nav_names(nx >= 0 ? items[nx].name : NULL,
-                             pv >= 0 ? items[pv].name : NULL);
+        if (idx + 1 < count) player_arm_next(label, hint);
+        if (idx > 0) player_arm_prev();
+        player_set_nav_names(idx + 1 < count ? items[idx + 1].name : NULL,
+                             idx > 0 ? items[idx - 1].name : NULL);
         xmb_play_item(&items[idx], 0);
         if (!player_take_next_request()) break;
-        if (player_took_prev()) { if (pv < 0) break; idx = pv; }
-        else if (nx >= 0) idx = nx;
+        if (player_took_prev()) idx--;
+        else if (idx + 1 < count) idx++;
         else break;
     }
 }
@@ -554,14 +557,22 @@ static void xmb_input_col_sub(void) {
         return;
     }
     if (BTN_PRESSED(cross) && g_col_sub_count > 0 && g_col_sub_sel < g_col_sub_count) {
+        if (g_col_folder) {
+            // As in the library grid, X opens the details page: Version and
+            // Quality are chosen there and Play / Resume live there.
+            const unsigned gen = g_play_gen;
+            if (timing_get_us() >= g_info_cooldown_until)
+                xmb_show_item_info(&g_col_sub_items[g_col_sub_sel]);
+            if (g_play_gen != gen) col_refresh();
+            init_btns();
+            return;
+        }
         xmb_play_list_with_next(g_col_sub_items, g_col_sub_count,
                                 g_col_sub_sel, TR("NEXT MOVIE"),
                                 TR("Press {SELECT} for next movie"));
-        if (!g_col_folder) {
-            g_col_depth = 0;
-            g_col_sub_sel = 0;
-            g_col_sub_scroll = 0;
-        }
+        g_col_depth = 0;
+        g_col_sub_sel = 0;
+        g_col_sub_scroll = 0;
     }
 }
 
